@@ -56,6 +56,10 @@ if (empty($materials)) {
         <div class="container">
             
             <style>
+                :root {
+                    --color-bg-panel: #ffffff;
+                    --color-panel-border: rgba(10, 46, 36, 0.08);
+                }
                 .shop-layout {
                     display: flex;
                     gap: 40px;
@@ -63,15 +67,19 @@ if (empty($materials)) {
                     margin-top: 40px;
                 }
                 .shop-sidebar-filters {
-                    flex: 0 0 280px;
-                    width: 280px;
+                    flex: 0 0 300px;
+                    width: 300px;
                     position: sticky;
                     top: 100px;
                     background: var(--color-bg-panel);
                     border: 1px solid var(--color-panel-border);
-                    border-radius: 16px;
-                    padding: 25px;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+                    border-radius: 20px;
+                    padding: 28px;
+                    box-shadow: 0 10px 30px rgba(10, 46, 36, 0.03);
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .shop-sidebar-filters:hover {
+                    box-shadow: 0 15px 40px rgba(10, 46, 36, 0.06);
                 }
                 .shop-sidebar-filters h4 {
                     font-size: 1.05rem;
@@ -80,8 +88,8 @@ if (empty($materials)) {
                 }
                 .filter-group {
                     border-bottom: 1px solid var(--color-panel-border);
-                    padding-bottom: 20px;
-                    margin-bottom: 20px;
+                    padding-bottom: 24px;
+                    margin-bottom: 24px;
                 }
                 .filter-group:last-child {
                     border-bottom: none;
@@ -89,55 +97,206 @@ if (empty($materials)) {
                     margin-bottom: 0;
                 }
                 .filter-group h5 {
-                    font-size: 0.72rem;
+                    font-size: 0.74rem;
                     font-weight: 800;
                     text-transform: uppercase;
-                    color: var(--color-gray);
-                    letter-spacing: 1px;
-                    margin-bottom: 12px;
+                    color: var(--color-primary);
+                    letter-spacing: 1.2px;
+                    margin-bottom: 14px;
                     margin-top: 0;
-                }
-                .filter-radio-label {
                     display: flex;
                     align-items: center;
-                    gap: 10px;
-                    font-size: 0.82rem;
-                    font-weight: 600;
-                    color: var(--color-primary);
+                    gap: 8px;
+                }
+                .filter-group h5::after {
+                    content: '';
+                    flex: 1;
+                    height: 1px;
+                    background: rgba(10, 46, 36, 0.06);
+                }
+
+                /* Custom Styled Radio Badges (Pills) */
+                .filter-badge-list {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                    margin-top: 8px;
+                }
+                .filter-badge-item {
                     cursor: pointer;
                     user-select: none;
-                    margin-bottom: 8px;
-                    transition: color 0.2s ease;
+                    position: relative;
                 }
-                .filter-radio-label:hover {
+                .filter-badge-item input[type="radio"] {
+                    position: absolute;
+                    opacity: 0;
+                    width: 0;
+                    height: 0;
+                }
+                .filter-badge-content {
+                    display: inline-block;
+                    padding: 8px 16px;
+                    border-radius: 30px;
+                    font-size: 0.78rem;
+                    font-weight: 600;
+                    color: var(--color-primary);
+                    border: 1px solid rgba(10, 46, 36, 0.08);
+                    background: #ffffff;
+                    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .filter-badge-item:hover .filter-badge-content {
+                    border-color: var(--color-accent);
+                    color: var(--color-accent);
+                    transform: translateY(-1px);
+                }
+                .filter-badge-item input[type="radio"]:checked + .filter-badge-content {
+                    background: var(--color-primary);
+                    color: var(--color-white);
+                    border-color: var(--color-primary);
+                    box-shadow: 0 4px 10px rgba(10, 46, 36, 0.12);
+                }
+
+                /* Brand Partner Logo Grid Selector */
+                .brand-filter-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 8px;
+                    margin-top: 8px;
+                }
+                .brand-filter-item {
+                    cursor: pointer;
+                    position: relative;
+                }
+                .brand-filter-item input[type="radio"] {
+                    position: absolute;
+                    opacity: 0;
+                    width: 0;
+                    height: 0;
+                }
+                .brand-filter-logo {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 48px;
+                    border: 1px solid rgba(10, 46, 36, 0.08);
+                    border-radius: 8px;
+                    background: #ffffff;
+                    padding: 8px;
+                    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.01);
+                }
+                .brand-filter-logo img {
+                    max-width: 100%;
+                    max-height: 100%;
+                    object-fit: contain;
+                    filter: grayscale(100%);
+                    opacity: 0.55;
+                    transition: all 0.25s ease;
+                }
+                .brand-filter-item:hover .brand-filter-logo {
+                    border-color: var(--color-accent);
+                }
+                .brand-filter-item:hover .brand-filter-logo img {
+                    filter: grayscale(0%);
+                    opacity: 1;
+                }
+                .brand-filter-item input[type="radio"]:checked + .brand-filter-logo {
+                    border-color: var(--color-accent);
+                    background: #ffffff;
+                    box-shadow: 0 0 0 1px var(--color-accent), 0 4px 12px rgba(200, 162, 118, 0.15);
+                }
+                .brand-filter-item input[type="radio"]:checked + .brand-filter-logo img {
+                    filter: grayscale(0%);
+                    opacity: 1;
+                }
+                .brand-filter-logo.brand-all-text {
+                    font-family: var(--font-title);
+                    font-size: 0.72rem;
+                    font-weight: 800;
+                    color: var(--color-gray);
+                    letter-spacing: 0.5px;
+                    text-transform: uppercase;
+                }
+                .brand-filter-item input[type="radio"]:checked + .brand-filter-logo.brand-all-text {
+                    background: var(--color-accent);
+                    color: var(--color-white);
+                    border-color: var(--color-accent);
+                    box-shadow: 0 4px 12px rgba(200, 162, 118, 0.2);
+                }
+                .brand-text-fallback {
+                    font-family: var(--font-title);
+                    font-size: 0.75rem;
+                    font-weight: 700;
+                    color: var(--color-primary);
+                    text-transform: uppercase;
+                }
+                .brand-filter-item input[type="radio"]:checked + .brand-filter-logo .brand-text-fallback {
                     color: var(--color-accent);
                 }
-                .filter-radio-label input[type="radio"] {
-                    accent-color: var(--color-accent);
-                    width: 15px;
-                    height: 15px;
-                    cursor: pointer;
-                    margin: 0;
-                }
+
+                /* Color Finishes Filter */
                 .sidebar-color-btn {
-                    width: 28px;
-                    height: 28px;
+                    width: 32px;
+                    height: 32px;
                     border-radius: 50%;
-                    border: 1.5px solid transparent;
+                    border: 2px solid transparent;
                     background: transparent;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     cursor: pointer;
-                    transition: all 0.2s ease;
+                    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
                     outline: none;
                     padding: 0;
                 }
                 .sidebar-color-btn:hover {
-                    transform: scale(1.1);
+                    transform: scale(1.15);
                 }
                 .sidebar-color-btn.active {
-                    box-shadow: 0 0 0 1px rgba(255,255,255,1);
+                    border-color: var(--color-accent) !important;
+                    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+                }
+
+                /* Premium Price Range Slider */
+                input[type="range"] {
+                    -webkit-appearance: none;
+                    appearance: none;
+                    width: 100%;
+                    height: 4px;
+                    border-radius: 2px;
+                    background: var(--color-gray-light, #EFEFEF);
+                    outline: none;
+                    margin: 10px 0;
+                }
+                input[type="range"]::-webkit-slider-thumb {
+                    -webkit-appearance: none;
+                    appearance: none;
+                    width: 16px;
+                    height: 16px;
+                    border-radius: 50%;
+                    background: var(--color-accent);
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    border: 2.5px solid #ffffff;
+                    box-shadow: 0 2px 6px rgba(200, 162, 118, 0.3);
+                }
+                input[type="range"]::-webkit-slider-thumb:hover {
+                    transform: scale(1.25);
+                    box-shadow: 0 4px 12px rgba(200, 162, 118, 0.5);
+                }
+                input[type="range"]::-moz-range-thumb {
+                    width: 16px;
+                    height: 16px;
+                    border-radius: 50%;
+                    background: var(--color-accent);
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    border: 2.5px solid #ffffff;
+                    box-shadow: 0 2px 6px rgba(200, 162, 118, 0.3);
+                }
+                input[type="range"]::-moz-range-thumb:hover {
+                    transform: scale(1.25);
+                    box-shadow: 0 4px 12px rgba(200, 162, 118, 0.5);
                 }
                 
                 @media (max-width: 992px) {
@@ -174,15 +333,15 @@ if (empty($materials)) {
                     <!-- Category Filter -->
                     <div class="filter-group">
                         <h5>Category</h5>
-                        <div style="display: flex; flex-direction: column;">
-                            <label class="filter-radio-label">
+                        <div class="filter-badge-list">
+                            <label class="filter-badge-item">
                                 <input type="radio" name="shop_category" value="all" checked>
-                                <span>All Categories</span>
+                                <span class="filter-badge-content">All Categories</span>
                             </label>
                             <?php foreach ($categories as $cat): ?>
-                                <label class="filter-radio-label">
+                                <label class="filter-badge-item">
                                     <input type="radio" name="shop_category" value="<?php echo htmlspecialchars($cat['slug']); ?>">
-                                    <span><?php echo htmlspecialchars($cat['name']); ?></span>
+                                    <span class="filter-badge-content"><?php echo htmlspecialchars($cat['name']); ?></span>
                                 </label>
                             <?php endforeach; ?>
                         </div>
@@ -191,15 +350,15 @@ if (empty($materials)) {
                     <!-- Material Filter -->
                     <div class="filter-group">
                         <h5>Material</h5>
-                        <div style="display: flex; flex-direction: column;">
-                            <label class="filter-radio-label">
+                        <div class="filter-badge-list">
+                            <label class="filter-badge-item">
                                 <input type="radio" name="shop_material" value="all" checked>
-                                <span>All Materials</span>
+                                <span class="filter-badge-content">All Materials</span>
                             </label>
                             <?php foreach ($materials as $mat): ?>
-                                <label class="filter-radio-label">
+                                <label class="filter-badge-item">
                                     <input type="radio" name="shop_material" value="<?php echo htmlspecialchars($mat['slug']); ?>">
-                                    <span><?php echo htmlspecialchars($mat['name']); ?></span>
+                                    <span class="filter-badge-content"><?php echo htmlspecialchars($mat['name']); ?></span>
                                 </label>
                             <?php endforeach; ?>
                         </div>
@@ -226,15 +385,22 @@ if (empty($materials)) {
                     <?php if (!empty($brands)): ?>
                         <div class="filter-group">
                             <h5>Brand Partner</h5>
-                            <div style="display: flex; flex-direction: column;">
-                                <label class="filter-radio-label">
+                            <div class="brand-filter-grid">
+                                <label class="brand-filter-item" title="All Brands">
                                     <input type="radio" name="shop_brand" value="all" checked>
-                                    <span>All Brands</span>
+                                    <span class="brand-filter-logo brand-all-text">All</span>
                                 </label>
                                 <?php foreach ($brands as $b): ?>
-                                    <label class="filter-radio-label">
+                                    <label class="brand-filter-item" title="<?php echo htmlspecialchars($b['name']); ?>">
                                         <input type="radio" name="shop_brand" value="<?php echo htmlspecialchars($b['id']); ?>">
-                                        <span><?php echo htmlspecialchars($b['name']); ?></span>
+                                        <span class="brand-filter-logo">
+                                            <?php if (!empty($b['logo_path'])): ?>
+                                                <img src="<?php echo htmlspecialchars($b['logo_path']); ?>" alt="<?php echo htmlspecialchars($b['name']); ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                                <span class="brand-text-fallback" style="display: none;"><?php echo htmlspecialchars(substr($b['name'], 0, 2)); ?></span>
+                                            <?php else: ?>
+                                                <span class="brand-text-fallback"><?php echo htmlspecialchars(substr($b['name'], 0, 2)); ?></span>
+                                            <?php endif; ?>
+                                        </span>
                                     </label>
                                 <?php endforeach; ?>
                             </div>
