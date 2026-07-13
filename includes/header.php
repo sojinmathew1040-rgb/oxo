@@ -62,10 +62,10 @@ if ($is_product_page && $current_product) {
             </div>
             
             <nav class="nav-menu" id="nav-menu">
-                <a href="<?php echo ($is_product_page || $is_shop_page) ? 'index.php#hero' : '#hero'; ?>" class="nav-link <?php echo ($current_script === 'index.php') ? 'active' : ''; ?>">Home</a>
+                <a href="<?php echo ($current_script !== 'index.php') ? 'index.php#hero' : '#hero'; ?>" class="nav-link">Home</a>
                 <a href="shop.php" class="nav-link <?php echo ($current_script === 'shop.php') ? 'active' : ''; ?>">Products</a>
-                <a href="<?php echo ($is_product_page || $is_shop_page) ? 'index.php#about' : '#about'; ?>" class="nav-link">About</a>
-                <a href="<?php echo ($is_product_page || $is_shop_page) ? 'index.php#contact' : '#contact'; ?>" class="nav-link">Contact</a>
+                <a href="<?php echo ($current_script !== 'about.php' && $current_script !== 'index.php') ? 'index.php#about' : 'about.php'; ?>" class="nav-link <?php echo ($current_script === 'about.php') ? 'active' : ''; ?>">About</a>
+                <a href="<?php echo ($current_script !== 'index.php') ? 'index.php#contact' : '#contact'; ?>" class="nav-link">Contact</a>
             </nav>
             
             <div class="header-actions">

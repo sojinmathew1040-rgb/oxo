@@ -37,9 +37,9 @@
                 </div>
                 
                 <div style="margin-top: 15px;">
-                    <button class="magnetic-btn secondary" style="border-color: var(--color-accent); color: var(--color-accent);">
+                    <a href="about.php" class="magnetic-btn secondary" style="border-color: var(--color-accent); color: var(--color-accent); display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">
                         <span class="magnetic-btn-text">Read Our Story</span>
-                    </button>
+                    </a>
                 </div>
             </div>
         </div>

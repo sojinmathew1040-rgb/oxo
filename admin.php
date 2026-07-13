@@ -1,2 +1,3 @@
 <?php
-// Unused - Admin panel disabled
+header("Location: admin/index.php");
+exit;

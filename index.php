@@ -7,8 +7,6 @@
 // 1. Layout Header & CDNs
 require_once __DIR__ . '/includes/header.php';
 
-// 2. Cinematic Preloader Screen
-// require_once __DIR__ . '/components/preloader.php';
 ?>
 
 <!-- Scroll Container for Lenis -->
@@ -16,6 +14,9 @@ require_once __DIR__ . '/includes/header.php';
 
     <!-- 3. Hero Section (Background Video) -->
     <?php require_once __DIR__ . '/components/hero.php'; ?>
+
+    <!-- Partner Brands Infinite Marquee -->
+    <?php require_once __DIR__ . '/components/brands-marquee.php'; ?>
 
     <!-- 4. Product Grid Catalog Preview -->
     <?php require_once __DIR__ . '/components/products-landing.php'; ?>

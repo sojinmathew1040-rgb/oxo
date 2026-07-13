@@ -7,7 +7,7 @@ const PRODUCTS_DB = window.PRODUCTS_DB;
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    initPreloader();
+    animateHeroIntro();
     initLenis();
     initThreeJS();
     initGSAPAnimations();
@@ -15,66 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initShopState();
     initNavBehavior();
 });
-
-// --- 1. CINEMATIC PRELOADER ---
-function initPreloader() {
-    const preloader = document.getElementById('preloader');
-    const counterEl = document.querySelector('.preloader-counter');
-    const progressFill = document.querySelector('.preloader-progress-fill');
-    
-    if (!preloader) {
-        animateHeroIntro();
-        return;
-    }
-    
-    let countObj = { value: 0 };
-    
-    // Disable scrolling during load
-    document.body.style.overflow = 'hidden';
-    
-    gsap.to(countObj, {
-        value: 100,
-        duration: 3.5,
-        ease: "power2.out",
-        onUpdate: () => {
-            let current = Math.floor(countObj.value);
-            counterEl.textContent = current.toString().padStart(3, '0');
-            progressFill.style.width = `${current}%`;
-        },
-        onComplete: () => {
-            // Animate preloader out
-            const tl = gsap.timeline({
-                onComplete: () => {
-                    preloader.style.display = 'none';
-                    document.body.style.overflow = '';
-                    // Trigger Hero Intro
-                    animateHeroIntro();
-                }
-            });
-            
-            tl.to('.preloader-words, .preloader-header, .preloader-progress-bar', {
-                opacity: 0,
-                y: -30,
-                duration: 0.6,
-                stagger: 0.1,
-                ease: "power3.in"
-            });
-            
-            tl.to(counterEl, {
-                opacity: 0,
-                y: -50,
-                duration: 0.6,
-                ease: "power3.in"
-            }, "-=0.3");
-            
-            tl.to(preloader, {
-                yPercent: -100,
-                duration: 1.2,
-                ease: "power4.inOut"
-            }, "-=0.2");
-        }
-    });
-}
 
 // --- 2. LENIS SMOOTH SCROLLING ---
 let lenis;
@@ -257,20 +197,7 @@ function initGSAPAnimations() {
         });
     });
 
-    // About parallax section movement
-    if (document.querySelector('.about-visual')) {
-        gsap.to('.about-visual img', {
-            scrollTrigger: {
-                trigger: '#about',
-                start: "top bottom",
-                end: "bottom top",
-                scrub: true
-            },
-            yPercent: 15,
-            scale: 1.1,
-            ease: "none"
-        });
-    }
+
 
     // Smooth section background color fades (optional elegant touch)
     gsap.to('body', {
@@ -484,73 +411,100 @@ function initShopState() {
         }
     });
 
-    // Category Filtering with GSAP Card Shifts
+    // Category & Material Filtering with GSAP Card Shifts
+    let activeCategory = 'all';
+    let activeMaterial = 'all';
+
     const filterBtns = document.querySelectorAll('.filter-btn');
+    const materialBtns = document.querySelectorAll('.material-filter-btn');
     const productCards = document.querySelectorAll('.product-card');
 
-    filterBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const filter = btn.getAttribute('data-filter');
-            
-            // Toggle active button
-            filterBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-
-            // Animate card entries/exits
-            const tl = gsap.timeline();
-            
-            // Fade out current
-            tl.to(productCards, {
-                opacity: 0,
-                scale: 0.9,
-                y: 15,
-                duration: 0.3,
-                stagger: 0.05,
-                ease: "power2.in",
-                onComplete: () => {
-                    // Hide/Show based on filter
-                    productCards.forEach(card => {
-                        const cat = card.getAttribute('data-category');
-                        if (filter === 'all' || cat === filter) {
-                            card.style.display = 'flex';
-                        } else {
-                            card.style.display = 'none';
-                        }
-                    });
+    function applyCatalogFilters() {
+        const tl = gsap.timeline();
+        
+        // Fade out current cards
+        tl.to(productCards, {
+            opacity: 0,
+            scale: 0.9,
+            y: 15,
+            duration: 0.3,
+            stagger: 0.03,
+            ease: "power2.in",
+            onComplete: () => {
+                // Hide/Show based on both active filters
+                productCards.forEach(card => {
+                    const cat = card.getAttribute('data-category');
+                    const mat = card.getAttribute('data-material') || '';
                     
-                    // Trigger scroll refresh to recalibrate positions
-                    ScrollTrigger.refresh();
-                }
-            });
+                    const catMatches = (activeCategory === 'all' || cat === activeCategory);
+                    const matMatches = (activeMaterial === 'all' || mat === activeMaterial);
+                    
+                    if (catMatches && matMatches) {
+                        card.style.display = 'flex';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                
+                // Trigger scroll refresh to recalibrate positions
+                ScrollTrigger.refresh();
+            }
+        });
 
-            // Fade in matching
-            tl.to(productCards, {
-                opacity: (i, target) => {
-                    const cat = target.getAttribute('data-category');
-                    return (filter === 'all' || cat === filter) ? 1 : 0;
-                },
-                scale: (i, target) => {
-                    const cat = target.getAttribute('data-category');
-                    return (filter === 'all' || cat === filter) ? 1 : 0.9;
-                },
-                y: (i, target) => {
-                    const cat = target.getAttribute('data-category');
-                    return (filter === 'all' || cat === filter) ? 0 : 15;
-                },
-                duration: 0.6,
-                stagger: 0.05,
-                ease: "power3.out"
+        // Fade in matching cards
+        tl.to(productCards, {
+            opacity: (i, target) => {
+                const cat = target.getAttribute('data-category');
+                const mat = target.getAttribute('data-material') || '';
+                const matches = (activeCategory === 'all' || cat === activeCategory) && (activeMaterial === 'all' || mat === activeMaterial);
+                return matches ? 1 : 0;
+            },
+            scale: (i, target) => {
+                const cat = target.getAttribute('data-category');
+                const mat = target.getAttribute('data-material') || '';
+                const matches = (activeCategory === 'all' || cat === activeCategory) && (activeMaterial === 'all' || mat === activeMaterial);
+                return matches ? 1 : 0.9;
+            },
+            y: (i, target) => {
+                const cat = target.getAttribute('data-category');
+                const mat = target.getAttribute('data-material') || '';
+                const matches = (activeCategory === 'all' || cat === activeCategory) && (activeMaterial === 'all' || mat === activeMaterial);
+                return matches ? 0 : 15;
+            },
+            duration: 0.5,
+            stagger: 0.03,
+            ease: "power3.out"
+        });
+    }
+
+    if (filterBtns.length > 0) {
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                activeCategory = btn.getAttribute('data-filter') || 'all';
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                applyCatalogFilters();
             });
         });
-    });
+    }
+
+    if (materialBtns.length > 0) {
+        materialBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                activeMaterial = btn.getAttribute('data-material') || 'all';
+                materialBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                applyCatalogFilters();
+            });
+        });
+    }
 
     // Parse URL parameters to auto-select category filter on load
     const urlParams = new URLSearchParams(window.location.search);
     const filterParam = urlParams.get('filter');
-    if (filterParam) {
+    if (filterParam && filterBtns.length > 0) {
         const targetBtn = document.querySelector(`.filter-btn[data-filter="${filterParam}"]`);
         if (targetBtn) {
-            // Trigger filter selection animation
             setTimeout(() => {
                 targetBtn.click();
             }, 100);
