@@ -63,7 +63,7 @@ if ($is_product_page && $current_product) {
             
             <nav class="nav-menu" id="nav-menu">
                 <a href="<?php echo ($current_script !== 'index.php') ? 'index.php#hero' : '#hero'; ?>" class="nav-link">Home</a>
-                <a href="shop.php" class="nav-link <?php echo ($current_script === 'shop.php') ? 'active' : ''; ?>">Products</a>
+                <a href="<?php echo ($current_script !== 'index.php') ? 'index.php#products' : '#products'; ?>" class="nav-link <?php echo ($current_script === 'shop.php') ? 'active' : ''; ?>">Products</a>
                 <a href="<?php echo ($current_script !== 'about.php' && $current_script !== 'index.php') ? 'index.php#about' : 'about.php'; ?>" class="nav-link <?php echo ($current_script === 'about.php') ? 'active' : ''; ?>">About</a>
                 <a href="<?php echo ($current_script !== 'index.php') ? 'index.php#contact' : '#contact'; ?>" class="nav-link">Contact</a>
             </nav>
@@ -76,7 +76,7 @@ if ($is_product_page && $current_product) {
                     </a>
                 <?php else: ?>
                     <a href="login.php" class="header-btn magnetic" aria-label="Sign In" style="display: inline-flex; align-items: center; justify-content: center;">
-                        <span class="magnetic-btn-text"><i class="fa-solid fa-arrow-right-to-bracket"></i></span>
+                        <span class="magnetic-btn-text"><i class="fa-regular fa-user"></i></span>
                     </a>
                 <?php endif; ?>
 

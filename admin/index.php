@@ -924,9 +924,14 @@ if (!function_exists('format_inr_admin')) {
                                     <tr>
                                         <td><strong><?php echo htmlspecialchars($inq['name']); ?></strong></td>
                                         <td>
-                                            <a href="mailto:<?php echo htmlspecialchars($inq['email']); ?>" style="color: var(--color-accent); font-weight: 500; font-family: var(--font-numeric);">
-                                                <?php echo htmlspecialchars($inq['email']); ?>
+                                            <a href="mailto:<?php echo htmlspecialchars($inq['email']); ?>" style="color: var(--color-accent); font-weight: 500; font-family: var(--font-numeric); display: block; margin-bottom: 5px;">
+                                                <i class="fa-regular fa-envelope" style="margin-right: 4px; font-size: 0.85rem;"></i><?php echo htmlspecialchars($inq['email']); ?>
                                             </a>
+                                            <?php if (!empty($inq['whatsapp'])): ?>
+                                                <a href="https://wa.me/<?php echo preg_replace('/[^0-9]/', '', $inq['whatsapp']); ?>" target="_blank" style="color: #25D366; font-weight: 500; font-family: var(--font-numeric); display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
+                                                    <i class="fa-brands fa-whatsapp" style="font-size: 0.95rem;"></i> <?php echo htmlspecialchars($inq['whatsapp']); ?>
+                                                </a>
+                                            <?php endif; ?>
                                         </td>
                                         <td>
                                             <span style="font-weight: 600; color: var(--color-primary);"><?php echo htmlspecialchars($inq['product_title']); ?></span>
@@ -943,16 +948,27 @@ if (!function_exists('format_inr_admin')) {
                                             </span>
                                         </td>
                                         <td style="text-align: right;">
-                                            <?php if ($inq['status'] === 'Pending'): ?>
-                                                <a href="index.php?tab=analytics&action=address&inquiry_id=<?php echo $inq['id']; ?>" 
-                                                   class="btn-icon edit" 
-                                                   style="color: var(--color-success); border-color: rgba(95, 173, 138, 0.2); background: rgba(95, 173, 138, 0.08);"
-                                                   title="Mark as Addressed">
-                                                    <i class="fa-solid fa-check"></i>
-                                                </a>
-                                            <?php else: ?>
-                                                <span style="color: var(--color-gray); font-size: 0.75rem; font-style: italic;">Resolved</span>
-                                            <?php endif; ?>
+                                            <div class="table-actions" style="justify-content: flex-end; align-items: center;">
+                                                <?php if (!empty($inq['whatsapp'])): ?>
+                                                    <button onclick="openReplyModal(event, <?php echo $inq['id']; ?>, '<?php echo addslashes($inq['name']); ?>', '<?php echo addslashes($inq['whatsapp']); ?>', '<?php echo addslashes($inq['product_title']); ?>', '<?php echo addslashes(str_replace(array("\r", "\n"), ' ', $inq['message'])); ?>')"
+                                                       class="btn-icon" 
+                                                       style="color: var(--color-primary); border-color: rgba(10, 46, 36, 0.15); background: rgba(10, 46, 36, 0.05); padding: 0;"
+                                                       title="Send WhatsApp Response Dialog">
+                                                        <img src="../assets/images/logo.png" alt="OXO Logo" style="width: 16px; height: 16px; object-fit: contain; filter: brightness(0.2);">
+                                                    </button>
+                                                <?php endif; ?>
+                                                
+                                                <?php if ($inq['status'] === 'Pending'): ?>
+                                                    <a href="index.php?tab=analytics&action=address&inquiry_id=<?php echo $inq['id']; ?>" 
+                                                       class="btn-icon edit" 
+                                                       style="color: var(--color-success); border-color: rgba(95, 173, 138, 0.2); background: rgba(95, 173, 138, 0.08);"
+                                                       title="Mark as Addressed">
+                                                        <i class="fa-solid fa-check"></i>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <span style="color: var(--color-gray); font-size: 0.75rem; font-style: italic; align-self: center;">Resolved</span>
+                                                <?php endif; ?>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -2055,7 +2071,137 @@ if (!function_exists('format_inr_admin')) {
             });
         });
     </script>
-    <?php endif; ?>
+    <!-- Concierge Reply Modal Overlay -->
+    <div id="concierge-reply-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99999; justify-content: center; align-items: center; font-family: 'Inter', sans-serif;">
+        <div style="background: #ffffff; width: 90%; max-width: 500px; padding: 30px; border-radius: 16px; border: 1px solid rgba(10, 46, 36, 0.08); box-shadow: 0 20px 50px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 20px; position: relative;">
+            <!-- Close Button -->
+            <button onclick="closeReplyModal()" style="position: absolute; top: 20px; right: 20px; background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: #888;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <div style="display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 15px;">
+                <img src="../assets/images/logo.png" alt="OXO Logo" style="width: 28px; height: 28px; object-fit: contain; filter: brightness(0.2);">
+                <div>
+                    <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #0A2E24; font-family: 'Outfit', sans-serif; text-transform: uppercase; letter-spacing: 0.05em;">Concierge Response</h3>
+                    <p style="margin: 3px 0 0 0; font-size: 0.75rem; color: #888;">Send official response via WhatsApp</p>
+                </div>
+            </div>
+            
+            <!-- Client Context -->
+            <div style="background: rgba(10,46,36,0.03); border: 1px solid rgba(10,46,36,0.05); border-radius: 8px; padding: 12px; font-size: 0.82rem; line-height: 1.5; color: #4A564E;">
+                <div><strong>Client:</strong> <span id="modal-client-name">John Doe</span> (<span id="modal-client-phone">+91 9999999999</span>)</div>
+                <div style="margin-top: 4px;"><strong>Regarding:</strong> <span id="modal-client-subject">General Contact</span></div>
+            </div>
+            
+            <!-- Textarea -->
+            <div>
+                <label style="display: block; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #bf8f54; margin-bottom: 8px;">Response Message</label>
+                <textarea id="modal-reply-text" rows="6" style="width: 100%; border: 1px solid rgba(10, 46, 36, 0.15); padding: 12px; font-size: 0.85rem; border-radius: 8px; font-family: inherit; line-height: 1.5; resize: vertical; box-sizing: border-box;"></textarea>
+            </div>
+            
+            <p style="margin: 0; font-size: 0.78rem; color: #888; line-height: 1.4;">
+                💡 <strong>How to add Logo:</strong> Click "Copy Logo Image" first, then click "Send via WhatsApp". Once the chat opens, paste (<strong>Ctrl+V</strong>) the image directly into the chat input.
+            </p>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 5px;">
+                <button onclick="copyLogoToClipboard(this)" style="background: #ffffff; border: 1px solid rgba(10, 46, 36, 0.15); color: #0a2e24; padding: 12px 18px; font-size: 0.78rem; font-weight: 700; border-radius: 8px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; display: inline-flex; align-items: center; gap: 6px; transition: all 0.3s;">
+                    <span id="copy-btn-label">📋 Copy Logo Image</span>
+                </button>
+                <button onclick="submitWhatsAppReply()" style="background: #25D366; border: 1px solid #20BA5A; color: #ffffff; padding: 12px 20px; font-size: 0.78rem; font-weight: 700; border-radius: 8px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; display: inline-flex; align-items: center; gap: 6px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.15);">
+                    <span>Send via WhatsApp 🚀</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
+    <script>
+    let currentInquiryId = null;
+    let currentClientPhone = "";
+
+    function openReplyModal(event, id, name, phone, title, rawMessage) {
+        event.preventDefault();
+        currentInquiryId = id;
+        currentClientPhone = phone.replace(/[^0-9]/g, '');
+        
+        document.getElementById('modal-client-name').innerText = name;
+        document.getElementById('modal-client-phone').innerText = phone;
+        document.getElementById('modal-client-subject').innerText = title;
+        
+        // Auto-filled message template
+        const autoMsg = `Hello ${name},\n\nThank you for contacting OXO. We received your inquiry regarding '${title}': "${rawMessage}".\n\nOur concierge team is reviewing it. How can we help you further?`;
+        document.getElementById('modal-reply-text').value = autoMsg;
+        
+        // Reset Copy Button label
+        const copyLabel = document.getElementById('copy-btn-label');
+        copyLabel.innerHTML = "📋 Copy Logo Image";
+        
+        document.getElementById('concierge-reply-modal').style.display = 'flex';
+    }
+
+    function closeReplyModal() {
+        document.getElementById('concierge-reply-modal').style.display = 'none';
+    }
+
+    async function copyLogoToClipboard(btn) {
+        const label = document.getElementById('copy-btn-label');
+        const originalText = label.innerHTML;
+        label.innerHTML = "⏳ Copying...";
+        btn.disabled = true;
+        
+        try {
+            const logoUrl = '../assets/images/logo.png';
+            const response = await fetch(logoUrl);
+            if (!response.ok) throw new Error('Failed to fetch image file.');
+            const blob = await response.blob();
+            
+            // Write the image to the clipboard
+            const item = new ClipboardItem({ [blob.type]: blob });
+            await navigator.clipboard.write([item]);
+            
+            label.innerHTML = "✅ Logo Copied!";
+            btn.style.borderColor = "#20BA5A";
+            btn.style.color = "#20BA5A";
+            btn.style.background = "rgba(37, 211, 102, 0.05)";
+            
+            setTimeout(() => {
+                label.innerHTML = originalText;
+                btn.style.borderColor = "rgba(10, 46, 36, 0.15)";
+                btn.style.color = "#0a2e24";
+                btn.style.background = "#ffffff";
+                btn.disabled = false;
+            }, 3000);
+        } catch (err) {
+            console.error('Clipboard copy failed:', err);
+            label.innerHTML = "❌ Failed to Copy";
+            setTimeout(() => {
+                label.innerHTML = originalText;
+                btn.disabled = false;
+            }, 3000);
+        }
+    }
+
+    function submitWhatsAppReply() {
+        const message = document.getElementById('modal-reply-text').value;
+        const url = `https://wa.me/${currentClientPhone}?text=${encodeURIComponent(message)}`;
+        
+        // Open WhatsApp
+        window.open(url, '_blank');
+        
+        // Auto-mark the inquiry as replied/addressed in OXO
+        if (currentInquiryId) {
+            fetch(`index.php?tab=analytics&action=address&inquiry_id=${currentInquiryId}`)
+                .then(response => {
+                    if (response.ok) {
+                        // Success callback: refresh dashboard to update stats and table status
+                        window.location.reload();
+                    }
+                })
+                .catch(err => console.error('Failed to mark inquiry as addressed:', err));
+        }
+        
+        closeReplyModal();
+    }
+    </script>
+    <?php endif; ?>
 </body>
 </html>

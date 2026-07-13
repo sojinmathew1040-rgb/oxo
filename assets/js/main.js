@@ -274,7 +274,8 @@ function animateHeroIntro() {
 
 // --- 5. MAGNETIC BUTTONS ---
 function initMagneticButtons() {
-    const magneticBtns = document.querySelectorAll('.magnetic-btn');
+    // Disabled magnetic movement effect globally to keep all buttons fixed/static
+    return;
 
     magneticBtns.forEach(btn => {
         const text = btn.querySelector('.magnetic-btn-text');

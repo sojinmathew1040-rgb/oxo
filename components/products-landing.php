@@ -11,6 +11,11 @@
                 <span class="section-tag">Our Collection</span>
                 <h2 class="title-medium">Curated <span class="title-serif">Creations</span></h2>
             </div>
+            <div class="explore-catalog-cta" style="width: auto; margin-top: 0;">
+                <a href="shop.php" class="magnetic-btn secondary static-btn">
+                    <span class="magnetic-btn-text">Explore Full Collection &nbsp; <i class="fa-solid fa-arrow-right-long"></i></span>
+                </a>
+            </div>
         </div>
         
         <div class="product-grid">
@@ -42,13 +47,6 @@
                     </div>
                 </div>
             <?php } ?>
-        </div>
-        
-        <!-- Explore Catalog CTA Button -->
-        <div class="explore-catalog-cta">
-            <a href="shop.php" class="magnetic-btn secondary">
-                <span class="magnetic-btn-text">Explore Full Collection &nbsp; <i class="fa-solid fa-arrow-right-long"></i></span>
-            </a>
         </div>
     </div>
 </section>

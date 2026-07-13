@@ -94,6 +94,12 @@ function initialize_tables($pdo) {
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB;");
 
+    // Check if column whatsapp exists in oxo_consultations, add if missing
+    $col_stmt = $pdo->query("SHOW COLUMNS FROM `oxo_consultations` LIKE 'whatsapp'");
+    if (!$col_stmt->fetch()) {
+        $pdo->exec("ALTER TABLE `oxo_consultations` ADD COLUMN `whatsapp` VARCHAR(50) DEFAULT NULL");
+    }
+
     // 4. Create brands table
     $pdo->exec("CREATE TABLE IF NOT EXISTS `oxo_brands` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
