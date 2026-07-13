@@ -1,5 +1,5 @@
--- OXO Database Backup
--- Generated on 2026-07-13 11:30:51
+-- OXO Furniture Database Backup
+-- Generated: 2026-07-13 12:21:52
 
 SET FOREIGN_KEY_CHECKS=0;
 
@@ -154,11 +154,12 @@ CREATE TABLE `oxo_consultations` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `whatsapp` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO `oxo_consultations` (`id`, `name`, `email`, `product_title`, `message`, `status`, `created_at`, `whatsapp`) VALUES
 ('1', 'SOJIN MATHEW', 'sojinmathew1040@gmail.com', 'General Contact', 'hello', 'Addressed', '2026-07-13 11:35:29', '9946020724'),
-('2', 'SOJIN MATHEW', 'sojinmathew1040@gmail.com', 'General Contact', 'hi', 'Addressed', '2026-07-13 11:39:34', '9946020724');
+('2', 'SOJIN MATHEW', 'sojinmathew1040@gmail.com', 'General Contact', 'hi', 'Addressed', '2026-07-13 11:39:34', '9946020724'),
+('3', 'SOJIN MATHEW', 'sojinmathew1040@gmail.com', 'test', 'is it avalable', 'Addressed', '2026-07-13 15:18:04', '8943804920');
 
 DROP TABLE IF EXISTS `oxo_materials`;
 CREATE TABLE `oxo_materials` (

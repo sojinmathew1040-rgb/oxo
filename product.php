@@ -527,6 +527,9 @@ function render_scale_graph($h, $w, $l) {
                 <input type="email" name="email" placeholder="Your Email Address" required class="consult-input">
             </div>
             <div class="form-input-group">
+                <input type="tel" name="whatsapp" placeholder="WhatsApp / Mobile Number" required class="consult-input">
+            </div>
+            <div class="form-input-group">
                 <textarea name="message" placeholder="Tell us about your space or questions about <?php echo htmlspecialchars($product['title'] ?? ''); ?>..." required class="consult-input" rows="4"></textarea>
             </div>
             <button type="submit" class="magnetic-btn form-submit-btn" style="width: 100%; padding: 14px 28px; text-align: center; border-radius: 4px; background: var(--color-primary); color: var(--color-white); font-weight: 600;">

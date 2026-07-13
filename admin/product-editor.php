@@ -102,6 +102,33 @@ if ($is_edit) {
     }
 }
 
+// Action: Mark inquiry as addressed from this product details view
+if ($is_edit && isset($_GET['inquiry_action']) && $_GET['inquiry_action'] === 'address' && isset($_GET['inquiry_id'])) {
+    $inquiry_id = (int)$_GET['inquiry_id'];
+    try {
+        $up_stmt = $db->prepare("UPDATE `oxo_consultations` SET `status` = 'Addressed' WHERE `id` = ?");
+        $up_stmt->execute([$inquiry_id]);
+        
+        // Redirect to avoid refresh/re-submission anomalies
+        header("Location: product-editor.php?action=edit&id=" . urlencode($product_id));
+        exit;
+    } catch (\Exception $e) {
+        error_log("Failed to update inquiry status in product-editor: " . $e->getMessage());
+    }
+}
+
+// Load inquiries for this specific product
+$product_inquiries = [];
+if ($is_edit && !empty($title)) {
+    try {
+        $inq_stmt = $db->prepare("SELECT * FROM `oxo_consultations` WHERE `product_title` = ? ORDER BY `created_at` DESC");
+        $inq_stmt->execute([$title]);
+        $product_inquiries = $inq_stmt->fetchAll();
+    } catch (\Exception $e) {
+        error_log("Failed to load inquiries for specific product: " . $e->getMessage());
+    }
+}
+
 // Handle Form Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id = isset($_POST['id']) ? trim($_POST['id']) : '';
@@ -623,6 +650,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             </div>
         </form>
+
+        <?php if ($is_edit): ?>
+            <!-- Product Inquiries Card -->
+            <div class="editor-card" style="margin-top: 30px; clear: both;">
+                <h3 class="editor-card-title" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-panel-border); padding-bottom: 12px; margin-bottom: 20px;">
+                    <span style="display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-comments" style="color: var(--color-accent); font-size: 1.1rem;"></i>
+                        Product Inquiries 
+                        <span style="font-size: 0.78rem; font-weight: 500; background: var(--color-panel-border); padding: 2px 8px; border-radius: 12px; color: var(--color-primary);">
+                            <?php echo count($product_inquiries); ?> inquiries
+                        </span>
+                    </span>
+                </h3>
+                
+                <?php if (empty($product_inquiries)): ?>
+                    <div style="text-align: center; padding: 30px 15px; color: var(--color-gray);">
+                        <i class="fa-regular fa-comment-dots" style="font-size: 2.2rem; margin-bottom: 12px; opacity: 0.5; display: block; color: var(--color-accent);"></i>
+                        <p style="font-size: 0.88rem; margin: 0;">No bespoke inquiries received for this specific product yet.</p>
+                    </div>
+                <?php else: ?>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.82rem; min-width: 600px;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid var(--color-panel-border); font-family: var(--font-title); font-weight: 700; text-transform: uppercase; color: var(--color-gray); letter-spacing: 0.5px;">
+                                    <th style="padding: 12px 10px;">Client</th>
+                                    <th style="padding: 12px 10px;">Contact Details</th>
+                                    <th style="padding: 12px 10px;">Message</th>
+                                    <th style="padding: 12px 10px;">Status</th>
+                                    <th style="padding: 12px 10px; text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($product_inquiries as $inq): 
+                                    $is_pending = (strtolower($inq['status']) === 'pending');
+                                    $status_color = $is_pending ? '#E05A47' : '#2D8B57';
+                                ?>
+                                    <tr style="border-bottom: 1px solid var(--color-panel-border); transition: background 0.2s;">
+                                        <td style="padding: 14px 10px; font-weight: 700; color: var(--color-primary);"><?php echo htmlspecialchars($inq['name']); ?></td>
+                                        <td style="padding: 14px 10px;">
+                                            <a href="mailto:<?php echo htmlspecialchars($inq['email']); ?>" style="color: var(--color-accent); font-weight: 500; font-family: var(--font-numeric); text-decoration: none; display: block; margin-bottom: 5px;">
+                                                <i class="fa-regular fa-envelope" style="margin-right: 4px;"></i><?php echo htmlspecialchars($inq['email']); ?>
+                                            </a>
+                                            <?php if (!empty($inq['whatsapp'])): ?>
+                                                <div style="margin-top: 4px;">
+                                                    <a href="https://wa.me/<?php echo preg_replace('/[^0-9]/', '', $inq['whatsapp']); ?>" target="_blank" style="color: #25D366; font-weight: 500; font-family: var(--font-numeric); display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
+                                                        <i class="fa-brands fa-whatsapp"></i> <?php echo htmlspecialchars($inq['whatsapp']); ?>
+                                                    </a>
+                                                </div>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td style="padding: 14px 10px; max-width: 320px; line-height: 1.5; color: #4A564E;"><?php echo nl2br(htmlspecialchars($inq['message'])); ?></td>
+                                        <td style="padding: 14px 10px;">
+                                            <span style="display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; background: <?php echo $status_color; ?>12; color: <?php echo $status_color; ?>;">
+                                                <?php echo htmlspecialchars($inq['status']); ?>
+                                            </span>
+                                        </td>
+                                        <td style="padding: 14px 10px; text-align: right;">
+                                            <?php if ($is_pending): ?>
+                                                <a href="product-editor.php?action=edit&id=<?php echo urlencode($id); ?>&inquiry_action=address&inquiry_id=<?php echo $inq['id']; ?>" 
+                                                   class="action-btn" style="padding: 6px 12px; font-size: 0.7rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--color-accent); background: transparent; color: var(--color-accent); text-decoration: none;">
+                                                    <i class="fa-solid fa-check"></i> Mark Addressed
+                                                </a>
+                                            <?php else: ?>
+                                                <span style="color: var(--color-gray); font-size: 0.75rem; font-weight: 600; text-transform: uppercase;"><i class="fa-solid fa-circle-check"></i> Resolved</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
 
         </main>
     </div>

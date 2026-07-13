@@ -56,43 +56,134 @@ if (empty($materials)) {
         <div class="container">
             
             <style>
-                :root {
-                    --color-bg-panel: #ffffff;
-                    --color-panel-border: rgba(10, 46, 36, 0.08);
-                }
-                .shop-layout {
+                /* Premium Glassmorphic White & Forest Green Filter Bar & Drawer */
+                .filter-control-deck {
+                    background: #ffffff;
+                    border: 1px solid rgba(10, 46, 36, 0.08);
+                    border-radius: 16px;
+                    padding: 16px 24px;
+                    margin: 30px 0 20px 0;
                     display: flex;
-                    gap: 40px;
-                    align-items: start;
-                    margin-top: 40px;
-                }
-                .shop-sidebar-filters {
-                    flex: 0 0 300px;
-                    width: 300px;
-                    position: sticky;
-                    top: 100px;
-                    background: var(--color-bg-panel);
-                    border: 1px solid var(--color-panel-border);
-                    border-radius: 20px;
-                    padding: 28px;
+                    flex-direction: column;
+                    gap: 12px;
                     box-shadow: 0 10px 30px rgba(10, 46, 36, 0.03);
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    transition: all 0.3s ease;
                 }
-                .shop-sidebar-filters:hover {
+                .filter-control-deck:hover {
                     box-shadow: 0 15px 40px rgba(10, 46, 36, 0.06);
                 }
-                .shop-sidebar-filters h4 {
-                    font-size: 1.05rem;
+                .deck-top-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    width: 100%;
+                }
+                .deck-title {
+                    font-family: var(--font-title);
+                    font-size: 0.85rem;
                     font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 1.5px;
+                    color: var(--color-primary);
                     margin: 0;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .deck-actions {
+                    display: flex;
+                    align-items: center;
+                    gap: 15px;
+                }
+                .active-tags-list {
+                    display: flex;
+                    gap: 8px;
+                    overflow-x: auto;
+                    white-space: nowrap;
+                    padding-bottom: 4px;
+                    -webkit-overflow-scrolling: touch;
+                }
+                /* Hide scrollbar for Chrome, Safari and Opera */
+                .active-tags-list::-webkit-scrollbar {
+                    display: none;
+                }
+                /* Hide scrollbar for IE, Edge and Firefox */
+                .active-tags-list {
+                    -ms-overflow-style: none;  /* IE and Edge */
+                    scrollbar-width: none;  /* Firefox */
+                }
+                .active-tags-list:empty {
+                    display: none;
+                }
+                
+                .filter-tag {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 6px 12px;
+                    border-radius: 20px;
+                    background: rgba(10, 46, 36, 0.05);
+                    color: var(--color-primary);
+                    border: 1px solid rgba(10, 46, 36, 0.1);
+                    font-size: 0.72rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    flex-shrink: 0;
+                }
+                .filter-tag:hover {
+                    background: rgba(235, 94, 85, 0.1);
+                    color: #ff6b62;
+                    border-color: rgba(235, 94, 85, 0.25);
+                    transform: translateY(-1px);
+                }
+                .filter-tag i {
+                    font-size: 0.65rem;
+                    opacity: 0.8;
+                }
+
+                .btn-toggle-filters {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 10px 22px;
+                    border-radius: 30px;
+                    background: rgba(10, 46, 36, 0.05);
+                    color: var(--color-primary);
+                    border: 1px solid rgba(10, 46, 36, 0.12);
+                    font-size: 0.74rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    cursor: pointer;
+                    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .btn-toggle-filters:hover {
+                    background: var(--color-primary);
+                    color: var(--color-white);
+                    border-color: var(--color-primary);
+                    box-shadow: 0 4px 12px rgba(10, 46, 36, 0.15);
+                }
+                .btn-toggle-filters .toggle-icon {
+                    transition: transform 0.3s ease;
+                }
+
+                /* Expandable Filter Drawer */
+                .filter-drawer {
+                    display: none; /* Controlled by JS */
+                    background: #ffffff;
+                    border: 1px solid rgba(10, 46, 36, 0.08);
+                    border-radius: 20px;
+                    padding: 30px;
+                    margin-bottom: 30px;
+                    box-shadow: 0 15px 40px rgba(10, 46, 36, 0.04);
+                }
+                .drawer-grid {
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 30px;
                 }
                 .filter-group {
-                    border-bottom: 1px solid var(--color-panel-border);
-                    padding-bottom: 24px;
-                    margin-bottom: 24px;
-                }
-                .filter-group:last-child {
-                    border-bottom: none;
                     padding-bottom: 0;
                     margin-bottom: 0;
                 }
@@ -101,8 +192,8 @@ if (empty($materials)) {
                     font-weight: 800;
                     text-transform: uppercase;
                     color: var(--color-primary);
-                    letter-spacing: 1.2px;
-                    margin-bottom: 14px;
+                    letter-spacing: 1.5px;
+                    margin-bottom: 16px;
                     margin-top: 0;
                     display: flex;
                     align-items: center;
@@ -137,7 +228,7 @@ if (empty($materials)) {
                     display: inline-block;
                     padding: 8px 16px;
                     border-radius: 30px;
-                    font-size: 0.78rem;
+                    font-size: 0.74rem;
                     font-weight: 600;
                     color: var(--color-primary);
                     border: 1px solid rgba(10, 46, 36, 0.08);
@@ -147,6 +238,7 @@ if (empty($materials)) {
                 .filter-badge-item:hover .filter-badge-content {
                     border-color: var(--color-accent);
                     color: var(--color-accent);
+                    background: rgba(200, 162, 118, 0.05);
                     transform: translateY(-1px);
                 }
                 .filter-badge-item input[type="radio"]:checked + .filter-badge-content {
@@ -154,6 +246,7 @@ if (empty($materials)) {
                     color: var(--color-white);
                     border-color: var(--color-primary);
                     box-shadow: 0 4px 10px rgba(10, 46, 36, 0.12);
+                    font-weight: 700;
                 }
 
                 /* Brand Partner Logo Grid Selector */
@@ -221,7 +314,7 @@ if (empty($materials)) {
                     background: var(--color-accent);
                     color: var(--color-white);
                     border-color: var(--color-accent);
-                    box-shadow: 0 4px 12px rgba(200, 162, 118, 0.2);
+                    box-shadow: 0 4px 12px rgba(200, 162, 118, 0.25);
                 }
                 .brand-text-fallback {
                     font-family: var(--font-title);
@@ -300,15 +393,18 @@ if (empty($materials)) {
                 }
                 
                 @media (max-width: 992px) {
-                    .shop-layout {
-                        flex-direction: column !important;
-                        gap: 30px !important;
+                    .drawer-grid {
+                        grid-template-columns: repeat(2, 1fr);
+                        gap: 24px;
                     }
-                    .shop-sidebar-filters {
-                        width: 100% !important;
-                        flex: none !important;
-                        position: relative !important;
-                        top: 0 !important;
+                }
+                @media (max-width: 576px) {
+                    .drawer-grid {
+                        grid-template-columns: 1fr;
+                        gap: 20px;
+                    }
+                    .filter-control-deck {
+                        padding: 12px 16px;
                     }
                 }
             </style>
@@ -319,18 +415,29 @@ if (empty($materials)) {
                 <p class="shop-subtitle">Discover curated luxury creations, crafted for silent elegance and premium spaces.</p>
             </div>
 
-            <div class="shop-layout">
-                <!-- Sidebar Filters -->
-                <aside class="shop-sidebar-filters">
-                    <!-- Header -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-panel-border); padding-bottom: 15px; margin-bottom: 20px;">
-                        <h4 style="font-family: var(--font-title); color: var(--color-primary); display: flex; align-items: center; gap: 8px;">
-                            <i class="fa-solid fa-sliders" style="color: var(--color-accent); font-size: 0.95rem;"></i> Filter Option
-                        </h4>
-                        <button id="btn-clear-filters" style="font-size: 0.68rem; font-weight: 800; color: var(--color-accent); background: none; border: none; cursor: pointer; text-transform: uppercase; letter-spacing: 0.8px;">Clear All</button>
+            <!-- Filter Deck -->
+            <div class="filter-control-deck">
+                <div class="deck-top-row">
+                    <h4 class="deck-title">
+                        <i class="fa-solid fa-sliders" style="color: var(--color-accent); font-size: 0.9rem;"></i> Filter Options
+                    </h4>
+                    <div class="deck-actions">
+                        <button id="btn-clear-filters" style="font-size: 0.68rem; font-weight: 800; color: var(--color-accent); background: none; border: none; cursor: pointer; text-transform: uppercase; letter-spacing: 0.8px; display: none;">Clear All</button>
+                        <button class="btn-toggle-filters" id="btn-toggle-filters">
+                            <span>Filter & Refine</span>
+                            <i class="fa-solid fa-chevron-down toggle-icon"></i>
+                        </button>
                     </div>
+                </div>
+                <div class="active-tags-list" id="active-tags-list">
+                    <!-- Dynamic Tags rendered by Javascript -->
+                </div>
+            </div>
 
-                    <!-- Category Filter -->
+            <!-- Expandable Filter Drawer -->
+            <div class="filter-drawer" id="filter-drawer">
+                <div class="drawer-grid">
+                    <!-- Column 1: Category Filter -->
                     <div class="filter-group">
                         <h5>Category</h5>
                         <div class="filter-badge-list">
@@ -347,7 +454,7 @@ if (empty($materials)) {
                         </div>
                     </div>
 
-                    <!-- Material Filter -->
+                    <!-- Column 2: Material Filter -->
                     <div class="filter-group">
                         <h5>Material</h5>
                         <div class="filter-badge-list">
@@ -364,24 +471,37 @@ if (empty($materials)) {
                         </div>
                     </div>
 
-                    <!-- Color Finishes Filter -->
-                    <div class="filter-group">
-                        <h5>Finish / Color</h5>
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; min-height: 32px;">
-                            <button type="button" class="sidebar-color-btn active" data-color-id="all" title="All Colors" 
-                                    style="border-color: var(--color-accent);">
-                                <span style="width: 18px; height: 18px; border-radius: 50%; background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red); display: inline-block;"></span>
-                            </button>
-                            <?php foreach ($colors_map as $cid => $cdata): ?>
-                                <button type="button" class="sidebar-color-btn" data-color-id="<?php echo $cid; ?>" title="<?php echo htmlspecialchars($cdata['name']); ?>" data-hex="<?php echo htmlspecialchars($cdata['hex']); ?>">
-                                    <span style="width: 18px; height: 18px; border-radius: 50%; background-color: <?php echo htmlspecialchars($cdata['hex']); ?>; display: inline-block; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08); <?php if (strtolower($cdata['hex']) === '#ffffff') echo 'border: 1px solid var(--color-panel-border);'; ?>"></span>
+                    <!-- Column 3: Color Finishes & Price Bracket -->
+                    <div class="filter-group" style="display: flex; flex-direction: column; gap: 24px;">
+                        <div>
+                            <h5>Finish / Color</h5>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 32px; margin-top: 10px;">
+                                <button type="button" class="sidebar-color-btn active" data-color-id="all" title="All Colors" 
+                                        style="border-color: var(--color-accent);">
+                                    <span style="width: 18px; height: 18px; border-radius: 50%; background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red); display: inline-block;"></span>
                                 </button>
-                            <?php endforeach; ?>
+                                <?php foreach ($colors_map as $cid => $cdata): ?>
+                                    <button type="button" class="sidebar-color-btn" data-color-id="<?php echo $cid; ?>" title="<?php echo htmlspecialchars($cdata['name']); ?>" data-hex="<?php echo htmlspecialchars($cdata['hex']); ?>">
+                                        <span style="width: 18px; height: 18px; border-radius: 50%; background-color: <?php echo htmlspecialchars($cdata['hex']); ?>; display: inline-block; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15); <?php if (strtolower($cdata['hex']) === '#ffffff') echo 'border: 1px solid rgba(255,255,255,0.2);'; ?>"></span>
+                                    </button>
+                                <?php endforeach; ?>
+                            </div>
+                            <div id="sidebar-color-label" style="font-size: 0.68rem; color: rgba(255, 255, 255, 0.4); margin-top: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">All Colors</div>
                         </div>
-                        <div id="sidebar-color-label" style="font-size: 0.68rem; color: var(--color-gray); margin-top: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">All Colors</div>
+
+                        <div>
+                            <h5>Price Bracket (Max)</h5>
+                            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                                <input type="range" id="price-range" min="5000" max="600000" step="5000" value="600000" style="width: 100%; accent-color: var(--color-accent); cursor: pointer;">
+                                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.8); font-family: var(--font-numeric);">
+                                    <span>₹5,000</span>
+                                    <span id="price-val" style="color: var(--color-accent);">₹6,00,000</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Brand Filter -->
+                    <!-- Column 4: Brand Partner -->
                     <?php if (!empty($brands)): ?>
                         <div class="filter-group">
                             <h5>Brand Partner</h5>
@@ -406,23 +526,12 @@ if (empty($materials)) {
                             </div>
                         </div>
                     <?php endif; ?>
+                </div>
+            </div>
 
-                    <!-- Price Range Filter -->
-                    <div class="filter-group" style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">
-                        <h5>Price Bracket (Max)</h5>
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <input type="range" id="price-range" min="5000" max="600000" step="5000" value="600000" style="width: 100%; accent-color: var(--color-accent); cursor: pointer;">
-                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: var(--color-primary); font-family: var(--font-numeric);">
-                                <span>₹5,000</span>
-                                <span id="price-val" style="color: var(--color-accent);">₹6,00,000</span>
-                            </div>
-                        </div>
-                    </div>
-                </aside>
-
-                <!-- Grid Section -->
-                <div style="flex: 1;">
-                    <div class="product-grid" style="margin-top: 0; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));">
+            <!-- Grid Section -->
+            <div class="shop-grid-container" style="width: 100%;">
+                <div class="product-grid" style="margin-top: 0; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
                 <?php 
                     foreach ($PRODUCTS_DB as $pid => $p) {
                         $p_mat = isset($p['material_slug']) ? $p['material_slug'] : 'wood';
@@ -528,8 +637,8 @@ if (empty($materials)) {
                         </div>
                     </div>
                 <?php } ?>
-                </div> <!-- Closes flex: 1 wrapper -->
-            </div> <!-- Closes shop-layout -->
+                </div> <!-- Closes product-grid -->
+            </div> <!-- Closes shop-grid-container -->
         </div> <!-- Closes container -->
     </section>
 
@@ -581,7 +690,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 2. Sidebar Live Multi-Criteria Filtering
+    // 2. Sidebar Live Multi-Criteria Filtering helpers
     const getCategory = () => {
         const selected = document.querySelector('input[name="shop_category"]:checked');
         return selected ? selected.value : 'all';
@@ -607,6 +716,127 @@ document.addEventListener('DOMContentLoaded', () => {
         return range ? parseInt(range.value) : 600000;
     };
 
+    // 3. Dynamic Active Tags Control
+    const activeTagsList = document.getElementById('active-tags-list');
+    const btnClearAll = document.getElementById('btn-clear-filters');
+
+    function updateActiveTags() {
+        if (!activeTagsList) return;
+        activeTagsList.innerHTML = '';
+        
+        let tagsHtml = '';
+        let hasActiveFilters = false;
+        
+        // Category Tag
+        const catVal = getCategory();
+        if (catVal !== 'all') {
+            hasActiveFilters = true;
+            const selectedRadio = document.querySelector(`input[name="shop_category"][value="${catVal}"]`);
+            const labelText = selectedRadio ? selectedRadio.nextElementSibling.textContent.trim() : catVal;
+            tagsHtml += `
+                <div class="filter-tag" data-type="category" title="Remove Category filter">
+                    <span>${labelText}</span>
+                    <i class="fa-solid fa-xmark"></i>
+                </div>
+            `;
+        }
+        
+        // Material Tag
+        const matVal = getMaterial();
+        if (matVal !== 'all') {
+            hasActiveFilters = true;
+            const selectedRadio = document.querySelector(`input[name="shop_material"][value="${matVal}"]`);
+            const labelText = selectedRadio ? selectedRadio.nextElementSibling.textContent.trim() : matVal;
+            tagsHtml += `
+                <div class="filter-tag" data-type="material" title="Remove Material filter">
+                    <span>${labelText}</span>
+                    <i class="fa-solid fa-xmark"></i>
+                </div>
+            `;
+        }
+        
+        // Color Tag
+        const colorVal = getColor();
+        if (colorVal !== 'all') {
+            hasActiveFilters = true;
+            const activeColorBtn = document.querySelector('.sidebar-color-btn.active');
+            const labelText = activeColorBtn ? activeColorBtn.getAttribute('title') : 'Color';
+            tagsHtml += `
+                <div class="filter-tag" data-type="color" title="Remove Color filter">
+                    <span>${labelText}</span>
+                    <i class="fa-solid fa-xmark"></i>
+                </div>
+            `;
+        }
+        
+        // Brand Tag
+        const brandVal = getBrand();
+        if (brandVal !== 'all') {
+            hasActiveFilters = true;
+            const selectedRadio = document.querySelector(`input[name="shop_brand"][value="${brandVal}"]`);
+            const labelText = selectedRadio ? selectedRadio.closest('.brand-filter-item').getAttribute('title') : 'Brand';
+            tagsHtml += `
+                <div class="filter-tag" data-type="brand" title="Remove Brand filter">
+                    <span>${labelText}</span>
+                    <i class="fa-solid fa-xmark"></i>
+                </div>
+            `;
+        }
+        
+        // Price Tag
+        const maxPrice = getMaxPrice();
+        if (maxPrice < 600000) {
+            hasActiveFilters = true;
+            tagsHtml += `
+                <div class="filter-tag" data-type="price" title="Remove Price Limit">
+                    <span>Under ₹${maxPrice.toLocaleString('en-IN')}</span>
+                    <i class="fa-solid fa-xmark"></i>
+                </div>
+            `;
+        }
+        
+        activeTagsList.innerHTML = tagsHtml;
+        
+        // Show/hide Clear All button
+        if (btnClearAll) {
+            btnClearAll.style.display = hasActiveFilters ? 'inline-block' : 'none';
+        }
+        
+        // Bind tag dismissal clicks
+        activeTagsList.querySelectorAll('.filter-tag').forEach(tag => {
+            tag.addEventListener('click', (e) => {
+                const type = tag.getAttribute('data-type');
+                if (type === 'category') {
+                    const defaultRadio = document.querySelector('input[name="shop_category"][value="all"]');
+                    if (defaultRadio) defaultRadio.checked = true;
+                } else if (type === 'material') {
+                    const defaultRadio = document.querySelector('input[name="shop_material"][value="all"]');
+                    if (defaultRadio) defaultRadio.checked = true;
+                } else if (type === 'color') {
+                    document.querySelectorAll('.sidebar-color-btn').forEach(b => b.classList.remove('active'));
+                    const defaultBtn = document.querySelector('.sidebar-color-btn[data-color-id="all"]');
+                    if (defaultBtn) {
+                        defaultBtn.classList.add('active');
+                        defaultBtn.style.borderColor = 'var(--color-accent)';
+                    }
+                    const sidebarColorLabel = document.getElementById('sidebar-color-label');
+                    if (sidebarColorLabel) sidebarColorLabel.textContent = 'All Colors';
+                } else if (type === 'brand') {
+                    const defaultRadio = document.querySelector('input[name="shop_brand"][value="all"]');
+                    if (defaultRadio) defaultRadio.checked = true;
+                } else if (type === 'price') {
+                    const priceRange = document.getElementById('price-range');
+                    if (priceRange) {
+                        priceRange.value = 600000;
+                        const priceVal = document.getElementById('price-val');
+                        if (priceVal) priceVal.textContent = '₹6,00,000';
+                    }
+                }
+                runShopFilter();
+            });
+        });
+    }
+
     function runShopFilter() {
         const cat = getCategory();
         const mat = getMaterial();
@@ -615,6 +845,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const maxPrice = getMaxPrice();
 
         const productCards = document.querySelectorAll('.product-card');
+        
+        // Update tags instantly
+        updateActiveTags();
         
         // Use GSAP animation timeline if available
         if (typeof gsap !== 'undefined') {
@@ -719,7 +952,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    const btnClearAll = document.getElementById('btn-clear-filters');
     if (btnClearAll) {
         btnClearAll.addEventListener('click', () => {
             const catAll = document.querySelector('input[name="shop_category"][value="all"]');
@@ -751,6 +983,69 @@ document.addEventListener('DOMContentLoaded', () => {
             runShopFilter();
         });
     }
+
+    // 4. Expandable Filter Drawer slide toggle behavior
+    const btnToggleFilters = document.getElementById('btn-toggle-filters');
+    const filterDrawer = document.getElementById('filter-drawer');
+    const toggleIcon = btnToggleFilters ? btnToggleFilters.querySelector('.toggle-icon') : null;
+
+    if (btnToggleFilters && filterDrawer) {
+        btnToggleFilters.addEventListener('click', () => {
+            const isOpen = filterDrawer.classList.contains('open');
+            if (isOpen) {
+                filterDrawer.classList.remove('open');
+                if (typeof gsap !== 'undefined') {
+                    if (toggleIcon) gsap.to(toggleIcon, { rotation: 0, duration: 0.3 });
+                    gsap.to(filterDrawer, {
+                        height: 0,
+                        opacity: 0,
+                        paddingTop: 0,
+                        paddingBottom: 0,
+                        marginTop: 0,
+                        marginBottom: 0,
+                        duration: 0.45,
+                        ease: "power2.inOut",
+                        onComplete: () => {
+                            filterDrawer.style.display = 'none';
+                        }
+                    });
+                } else {
+                    filterDrawer.style.display = 'none';
+                }
+            } else {
+                filterDrawer.classList.add('open');
+                filterDrawer.style.display = 'block';
+                
+                // Get full expanded scroll height
+                filterDrawer.style.height = 'auto';
+                filterDrawer.style.paddingTop = '30px';
+                filterDrawer.style.paddingBottom = '30px';
+                const targetHeight = filterDrawer.scrollHeight;
+                
+                if (typeof gsap !== 'undefined') {
+                    if (toggleIcon) gsap.to(toggleIcon, { rotation: 180, duration: 0.3 });
+                    
+                    // Animate open
+                    gsap.fromTo(filterDrawer, 
+                        { height: 0, opacity: 0 },
+                        { height: targetHeight, opacity: 1, duration: 0.5, ease: "power3.out", clearProps: "height" }
+                    );
+                    
+                    // Stagger group reveal
+                    const groups = filterDrawer.querySelectorAll('.filter-group');
+                    gsap.fromTo(groups,
+                        { opacity: 0, y: 15 },
+                        { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: "power2.out", delay: 0.1 }
+                    );
+                } else {
+                    filterDrawer.style.opacity = '1';
+                }
+            }
+        });
+    }
+
+    // Initialize tags on load
+    updateActiveTags();
 });
 </script>
 
