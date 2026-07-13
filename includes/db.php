@@ -4,6 +4,17 @@
  * Handles connection, DB auto-creation, and schema initialization.
  */
 
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.use_only_cookies', 1);
+    session_start();
+}
+
+// Google OAuth Configuration
+if (!defined('GOOGLE_CLIENT_ID')) {
+    define('GOOGLE_CLIENT_ID', '105645089758-b99k8p7nia6pmr1ts8a73uo78g9av8nr.apps.googleusercontent.com');
+}
+
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
 define('DB_PASS', '');
@@ -229,6 +240,17 @@ function initialize_tables($pdo) {
     if (!$col_stmt->fetch()) {
         $pdo->exec("ALTER TABLE `oxo_products` ADD COLUMN `color_ids` TEXT DEFAULT NULL");
     }
+    
+    // 7. Create users table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `oxo_users` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `name` VARCHAR(255) NOT NULL,
+        `email` VARCHAR(255) UNIQUE NOT NULL,
+        `password` VARCHAR(255) NOT NULL,
+        `phone` VARCHAR(50) DEFAULT NULL,
+        `address` TEXT DEFAULT NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB;");
     
     // Check if table is empty, if so, seed from static products-db.php
     $stmt = $pdo->query("SELECT COUNT(*) FROM `oxo_products`");
