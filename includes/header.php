@@ -63,8 +63,8 @@ if ($is_product_page && $current_product) {
             
             <nav class="nav-menu" id="nav-menu">
                 <a href="<?php echo ($current_script !== 'index.php') ? 'index.php#hero' : '#hero'; ?>" class="nav-link">Home</a>
-                <a href="<?php echo ($current_script !== 'index.php') ? 'index.php#products' : '#products'; ?>" class="nav-link <?php echo ($current_script === 'shop.php') ? 'active' : ''; ?>">Products</a>
-                <a href="<?php echo ($current_script !== 'about.php' && $current_script !== 'index.php') ? 'index.php#about' : 'about.php'; ?>" class="nav-link <?php echo ($current_script === 'about.php') ? 'active' : ''; ?>">About</a>
+                <a href="<?php echo ($current_script !== 'index.php') ? 'index.php#collections-container' : '#collections-container'; ?>" class="nav-link <?php echo ($current_script === 'shop.php') ? 'active' : ''; ?>">Products</a>
+                <a href="<?php echo ($current_script === 'index.php') ? '#about' : (($current_script === 'about.php') ? '#philosophy' : 'about.php#philosophy'); ?>" class="nav-link <?php echo ($current_script === 'about.php') ? 'active' : ''; ?>">About</a>
                 <a href="<?php echo ($current_script !== 'index.php') ? 'index.php#contact' : '#contact'; ?>" class="nav-link">Contact</a>
             </nav>
             
@@ -80,16 +80,6 @@ if ($is_product_page && $current_product) {
                     </a>
                 <?php endif; ?>
 
-                <button class="header-btn magnetic" id="wishlist-toggle" aria-label="Open Wishlist">
-                    <span class="magnetic-btn-text"><i class="fa-regular fa-heart"></i></span>
-                    <span class="badge-count" id="wishlist-badge" style="display: none;">0</span>
-                </button>
-                
-                <button class="header-btn magnetic" id="cart-toggle" aria-label="Open Cart">
-                    <span class="magnetic-btn-text"><i class="fa-solid fa-bag-shopping"></i></span>
-                    <span class="badge-count" id="cart-badge" style="display: none;">0</span>
-                </button>
-                
                 <button class="menu-toggle" id="menu-toggle" aria-label="Toggle Menu">
                     <i class="fa-solid fa-bars-staggered"></i>
                 </button>

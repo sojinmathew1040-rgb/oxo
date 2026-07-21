@@ -123,6 +123,25 @@ if ($current_tab === 'settings' && $_SERVER['REQUEST_METHOD'] === 'POST' && isse
     }
 }
 
+// 3.5 ACTION: Handle WhatsApp Update
+if ($current_tab === 'settings' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'update_whatsapp') {
+    $whatsapp_num = isset($_POST['whatsapp']) ? trim($_POST['whatsapp']) : '';
+    if ($db) {
+        try {
+            $stmt = $db->prepare("UPDATE `oxo_admins` SET `whatsapp` = ? WHERE `username` = ?");
+            $stmt->execute([$whatsapp_num, $_SESSION['admin_username']]);
+            $message = "WhatsApp contact number successfully updated.";
+            $message_type = 'success';
+        } catch (\Exception $e) {
+            $message = "Failed to update WhatsApp contact: " . $e->getMessage();
+            $message_type = 'danger';
+        }
+    } else {
+        $message = "Database offline. WhatsApp update disabled.";
+        $message_type = 'danger';
+    }
+}
+
 // 4. ACTION: Handle Brand Deletion
 if ($current_tab === 'collections' && isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $delete_brand_id = (int)$_GET['id'];
@@ -238,6 +257,7 @@ if ($current_tab === 'collections' && isset($_GET['action']) && $_GET['action'] 
 if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'add_category') {
     $cat_name = isset($_POST['cat_name']) ? trim($_POST['cat_name']) : '';
     $cat_slug = isset($_POST['cat_slug']) ? trim($_POST['cat_slug']) : '';
+    $cat_bg_color = isset($_POST['cat_bg_color']) ? trim($_POST['cat_bg_color']) : '';
     
     if (empty($cat_name) || empty($cat_slug)) {
         $message = "Category Name and Slug are required.";
@@ -248,13 +268,138 @@ if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && i
         
         if ($db) {
             try {
-                $stmt = $db->prepare("INSERT INTO `oxo_categories` (`slug`, `name`) VALUES (?, ?)");
-                $stmt->execute([$cat_slug, $cat_name]);
+                $stmt = $db->prepare("INSERT INTO `oxo_categories` (`slug`, `name`, `bg_color`) VALUES (?, ?, ?)");
+                $stmt->execute([$cat_slug, $cat_name, !empty($cat_bg_color) ? $cat_bg_color : null]);
                 
                 $message = "Category '{$cat_name}' added successfully.";
                 $message_type = 'success';
             } catch (\Exception $e) {
                 $message = "Failed to add category: " . $e->getMessage();
+                $message_type = 'danger';
+            }
+        }
+    }
+}
+
+// 7.5 ACTION: Handle Category Edit
+if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'edit_category') {
+    $cat_id = (int)$_POST['cat_id'];
+    $cat_name = isset($_POST['cat_name']) ? trim($_POST['cat_name']) : '';
+    $cat_slug = isset($_POST['cat_slug']) ? trim($_POST['cat_slug']) : '';
+    $cat_bg_color = isset($_POST['cat_bg_color']) ? trim($_POST['cat_bg_color']) : '';
+    
+    if (empty($cat_name) || empty($cat_slug)) {
+        $message = "Category Name and Slug are required.";
+        $message_type = 'danger';
+    } else {
+        $cat_slug = preg_replace('/[^a-z0-9-]/', '', strtolower($cat_slug));
+        if ($db) {
+            try {
+                $stmt = $db->prepare("UPDATE `oxo_categories` SET `slug` = ?, `name` = ?, `bg_color` = ? WHERE `id` = ?");
+                $stmt->execute([$cat_slug, $cat_name, !empty($cat_bg_color) ? $cat_bg_color : null, $cat_id]);
+                $message = "Category '{$cat_name}' updated successfully.";
+                $message_type = 'success';
+            } catch (\Exception $e) {
+                $message = "Failed to update category: " . $e->getMessage();
+                $message_type = 'danger';
+            }
+        }
+    }
+}
+
+// 7.6 ACTION: Handle Material Edit
+if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'edit_material') {
+    $mat_id = (int)$_POST['mat_id'];
+    $mat_name = isset($_POST['mat_name']) ? trim($_POST['mat_name']) : '';
+    $mat_slug = isset($_POST['mat_slug']) ? trim($_POST['mat_slug']) : '';
+    
+    if (empty($mat_name) || empty($mat_slug)) {
+        $message = "Material Name and Slug are required.";
+        $message_type = 'danger';
+    } else {
+        $mat_slug = preg_replace('/[^a-z0-9-]/', '', strtolower($mat_slug));
+        if ($db) {
+            try {
+                $stmt = $db->prepare("UPDATE `oxo_materials` SET `slug` = ?, `name` = ? WHERE `id` = ?");
+                $stmt->execute([$mat_slug, $mat_name, $mat_id]);
+                $message = "Material '{$mat_name}' updated successfully.";
+                $message_type = 'success';
+            } catch (\Exception $e) {
+                $message = "Failed to update material: " . $e->getMessage();
+                $message_type = 'danger';
+            }
+        }
+    }
+}
+
+// 7.7 ACTION: Handle Color Edit
+if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'edit_color') {
+    $color_id = (int)$_POST['color_id'];
+    $color_name = isset($_POST['color_name']) ? trim($_POST['color_name']) : '';
+    $color_hex = isset($_POST['color_hex']) ? trim($_POST['color_hex']) : '';
+    
+    if (empty($color_name) || empty($color_hex)) {
+        $message = "Color Name and HEX Value are required.";
+        $message_type = 'danger';
+    } else {
+        if ($db) {
+            try {
+                $stmt = $db->prepare("UPDATE `oxo_colors` SET `name` = ?, `hex` = ? WHERE `id` = ?");
+                $stmt->execute([$color_name, $color_hex, $color_id]);
+                $message = "Color '{$color_name}' updated successfully.";
+                $message_type = 'success';
+            } catch (\Exception $e) {
+                $message = "Failed to update color: " . $e->getMessage();
+                $message_type = 'danger';
+            }
+        }
+    }
+}
+
+// 7.8 ACTION: Handle Brand Edit
+if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'edit_brand') {
+    $brand_id = (int)$_POST['brand_id'];
+    $brand_name = isset($_POST['brand_name']) ? trim($_POST['brand_name']) : '';
+    $logo_url = isset($_POST['logo_url']) ? trim($_POST['logo_url']) : '';
+    
+    if (empty($brand_name)) {
+        $message = "Brand Name is required.";
+        $message_type = 'danger';
+    } else {
+        if ($db) {
+            try {
+                $logo_path = null;
+                if (isset($_FILES['logo_file']) && $_FILES['logo_file']['error'] === UPLOAD_ERR_OK) {
+                    $upload_dir = __DIR__ . '/../assets/images/uploads/';
+                    if (!file_exists($upload_dir)) {
+                        mkdir($upload_dir, 0755, true);
+                    }
+                    $file_name = basename($_FILES['logo_file']['name']);
+                    $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+                    $allowed_exts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+                    
+                    if (in_array($file_ext, $allowed_exts)) {
+                        $new_file_name = 'brand_' . time() . '_' . rand(100, 999) . '.' . $file_ext;
+                        if (move_uploaded_file($_FILES['logo_file']['tmp_name'], $upload_dir . $new_file_name)) {
+                            $logo_path = 'assets/images/uploads/' . $new_file_name;
+                        }
+                    }
+                } elseif (!empty($logo_url)) {
+                    $logo_path = $logo_url;
+                }
+                
+                if ($logo_path !== null) {
+                    $stmt = $db->prepare("UPDATE `oxo_brands` SET `name` = ?, `logo_path` = ? WHERE `id` = ?");
+                    $stmt->execute([$brand_name, $logo_path, $brand_id]);
+                } else {
+                    $stmt = $db->prepare("UPDATE `oxo_brands` SET `name` = ? WHERE `id` = ?");
+                    $stmt->execute([$brand_name, $brand_id]);
+                }
+                
+                $message = "Brand '{$brand_name}' updated successfully.";
+                $message_type = 'success';
+            } catch (\Exception $e) {
+                $message = "Failed to update brand: " . $e->getMessage();
                 $message_type = 'danger';
             }
         }
@@ -838,6 +983,24 @@ if (!function_exists('format_inr_admin')) {
 
         <!-- TAB B: ANALYTICS & INQUIRIES TAB -->
         <div class="tab-container <?php echo $current_tab === 'analytics' ? 'active' : ''; ?>">
+            <?php
+            // Group inquiries by status for CRM Kanban Board
+            $cols = [
+                'Pending' => [],
+                'Contacted' => [],
+                'Quoted' => [],
+                'Addressed' => []
+            ];
+            if (!empty($inquiries)) {
+                foreach ($inquiries as $inq) {
+                    $status = $inq['status'];
+                    if (!isset($cols[$status])) {
+                        $status = 'Pending';
+                    }
+                    $cols[$status][] = $inq;
+                }
+            }
+            ?>
             
             <!-- Analytics Cards -->
             <section class="stats-grid">
@@ -899,89 +1062,281 @@ if (!function_exists('format_inr_admin')) {
                 </div>
             </div>
 
-            <div class="table-card">
-                <div class="table-responsive">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 180px;">Client</th>
-                                <th style="width: 180px;">Contact</th>
-                                <th style="width: 180px;">Product Context</th>
-                                <th>Message</th>
-                                <th style="width: 120px;">Status</th>
-                                <th style="width: 100px; text-align: right;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($inquiries)): ?>
-                                <tr>
-                                    <td colspan="6" style="text-align: center; padding: 40px; color: var(--color-gray);">
-                                        No client inquiries received yet. Submit one from the product concierge.
-                                    </td>
-                                </tr>
-                            <?php else: ?>
-                                <?php foreach ($inquiries as $inq): ?>
-                                    <tr>
-                                        <td><strong><?php echo htmlspecialchars($inq['name']); ?></strong></td>
-                                        <td>
-                                            <a href="mailto:<?php echo htmlspecialchars($inq['email']); ?>" style="color: var(--color-accent); font-weight: 500; font-family: var(--font-numeric); display: block; margin-bottom: 5px;">
-                                                <i class="fa-regular fa-envelope" style="margin-right: 4px; font-size: 0.85rem;"></i><?php echo htmlspecialchars($inq['email']); ?>
+            <!-- Premium CRM Kanban Board -->
+            <style>
+                .kanban-board {
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 20px;
+                    margin-top: 15px;
+                    width: 100%;
+                }
+                .kanban-column {
+                    background: rgba(10, 46, 36, 0.015);
+                    border: 1px solid rgba(10, 46, 36, 0.05);
+                    border-radius: 12px;
+                    padding: 15px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 15px;
+                    min-height: 520px;
+                    transition: background-color 0.3s, border-color 0.3s;
+                }
+                .kanban-column.drag-over {
+                    background: rgba(200, 162, 118, 0.04);
+                    border-color: var(--color-accent);
+                }
+                .kanban-column-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-bottom: 2px solid rgba(10, 46, 36, 0.05);
+                    padding-bottom: 12px;
+                    margin-bottom: 5px;
+                }
+                .kanban-column-title {
+                    font-family: var(--font-title);
+                    font-size: 0.8rem;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    color: var(--color-primary);
+                }
+                .kanban-column-count {
+                    font-family: var(--font-numeric);
+                    font-size: 0.7rem;
+                    font-weight: 700;
+                    background: var(--color-primary);
+                    color: var(--color-white);
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                }
+                .kanban-cards-container {
+                    flex-grow: 1;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                    min-height: 420px;
+                }
+                .kanban-card {
+                    background: #ffffff;
+                    border: 1px solid rgba(10, 46, 36, 0.05);
+                    border-radius: 8px;
+                    padding: 16px;
+                    box-shadow: 0 4px 10px rgba(10, 46, 36, 0.02);
+                    cursor: grab;
+                    transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+                    user-select: none;
+                    position: relative;
+                }
+                .kanban-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 8px 18px rgba(10, 46, 36, 0.04);
+                    border-color: rgba(200, 162, 118, 0.3);
+                }
+                .kanban-card:active {
+                    cursor: grabbing;
+                }
+                .kanban-card.dragging {
+                    opacity: 0.4;
+                    transform: scale(0.98);
+                }
+                .kanban-card-client {
+                    font-size: 0.82rem;
+                    font-weight: 700;
+                    color: var(--color-primary);
+                    margin-bottom: 6px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .kanban-card-date {
+                    font-family: var(--font-numeric);
+                    font-size: 0.68rem;
+                    color: var(--color-gray);
+                }
+                .kanban-card-product {
+                    font-family: var(--font-title);
+                    font-size: 0.72rem;
+                    font-weight: 700;
+                    color: var(--color-accent);
+                    margin-bottom: 8px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                .kanban-card-message {
+                    font-size: 0.78rem;
+                    line-height: 1.45;
+                    color: #4A564E;
+                    margin-bottom: 12px;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 3;
+                    -webkit-box-orient: vertical;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-height: 52px;
+                }
+                .kanban-card-footer {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-top: 1px solid rgba(10, 46, 36, 0.05);
+                    padding-top: 10px;
+                    margin-top: 5px;
+                }
+                .kanban-card-links {
+                    display: flex;
+                    gap: 12px;
+                }
+                .kanban-card-link {
+                    font-size: 0.8rem;
+                    color: var(--color-gray);
+                    transition: color 0.2s;
+                }
+                .kanban-card-link.email:hover {
+                    color: var(--color-accent-green);
+                }
+                .kanban-card-link.whatsapp:hover {
+                    color: #25D366;
+                }
+                .kanban-reply-btn {
+                    padding: 6px 12px;
+                    border-radius: 4px;
+                    background: rgba(10, 46, 36, 0.03);
+                    color: var(--color-primary);
+                    font-size: 0.68rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    transition: all 0.2s;
+                    border: 1px solid rgba(10, 46, 36, 0.08);
+                }
+                .kanban-reply-btn:hover {
+                    background: var(--color-primary);
+                    color: var(--color-white);
+                    border-color: var(--color-primary);
+                }
+                .kanban-reply-btn img {
+                    width: 12px;
+                    height: 12px;
+                    object-fit: contain;
+                    filter: brightness(0.2);
+                    transition: filter 0.2s;
+                }
+                .kanban-reply-btn:hover img {
+                    filter: brightness(1) invert(1);
+                }
+                @media screen and (max-width: 1024px) {
+                    .kanban-board {
+                        grid-template-columns: repeat(2, 1fr);
+                    }
+                }
+                @media screen and (max-width: 640px) {
+                    .kanban-board {
+                        grid-template-columns: 1fr;
+                    }
+                }
+            </style>
+
+            <div class="kanban-board">
+                <?php 
+                $col_configs = [
+                    'Pending' => ['title' => 'New Leads', 'class' => 'pending'],
+                    'Contacted' => ['title' => 'Contacted', 'class' => 'contacted'],
+                    'Quoted' => ['title' => 'Quoted', 'class' => 'quoted'],
+                    'Addressed' => ['title' => 'Closed / Won', 'class' => 'addressed']
+                ];
+                foreach ($col_configs as $status_key => $config):
+                    $col_inquiries = isset($cols[$status_key]) ? $cols[$status_key] : [];
+                ?>
+                    <div class="kanban-column" data-status="<?php echo $status_key; ?>">
+                        <div class="kanban-column-header">
+                            <h4 class="kanban-column-title"><?php echo htmlspecialchars($config['title']); ?></h4>
+                            <span class="kanban-column-count"><?php echo count($col_inquiries); ?></span>
+                        </div>
+                        
+                        <div class="kanban-cards-container" data-status="<?php echo $status_key; ?>">
+                            <?php foreach ($col_inquiries as $inq): ?>
+                                <div class="kanban-card" draggable="true" data-id="<?php echo $inq['id']; ?>">
+                                    <div class="kanban-card-client">
+                                        <strong><?php echo htmlspecialchars($inq['name']); ?></strong>
+                                        <span class="kanban-card-date"><?php echo date('M d', strtotime($inq['created_at'])); ?></span>
+                                    </div>
+                                    <div class="kanban-card-product"><?php echo htmlspecialchars($inq['product_title']); ?></div>
+                                    <div class="kanban-card-message" title="<?php echo htmlspecialchars($inq['message']); ?>"><?php echo htmlspecialchars($inq['message']); ?></div>
+                                    
+                                    <div class="kanban-card-footer">
+                                        <div class="kanban-card-links">
+                                            <a href="mailto:<?php echo htmlspecialchars($inq['email']); ?>" class="kanban-card-link email" title="Send Email">
+                                                <i class="fa-regular fa-envelope"></i>
                                             </a>
-                                            <?php if (!empty($inq['whatsapp'])): ?>
-                                                <a href="https://wa.me/<?php echo preg_replace('/[^0-9]/', '', $inq['whatsapp']); ?>" target="_blank" style="color: #25D366; font-weight: 500; font-family: var(--font-numeric); display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
-                                                    <i class="fa-brands fa-whatsapp" style="font-size: 0.95rem;"></i> <?php echo htmlspecialchars($inq['whatsapp']); ?>
+                                            <?php if (!empty($inq['whatsapp'])): 
+                                                $clean_inq_wa = preg_replace('/[^0-9]/', '', $inq['whatsapp']);
+                                                if (strlen($clean_inq_wa) === 10) {
+                                                    $clean_inq_wa = '91' . $clean_inq_wa;
+                                                }
+                                            ?>
+                                                <a href="https://wa.me/<?php echo $clean_inq_wa; ?>" target="_blank" class="kanban-card-link whatsapp" title="Chat on WhatsApp">
+                                                    <i class="fa-brands fa-whatsapp"></i>
                                                 </a>
                                             <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <span style="font-weight: 600; color: var(--color-primary);"><?php echo htmlspecialchars($inq['product_title']); ?></span>
-                                        </td>
-                                        <td style="font-size: 0.85rem; line-height: 1.4; color: #4A564E;">
-                                            <?php echo htmlspecialchars($inq['message']); ?>
-                                            <div style="font-size: 0.72rem; color: var(--color-gray); margin-top: 5px; font-family: var(--font-numeric);">
-                                                Submitted: <?php echo date('M d, Y h:ia', strtotime($inq['created_at'])); ?>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="badge <?php echo $inq['status'] === 'Pending' ? 'pending' : 'addressed'; ?>">
-                                                <?php echo htmlspecialchars($inq['status']); ?>
-                                            </span>
-                                        </td>
-                                        <td style="text-align: right;">
-                                            <div class="table-actions" style="justify-content: flex-end; align-items: center;">
-                                                <?php if (!empty($inq['whatsapp'])): ?>
-                                                    <button onclick="openReplyModal(event, <?php echo $inq['id']; ?>, '<?php echo addslashes($inq['name']); ?>', '<?php echo addslashes($inq['whatsapp']); ?>', '<?php echo addslashes($inq['product_title']); ?>', '<?php echo addslashes(str_replace(array("\r", "\n"), ' ', $inq['message'])); ?>')"
-                                                       class="btn-icon" 
-                                                       style="color: var(--color-primary); border-color: rgba(10, 46, 36, 0.15); background: rgba(10, 46, 36, 0.05); padding: 0;"
-                                                       title="Send WhatsApp Response Dialog">
-                                                        <img src="../assets/images/logo.png" alt="OXO Logo" style="width: 16px; height: 16px; object-fit: contain; filter: brightness(0.2);">
-                                                    </button>
-                                                <?php endif; ?>
-                                                
-                                                <?php if ($inq['status'] === 'Pending'): ?>
-                                                    <a href="index.php?tab=analytics&action=address&inquiry_id=<?php echo $inq['id']; ?>" 
-                                                       class="btn-icon edit" 
-                                                       style="color: var(--color-success); border-color: rgba(95, 173, 138, 0.2); background: rgba(95, 173, 138, 0.08);"
-                                                       title="Mark as Addressed">
-                                                        <i class="fa-solid fa-check"></i>
-                                                    </a>
-                                                <?php else: ?>
-                                                    <span style="color: var(--color-gray); font-size: 0.75rem; font-style: italic; align-self: center;">Resolved</span>
-                                                <?php endif; ?>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
+                                        </div>
+                                        
+                                        <?php if (!empty($inq['whatsapp'])): ?>
+                                            <button onclick="openReplyModal(event, <?php echo $inq['id']; ?>, '<?php echo addslashes($inq['name']); ?>', '<?php echo addslashes($inq['whatsapp']); ?>', '<?php echo addslashes($inq['product_title']); ?>', '<?php echo addslashes(str_replace(array("\r", "\n"), ' ', $inq['message'])); ?>')"
+                                                    class="kanban-reply-btn" 
+                                                    title="Send WhatsApp Response Dialog">
+                                                <img src="../assets/images/logo.png" alt="Logo"> Reply
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
         </div>
 
-        <!-- TAB C: SETTINGS TAB (Password Reset) -->
+        <!-- TAB C: SETTINGS TAB (Password Reset & WhatsApp configuration) -->
         <div class="tab-container <?php echo $current_tab === 'settings' ? 'active' : ''; ?>">
-            <div class="settings-container">
+            <div class="settings-container" style="display: flex; flex-direction: column; gap: 30px;">
+                <!-- WhatsApp settings card -->
+                <div class="settings-card">
+                    <h3 class="editor-card-title"><i class="fa-brands fa-whatsapp" style="margin-right: 8px; color: #25D366;"></i> WhatsApp Configuration</h3>
+                    
+                    <?php
+                    // Fetch current WhatsApp number
+                    $current_whatsapp = '';
+                    if ($db) {
+                        try {
+                            $w_stmt = $db->prepare("SELECT `whatsapp` FROM `oxo_admins` WHERE `username` = ?");
+                            $w_stmt->execute([$_SESSION['admin_username']]);
+                            $current_whatsapp = $w_stmt->fetchColumn();
+                        } catch (\Exception $e) {}
+                    }
+                    ?>
+                    <form action="index.php?tab=settings" method="POST">
+                        <input type="hidden" name="form_action" value="update_whatsapp">
+                        
+                        <div class="form-group">
+                            <label for="whatsapp">Admin WhatsApp Contact Number</label>
+                            <input type="text" id="whatsapp" name="whatsapp" class="input-control" value="<?php echo htmlspecialchars($current_whatsapp ?? ''); ?>" placeholder="e.g. 919876543210 (include country code without + or spaces)" required>
+                            <p style="font-size: 0.75rem; color: var(--color-gray); margin-top: 5px;">
+                                Specify the WhatsApp contact number (with country code, e.g. 919876543210 for India) where client inquiries will be redirected.
+                            </p>
+                        </div>
+                        
+                        <button type="submit" class="action-btn" style="width: 100%; justify-content: center; margin-top: 10px; background: #25D366; border-color: #20BA5A; color: #ffffff;">
+                            <i class="fa-brands fa-whatsapp"></i> Update WhatsApp Contact
+                        </button>
+                    </form>
+                </div>
+
                 <div class="settings-card">
                     <h3 class="editor-card-title"><i class="fa-solid fa-lock" style="margin-right: 8px;"></i> Change Admin Password</h3>
                     
@@ -1645,6 +2000,13 @@ if (!function_exists('format_inr_admin')) {
                                                 </td>
                                                 <td style="font-weight: 700; color: var(--color-primary);"><?php echo htmlspecialchars($b['name']); ?></td>
                                                 <td style="text-align: right;">
+                                                    <button type="button" 
+                                                            onclick="openEditBrandModal(<?php echo $b['id']; ?>, '<?php echo addslashes($b['name']); ?>', '<?php echo addslashes($b['logo_path']); ?>')" 
+                                                            class="btn-icon edit" 
+                                                            style="background: none; border: none; cursor: pointer; color: var(--color-accent); margin-right: 8px; font-size: 0.9rem;"
+                                                            title="Edit Brand">
+                                                        <i class="fa-solid fa-pen-to-square"></i>
+                                                    </button>
                                                     <a href="index.php?tab=collections&action=delete&id=<?php echo urlencode($b['id']); ?>" 
                                                        class="btn-icon delete" 
                                                        title="Delete Brand"
@@ -1720,20 +2082,38 @@ if (!function_exists('format_inr_admin')) {
                                     <tr>
                                         <th>Category Name</th>
                                         <th>Slug</th>
-                                        <th style="width: 80px; text-align: right;">Action</th>
+                                        <th>Section Background</th>
+                                        <th style="width: 100px; text-align: right;">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php if (empty($categories_list)): ?>
                                         <tr>
-                                            <td colspan="3" style="text-align: center; padding: 20px; color: var(--color-gray);">No categories registered.</td>
+                                            <td colspan="4" style="text-align: center; padding: 20px; color: var(--color-gray);">No categories registered.</td>
                                         </tr>
                                     <?php else: ?>
                                         <?php foreach ($categories_list as $cat): ?>
                                             <tr>
                                                 <td style="font-weight: 700; color: var(--color-primary);"><?php echo htmlspecialchars($cat['name']); ?></td>
                                                 <td><code style="color: var(--color-accent); font-family: var(--font-numeric); font-size: 0.85rem; background: var(--color-gray-dark); padding: 4px 8px; border-radius: 4px;"><?php echo htmlspecialchars($cat['slug']); ?></code></td>
+                                                <td>
+                                                    <?php if (!empty($cat['bg_color'])): ?>
+                                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                                            <span style="display: inline-block; width: 14px; height: 14px; border-radius: 4px; background: <?php echo htmlspecialchars($cat['bg_color']); ?>; border: 1px solid var(--color-panel-border);"></span>
+                                                            <span style="font-size: 0.8rem; font-family: var(--font-numeric); color: var(--color-primary);"><?php echo htmlspecialchars($cat['bg_color']); ?></span>
+                                                        </div>
+                                                    <?php else: ?>
+                                                        <span style="font-size: 0.75rem; color: var(--color-gray); font-style: italic;">Auto Pastel HSL</span>
+                                                    <?php endif; ?>
+                                                </td>
                                                 <td style="text-align: right;">
+                                                    <button type="button" 
+                                                            onclick="openEditCategoryModal(<?php echo $cat['id']; ?>, '<?php echo addslashes($cat['name']); ?>', '<?php echo addslashes($cat['slug']); ?>', '<?php echo addslashes($cat['bg_color'] ?? ''); ?>')" 
+                                                            class="btn-icon edit" 
+                                                            style="background: none; border: none; cursor: pointer; color: var(--color-accent); margin-right: 8px; font-size: 0.9rem;"
+                                                            title="Edit Category">
+                                                        <i class="fa-solid fa-pen-to-square"></i>
+                                                    </button>
                                                     <a href="index.php?tab=collections&action=delete_category&id=<?php echo $cat['id']; ?>" 
                                                        class="btn-icon delete" 
                                                        title="Delete Category"
@@ -1767,7 +2147,16 @@ if (!function_exists('format_inr_admin')) {
                                 <input type="text" id="cat_slug" name="cat_slug" class="input-control" required placeholder="e.g. armchairs">
                             </div>
                             
-                            <button type="submit" class="action-btn" style="width: 100%; justify-content: center;">
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label for="cat_bg_color">Section Background Color (Pastel)</label>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <input type="text" id="cat_bg_color" name="cat_bg_color" class="input-control" placeholder="e.g. #FAF9F6" value="#FAF9F6">
+                                    <input type="color" id="cat_bg_picker" class="input-control" style="width: 45px; height: 42px; padding: 2px; border-radius: 6px; cursor: pointer; border: 1px solid var(--color-panel-border);" value="#FAF9F6" oninput="document.getElementById('cat_bg_color').value = this.value;">
+                                </div>
+                                <span style="font-size: 0.68rem; color: var(--color-gray); margin-top: 5px; display: inline-block;">Leave blank to dynamically generate a pastel shade.</span>
+                            </div>
+                            
+                            <button type="submit" class="action-btn" style="width: 100%; justify-content: center; margin-top: 20px;">
                                 <i class="fa-solid fa-circle-plus"></i> Register Category
                             </button>
                         </form>
@@ -1806,6 +2195,13 @@ if (!function_exists('format_inr_admin')) {
                                                 <td style="font-weight: 700; color: var(--color-primary);"><?php echo htmlspecialchars($mat['name']); ?></td>
                                                 <td><code style="color: var(--color-accent); font-family: var(--font-numeric); font-size: 0.85rem; background: var(--color-gray-dark); padding: 4px 8px; border-radius: 4px;"><?php echo htmlspecialchars($mat['slug']); ?></code></td>
                                                 <td style="text-align: right;">
+                                                    <button type="button" 
+                                                            onclick="openEditMaterialModal(<?php echo $mat['id']; ?>, '<?php echo addslashes($mat['name']); ?>', '<?php echo addslashes($mat['slug']); ?>')" 
+                                                            class="btn-icon edit" 
+                                                            style="background: none; border: none; cursor: pointer; color: var(--color-accent); margin-right: 8px; font-size: 0.9rem;"
+                                                            title="Edit Material">
+                                                        <i class="fa-solid fa-pen-to-square"></i>
+                                                    </button>
                                                     <a href="index.php?tab=collections&action=delete_material&id=<?php echo $mat['id']; ?>" 
                                                        class="btn-icon delete" 
                                                        title="Delete Material"
@@ -1882,6 +2278,13 @@ if (!function_exists('format_inr_admin')) {
                                                 <td style="font-weight: 700; color: var(--color-primary);"><?php echo htmlspecialchars($color['name']); ?></td>
                                                 <td><code style="color: var(--color-accent); font-family: var(--font-numeric); font-size: 0.85rem; background: var(--color-gray-dark); padding: 4px 8px; border-radius: 4px;"><?php echo htmlspecialchars($color['hex']); ?></code></td>
                                                 <td style="text-align: right;">
+                                                    <button type="button" 
+                                                            onclick="openEditColorModal(<?php echo $color['id']; ?>, '<?php echo addslashes($color['name']); ?>', '<?php echo addslashes($color['hex']); ?>')" 
+                                                            class="btn-icon edit" 
+                                                            style="background: none; border: none; cursor: pointer; color: var(--color-accent); margin-right: 8px; font-size: 0.9rem;"
+                                                            title="Edit Color">
+                                                        <i class="fa-solid fa-pen-to-square"></i>
+                                                    </button>
                                                     <a href="index.php?tab=collections&action=delete_color&id=<?php echo $color['id']; ?>" 
                                                        class="btn-icon delete" 
                                                        title="Delete Color"
@@ -2122,6 +2525,9 @@ if (!function_exists('format_inr_admin')) {
         event.preventDefault();
         currentInquiryId = id;
         currentClientPhone = phone.replace(/[^0-9]/g, '');
+        if (currentClientPhone.length === 10) {
+            currentClientPhone = '91' + currentClientPhone;
+        }
         
         document.getElementById('modal-client-name').innerText = name;
         document.getElementById('modal-client-phone').innerText = phone;
@@ -2189,19 +2595,375 @@ if (!function_exists('format_inr_admin')) {
         
         // Auto-mark the inquiry as replied/addressed in OXO
         if (currentInquiryId) {
-            fetch(`index.php?tab=analytics&action=address&inquiry_id=${currentInquiryId}`)
-                .then(response => {
-                    if (response.ok) {
-                        // Success callback: refresh dashboard to update stats and table status
-                        window.location.reload();
-                    }
-                })
-                .catch(err => console.error('Failed to mark inquiry as addressed:', err));
+            updateLeadStatus(currentInquiryId, 'Addressed');
         }
         
         closeReplyModal();
     }
+
+    // Kanban Drag and Drop Interactive Logic
+    document.addEventListener('DOMContentLoaded', () => {
+        const cards = document.querySelectorAll('.kanban-card');
+        const containers = document.querySelectorAll('.kanban-cards-container');
+        const columns = document.querySelectorAll('.kanban-column');
+
+        cards.forEach(card => {
+            card.addEventListener('dragstart', () => {
+                card.classList.add('dragging');
+            });
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
+            });
+        });
+
+        containers.forEach(container => {
+            container.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const afterElement = getDragAfterElement(container, e.clientY);
+                const draggingCard = document.querySelector('.dragging');
+                if (draggingCard) {
+                    if (afterElement == null) {
+                        container.appendChild(draggingCard);
+                    } else {
+                        container.insertBefore(draggingCard, afterElement);
+                    }
+                }
+            });
+        });
+
+        columns.forEach(column => {
+            column.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                column.classList.add('drag-over');
+            });
+            column.addEventListener('dragleave', () => {
+                column.classList.remove('drag-over');
+            });
+            column.addEventListener('drop', (e) => {
+                e.preventDefault();
+                column.classList.remove('drag-over');
+                const draggingCard = document.querySelector('.dragging');
+                if (draggingCard) {
+                    const newStatus = column.getAttribute('data-status');
+                    const cardId = draggingCard.getAttribute('data-id');
+                    updateLeadStatus(cardId, newStatus);
+                }
+            });
+        });
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.kanban-card:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+    });
+
+    function updateLeadStatus(id, status) {
+        const formData = new FormData();
+        formData.append('id', id);
+        formData.append('status', status);
+
+        fetch('update-inquiry-status.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // Dynamically move card in DOM if updated via WhatsApp modal trigger
+                const card = document.querySelector(`.kanban-card[data-id="${id}"]`);
+                const targetContainer = document.querySelector(`.kanban-cards-container[data-status="${status}"]`);
+                if (card && targetContainer && !card.classList.contains('dragging')) {
+                    targetContainer.appendChild(card);
+                }
+                updateColumnBadges();
+            } else {
+                alert(data.error || 'Failed to update status.');
+                window.location.reload();
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            window.location.reload();
+        });
+    }
+
+    function updateColumnBadges() {
+        document.querySelectorAll('.kanban-column').forEach(col => {
+            const countBadge = col.querySelector('.kanban-column-count');
+            const cardCount = col.querySelectorAll('.kanban-card').length;
+            if (countBadge) {
+                countBadge.textContent = cardCount;
+            }
+        });
+    }
     </script>
     <?php endif; ?>
+
+    <style>
+    /* Premium Edit Modals */
+    .edit-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(10, 46, 36, 0.4);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 3000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .edit-modal.active {
+        display: flex;
+        opacity: 1;
+    }
+    .edit-modal-content {
+        background: var(--color-bg-panel);
+        border: 1px solid var(--color-panel-border);
+        border-radius: 12px;
+        width: 90%;
+        max-width: 480px;
+        padding: 30px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        transform: translateY(20px);
+        transition: transform 0.3s ease;
+    }
+    .edit-modal.active .edit-modal-content {
+        transform: translateY(0);
+    }
+    .edit-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--color-panel-border);
+        padding-bottom: 12px;
+    }
+    .edit-modal-title {
+        font-family: var(--font-title);
+        font-size: 1.2rem;
+        color: var(--color-primary);
+        margin: 0;
+    }
+    .edit-modal-close {
+        border: none;
+        background: none;
+        font-size: 1.2rem;
+        color: var(--color-gray);
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+    .edit-modal-close:hover {
+        color: var(--color-primary);
+    }
+    </style>
+
+    <!-- Edit Category Modal -->
+    <div id="edit-category-modal" class="edit-modal">
+        <div class="edit-modal-content">
+            <div class="edit-modal-header">
+                <h4 class="edit-modal-title"><i class="fa-solid fa-layer-group" style="color: var(--color-accent); margin-right: 8px;"></i> Edit Category</h4>
+                <button type="button" class="edit-modal-close" onclick="closeEditModal('edit-category-modal')">&times;</button>
+            </div>
+            <form action="index.php?tab=collections" method="POST">
+                <input type="hidden" name="form_action" value="edit_category">
+                <input type="hidden" name="cat_id" id="edit_cat_id">
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="edit_cat_name">Category Name</label>
+                    <input type="text" id="edit_cat_name" name="cat_name" class="input-control" required placeholder="e.g. Armchairs" oninput="document.getElementById('edit_cat_slug').value = this.value.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="edit_cat_slug">Category Slug</label>
+                    <input type="text" id="edit_cat_slug" name="cat_slug" class="input-control" required placeholder="e.g. armchairs">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="edit_cat_bg_color">Section Background Color (Pastel)</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="edit_cat_bg_color" name="cat_bg_color" class="input-control" placeholder="e.g. #FAF9F6">
+                        <input type="color" id="edit_cat_bg_picker" class="input-control" style="width: 45px; height: 42px; padding: 2px; border-radius: 6px; cursor: pointer; border: 1px solid var(--color-panel-border);" oninput="document.getElementById('edit_cat_bg_color').value = this.value;">
+                    </div>
+                </div>
+                
+                <button type="submit" class="action-btn" style="width: 100%; justify-content: center;">
+                    <i class="fa-solid fa-circle-check"></i> Save Changes
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Material Modal -->
+    <div id="edit-material-modal" class="edit-modal">
+        <div class="edit-modal-content">
+            <div class="edit-modal-header">
+                <h4 class="edit-modal-title"><i class="fa-solid fa-cubes" style="color: var(--color-accent); margin-right: 8px;"></i> Edit Material</h4>
+                <button type="button" class="edit-modal-close" onclick="closeEditModal('edit-material-modal')">&times;</button>
+            </div>
+            <form action="index.php?tab=collections" method="POST">
+                <input type="hidden" name="form_action" value="edit_material">
+                <input type="hidden" name="mat_id" id="edit_mat_id">
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="edit_mat_name">Material Name</label>
+                    <input type="text" id="edit_mat_name" name="mat_name" class="input-control" required placeholder="e.g. Teak Wood" oninput="document.getElementById('edit_mat_slug').value = this.value.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="edit_mat_slug">Material Slug</label>
+                    <input type="text" id="edit_mat_slug" name="mat_slug" class="input-control" required placeholder="e.g. teak-wood">
+                </div>
+                
+                <button type="submit" class="action-btn" style="width: 100%; justify-content: center;">
+                    <i class="fa-solid fa-circle-check"></i> Save Changes
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Color Modal -->
+    <div id="edit-color-modal" class="edit-modal">
+        <div class="edit-modal-content">
+            <div class="edit-modal-header">
+                <h4 class="edit-modal-title"><i class="fa-solid fa-palette" style="color: var(--color-accent); margin-right: 8px;"></i> Edit Color</h4>
+                <button type="button" class="edit-modal-close" onclick="closeEditModal('edit-color-modal')">&times;</button>
+            </div>
+            <form action="index.php?tab=collections" method="POST">
+                <input type="hidden" name="form_action" value="edit_color">
+                <input type="hidden" name="color_id" id="edit_color_id">
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="edit_color_name">Color Name</label>
+                    <input type="text" id="edit_color_name" name="color_name" class="input-control" required placeholder="e.g. Amber Gold">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="edit_color_hex">Color HEX Code & Picker</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="edit_color_hex" name="color_hex" class="input-control" required placeholder="#ffffff" pattern="^#([A-Fa-f0-9]{6})$" title="Must be a valid hex color code starting with #, followed by 6 hex characters.">
+                        <input type="color" id="edit_color_picker" class="input-control" style="width: 45px; height: 42px; padding: 2px; border-radius: 6px; cursor: pointer; border: 1px solid var(--color-panel-border);" oninput="document.getElementById('edit_color_hex').value = this.value;">
+                    </div>
+                </div>
+                
+                <button type="submit" class="action-btn" style="width: 100%; justify-content: center;">
+                    <i class="fa-solid fa-circle-check"></i> Save Changes
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Brand Modal -->
+    <div id="edit-brand-modal" class="edit-modal">
+        <div class="edit-modal-content">
+            <div class="edit-modal-header">
+                <h4 class="edit-modal-title"><i class="fa-solid fa-certificate" style="color: var(--color-accent); margin-right: 8px;"></i> Edit Brand</h4>
+                <button type="button" class="edit-modal-close" onclick="closeEditModal('edit-brand-modal')">&times;</button>
+            </div>
+            <form action="index.php?tab=collections" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="form_action" value="edit_brand">
+                <input type="hidden" name="brand_id" id="edit_brand_id">
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="edit_brand_name">Brand Name</label>
+                    <input type="text" id="edit_brand_name" name="brand_name" class="input-control" required placeholder="e.g. Aethera Studio">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Upload New Logo Image (PNG / JPG / WEBP)</label>
+                    <div class="upload-container" onclick="document.getElementById('edit_logo_file').click();" style="padding: 15px;">
+                        <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                        <div class="upload-text"><strong>Click to Upload Logo File</strong></div>
+                    </div>
+                    <input type="file" id="edit_logo_file" name="logo_file" class="upload-file-input" accept="image/*" style="display: none;">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="edit_logo_url">Or Logo Image URL Path</label>
+                    <input type="text" id="edit_logo_url" name="logo_url" class="input-control" placeholder="assets/images/logo_client.png">
+                </div>
+                
+                <button type="submit" class="action-btn" style="width: 100%; justify-content: center;">
+                    <i class="fa-solid fa-circle-check"></i> Save Changes
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    function openEditModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.add('active');
+            }, 10);
+        }
+    }
+
+    function closeEditModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('active');
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+    }
+
+    function openEditCategoryModal(id, name, slug, bgColor) {
+        document.getElementById('edit_cat_id').value = id;
+        document.getElementById('edit_cat_name').value = name;
+        document.getElementById('edit_cat_slug').value = slug;
+        document.getElementById('edit_cat_bg_color').value = bgColor;
+        if (bgColor && bgColor.startsWith('#')) {
+            document.getElementById('edit_cat_bg_picker').value = bgColor;
+        }
+        openEditModal('edit-category-modal');
+    }
+
+    function openEditMaterialModal(id, name, slug) {
+        document.getElementById('edit_mat_id').value = id;
+        document.getElementById('edit_mat_name').value = name;
+        document.getElementById('edit_mat_slug').value = slug;
+        openEditModal('edit-material-modal');
+    }
+
+    function openEditColorModal(id, name, hex) {
+        document.getElementById('edit_color_id').value = id;
+        document.getElementById('edit_color_name').value = name;
+        document.getElementById('edit_color_hex').value = hex;
+        if (hex && hex.startsWith('#')) {
+            document.getElementById('edit_color_picker').value = hex;
+        }
+        openEditModal('edit-color-modal');
+    }
+
+    function openEditBrandModal(id, name, logoPath) {
+        document.getElementById('edit_brand_id').value = id;
+        document.getElementById('edit_brand_name').value = name;
+        document.getElementById('edit_logo_url').value = logoPath;
+        openEditModal('edit-brand-modal');
+    }
+
+    // Close modal when clicking outside contents
+    window.addEventListener('click', (e) => {
+        if (e.target.classList.contains('edit-modal')) {
+            closeEditModal(e.target.id);
+        }
+    });
+    </script>
 </body>
 </html>

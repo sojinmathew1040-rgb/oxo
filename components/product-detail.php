@@ -23,9 +23,9 @@
                 </div>
                 
                 <div class="modal-actions">
-                    <button class="magnetic-btn" style="flex-grow: 1; text-align: center; padding: 14px 28px;" data-action="add-to-cart" data-id="">
-                        <span class="magnetic-btn-text">Add to Cart</span>
-                    </button>
+                    <a href="" class="magnetic-btn" style="flex-grow: 1; text-align: center; padding: 14px 28px; text-decoration: none; display: inline-block;" id="modal-view-details">
+                        <span class="magnetic-btn-text">View Details</span>
+                    </a>
                 </div>
             </div>
         </div>

@@ -58,6 +58,75 @@
             </div>
         </div>
     </footer>
+    <!-- Floating Back to Top Button (Bottom Left) -->
+    <button id="btn-back-to-top" aria-label="Scroll to top" style="
+        position: fixed;
+        bottom: 30px;
+        left: 30px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background-color: var(--color-primary);
+        color: #ffffff;
+        border: 1px solid var(--color-accent);
+        font-size: 1.15rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+        box-shadow: 0 6px 20px rgba(10, 46, 36, 0.3);
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(15px);
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    ">
+        <i class="fa-solid fa-arrow-up"></i>
+    </button>
+
+    <style>
+    #btn-back-to-top:hover {
+        background-color: var(--color-accent) !important;
+        color: var(--color-primary) !important;
+        transform: translateY(-4px) scale(1.05) !important;
+        box-shadow: 0 10px 25px rgba(200, 162, 118, 0.45) !important;
+    }
+    #btn-back-to-top:active {
+        transform: translateY(-2px) scale(0.98) !important;
+    }
+    #btn-back-to-top.show {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        transform: translateY(0) !important;
+    }
+    </style>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const topBtn = document.getElementById('btn-back-to-top');
+        if (topBtn) {
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 300) {
+                    topBtn.classList.add('show');
+                } else {
+                    topBtn.classList.remove('show');
+                }
+            });
+            
+            topBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (window.lenis) {
+                    window.lenis.scrollTo(0);
+                } else {
+                    window.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        }
+    });
+    </script>
 
     <!-- Import Libraries CDNs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>

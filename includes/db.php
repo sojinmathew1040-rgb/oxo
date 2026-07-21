@@ -70,6 +70,12 @@ function initialize_tables($pdo) {
         $insert_stmt->execute([$hashed_password]);
     }
     
+    // Check if column whatsapp exists in oxo_admins, add if missing
+    $col_stmt = $pdo->query("SHOW COLUMNS FROM `oxo_admins` LIKE 'whatsapp'");
+    if (!$col_stmt->fetch()) {
+        $pdo->exec("ALTER TABLE `oxo_admins` ADD COLUMN `whatsapp` VARCHAR(50) DEFAULT NULL");
+    }
+    
     // 2. Create products table
     $pdo->exec("CREATE TABLE IF NOT EXISTS `oxo_products` (
         `id` VARCHAR(50) PRIMARY KEY,
@@ -136,20 +142,33 @@ function initialize_tables($pdo) {
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB;");
     
+    // Check if column bg_color exists in oxo_categories, add if missing
+    $col_cat_stmt = $pdo->query("SHOW COLUMNS FROM `oxo_categories` LIKE 'bg_color'");
+    if (!$col_cat_stmt->fetch()) {
+        $pdo->exec("ALTER TABLE `oxo_categories` ADD COLUMN `bg_color` VARCHAR(50) DEFAULT NULL");
+    }
+
     // Seed default categories
     $stmt = $pdo->query("SELECT COUNT(*) FROM `oxo_categories`");
     if ($stmt->fetchColumn() == 0) {
-        $insert_cat = $pdo->prepare("INSERT INTO `oxo_categories` (`slug`, `name`) VALUES (?, ?)");
+        $insert_cat = $pdo->prepare("INSERT INTO `oxo_categories` (`slug`, `name`, `bg_color`) VALUES (?, ?, ?)");
         $default_cats = [
-            ["sofas", "Sofas"],
-            ["chairs", "Chairs"],
-            ["tables", "Tables"],
-            ["lighting", "Lighting"],
-            ["storage", "Storage"]
+            ["sofas", "Sofas", "rgba(95, 173, 138, 0.03)"],
+            ["chairs", "Chairs", "#FAF9F6"],
+            ["tables", "Tables", "rgba(10, 46, 36, 0.02)"],
+            ["lighting", "Lighting", "rgba(200, 162, 118, 0.035)"],
+            ["storage", "Storage", "rgba(30, 40, 36, 0.015)"]
         ];
         foreach ($default_cats as $cat) {
-            $insert_cat->execute([$cat[0], $cat[1]]);
+            $insert_cat->execute([$cat[0], $cat[1], $cat[2]]);
         }
+    } else {
+        // Seed colors for existing categories if empty
+        $pdo->exec("UPDATE `oxo_categories` SET `bg_color` = '#FAF9F6' WHERE `slug` = 'chairs' AND (`bg_color` IS NULL OR `bg_color` = '')");
+        $pdo->exec("UPDATE `oxo_categories` SET `bg_color` = 'rgba(200, 162, 118, 0.035)' WHERE `slug` = 'lighting' AND (`bg_color` IS NULL OR `bg_color` = '')");
+        $pdo->exec("UPDATE `oxo_categories` SET `bg_color` = 'rgba(95, 173, 138, 0.03)' WHERE `slug` = 'sofas' AND (`bg_color` IS NULL OR `bg_color` = '')");
+        $pdo->exec("UPDATE `oxo_categories` SET `bg_color` = 'rgba(10, 46, 36, 0.02)' WHERE `slug` = 'tables' AND (`bg_color` IS NULL OR `bg_color` = '')");
+        $pdo->exec("UPDATE `oxo_categories` SET `bg_color` = 'rgba(30, 40, 36, 0.015)' WHERE `slug` = 'storage' AND (`bg_color` IS NULL OR `bg_color` = '')");
     }
 
     // 6. Create materials table
@@ -305,4 +324,17 @@ function initialize_tables($pdo) {
             }
         }
     }
+}
+
+function get_admin_whatsapp() {
+    $db = get_db_connection();
+    if ($db) {
+        try {
+            $stmt = $db->query("SELECT `whatsapp` FROM `oxo_admins` LIMIT 1");
+            return $stmt->fetchColumn();
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+    return null;
 }

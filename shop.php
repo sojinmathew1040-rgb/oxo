@@ -434,6 +434,9 @@ if (empty($materials)) {
                 </div>
             </div>
 
+            <?php
+            $active_category_param = isset($_GET['category']) ? trim($_GET['category']) : 'all';
+            ?>
             <!-- Expandable Filter Drawer -->
             <div class="filter-drawer" id="filter-drawer">
                 <div class="drawer-grid">
@@ -442,12 +445,12 @@ if (empty($materials)) {
                         <h5>Category</h5>
                         <div class="filter-badge-list">
                             <label class="filter-badge-item">
-                                <input type="radio" name="shop_category" value="all" checked>
+                                <input type="radio" name="shop_category" value="all" <?php echo $active_category_param === 'all' ? 'checked' : ''; ?>>
                                 <span class="filter-badge-content">All Categories</span>
                             </label>
                             <?php foreach ($categories as $cat): ?>
                                 <label class="filter-badge-item">
-                                    <input type="radio" name="shop_category" value="<?php echo htmlspecialchars($cat['slug']); ?>">
+                                    <input type="radio" name="shop_category" value="<?php echo htmlspecialchars($cat['slug']); ?>" <?php echo $active_category_param === $cat['slug'] ? 'checked' : ''; ?>>
                                     <span class="filter-badge-content"><?php echo htmlspecialchars($cat['name']); ?></span>
                                 </label>
                             <?php endforeach; ?>
@@ -486,14 +489,14 @@ if (empty($materials)) {
                                     </button>
                                 <?php endforeach; ?>
                             </div>
-                            <div id="sidebar-color-label" style="font-size: 0.68rem; color: rgba(255, 255, 255, 0.4); margin-top: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">All Colors</div>
+                            <div id="sidebar-color-label" style="font-size: 0.68rem; color: rgba(10, 46, 36, 0.5); margin-top: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">All Colors</div>
                         </div>
 
                         <div>
                             <h5>Price Bracket (Max)</h5>
                             <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
                                 <input type="range" id="price-range" min="5000" max="600000" step="5000" value="600000" style="width: 100%; accent-color: var(--color-accent); cursor: pointer;">
-                                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.8); font-family: var(--font-numeric);">
+                                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 700; color: rgba(10, 46, 36, 0.7); font-family: var(--font-numeric);">
                                     <span>₹5,000</span>
                                     <span id="price-val" style="color: var(--color-accent);">₹6,00,000</span>
                                 </div>
@@ -591,12 +594,6 @@ if (empty($materials)) {
                                 <button class="product-action-btn" data-action="quick-view" data-id="<?php echo htmlspecialchars($p['id']); ?>" aria-label="Quick View">
                                     <i class="fa-regular fa-eye"></i>
                                 </button>
-                                <button class="product-action-btn" data-action="add-to-wishlist" data-id="<?php echo htmlspecialchars($p['id']); ?>" aria-label="Add to Wishlist">
-                                    <i class="fa-regular fa-heart"></i>
-                                </button>
-                                <button class="product-action-btn" data-action="add-to-cart" data-id="<?php echo htmlspecialchars($p['id']); ?>" aria-label="Add to Cart">
-                                    <i class="fa-solid fa-cart-shopping"></i>
-                                </button>
                             </div>
                         </div>
                         <div class="product-info">
@@ -646,12 +643,6 @@ if (empty($materials)) {
 
 <!-- Drawers Overlays -->
 <div class="drawer-overlay" id="drawer-overlay"></div>
-
-<!-- Shopping Cart slide-out panel -->
-<?php require_once __DIR__ . '/components/cart.php'; ?>
-
-<!-- Wishlist slide-out panel -->
-<?php require_once __DIR__ . '/components/wishlist.php'; ?>
 
 <!-- Product Quick View modal popup -->
 <?php require_once __DIR__ . '/components/product-detail.php'; ?>
@@ -1044,8 +1035,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Initialize tags on load
-    updateActiveTags();
+    // Initialize filters on load
+    runShopFilter();
 });
 </script>
 

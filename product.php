@@ -383,29 +383,37 @@ function render_scale_graph($h, $w, $l) {
                         <?php endif; ?>
 
                         <!-- Action Block -->
+                        <?php
+                        $admin_whatsapp = get_admin_whatsapp();
+                        $whatsapp_url = '';
+                        if (!empty($admin_whatsapp)) {
+                            $clean_whatsapp = preg_replace('/[^0-9]/', '', $admin_whatsapp);
+                            if (strlen($clean_whatsapp) === 10) {
+                                $clean_whatsapp = '91' . $clean_whatsapp;
+                            }
+                            $product_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+                            $wa_text = "Hi, I am interested in " . $product['title'] . " (" . $product_url . ")";
+                            $whatsapp_url = "https://wa.me/" . $clean_whatsapp . "?text=" . urlencode($wa_text);
+                        }
+                        ?>
                         <div class="product-detail-action-block">
-                            <div class="detail-qty-wrapper">
-                                <span class="action-label">Quantity</span>
-                                <div class="detail-qty-selector">
-                                    <button type="button" class="qty-selector-btn" id="detail-qty-dec"><i class="fa-solid fa-minus"></i></button>
-                                    <input type="text" id="detail-qty-val" value="1" readonly>
-                                    <button type="button" class="qty-selector-btn" id="detail-qty-inc"><i class="fa-solid fa-plus"></i></button>
-                                </div>
+                            <div class="detail-actions-row" style="display: flex; gap: 15px; width: 100%;">
+                                <?php if (!empty($whatsapp_url)): ?>
+                                    <a href="<?php echo $whatsapp_url; ?>" target="_blank" class="btn-contact-store">
+                                        <span class="magnetic-btn-text"><i class="fa-brands fa-whatsapp"></i> Contact the Store</span>
+                                    </a>
+                                    <button class="btn-request-consult" id="open-consultation-btn" aria-label="Request Design Consultation">
+                                        <span class="magnetic-btn-text"><i class="fa-regular fa-envelope"></i> Request Consultation</span>
+                                    </button>
+                                <?php else: ?>
+                                    <button class="btn-contact-store" id="open-consultation-btn" aria-label="Request Design Consultation" style="width: 100%;">
+                                        <span class="magnetic-btn-text"><i class="fa-regular fa-envelope"></i> Request Consultation</span>
+                                    </button>
+                                <?php endif; ?>
                             </div>
-
-                            <div class="detail-actions-row">
-                                <button class="magnetic-btn primary-action-btn" data-action="add-to-cart" data-id="<?php echo htmlspecialchars($product['id']); ?>">
-                                    <span class="magnetic-btn-text">Add to Cart</span>
-                                </button>
-                                
-                                <button class="wishlist-action-btn" data-action="add-to-wishlist" data-id="<?php echo htmlspecialchars($product['id']); ?>" aria-label="Add to Wishlist">
-                                    <i class="fa-regular fa-heart"></i>
-                                </button>
-                                
-                                <button class="concierge-action-btn magnetic" id="open-consultation-btn" aria-label="Speak to a Specialist">
-                                    <span class="magnetic-btn-text"><i class="fa-regular fa-comments"></i> Inquire</span>
-                                </button>
-                            </div>
+                            <button class="btn-request-consult" id="btn-view-in-space" style="width: 100%; margin-top: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: transparent; border: 1.5px solid var(--color-accent); color: var(--color-accent); font-family: var(--font-title); font-weight: 700; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 2px; padding: 16px 24px; border-radius: 4px; cursor: pointer; transition: all 0.3s ease;">
+                                <span class="magnetic-btn-text"><i class="fa-solid fa-cube"></i> View in Your Space (AR)</span>
+                            </button>
                         </div>
 
                         <!-- Luxury Trust Badges -->
@@ -459,19 +467,65 @@ function render_scale_graph($h, $w, $l) {
                     </div>
                 </div>
 
-                <!-- Related Products Section -->
+                <!-- Related Products Section with Horizontal Scrolling Slider -->
+                <style>
+                .related-products-section .product-grid {
+                    display: flex !important;
+                    flex-wrap: nowrap !important;
+                    overflow-x: auto !important;
+                    scroll-behavior: smooth;
+                    scroll-snap-type: x mandatory;
+                    gap: 30px;
+                    padding: 10px 0 25px 0;
+                    scrollbar-width: none; /* Firefox */
+                    -ms-overflow-style: none; /* IE 10+ */
+                }
+                .related-products-section .product-grid::-webkit-scrollbar {
+                    display: none; /* Chrome, Safari, Opera */
+                }
+                .related-products-section .product-card {
+                    flex: 0 0 310px !important;
+                    scroll-snap-align: start;
+                    margin: 0;
+                }
+                @media (max-width: 767px) {
+                    .related-products-section .product-card {
+                        flex: 0 0 250px !important;
+                    }
+                    .related-products-section .slider-nav-arrows {
+                        display: none !important; /* Hide arrows on mobile to save space (use native touch swipe) */
+                    }
+                }
+                .slider-nav-btn:hover {
+                    background-color: var(--color-accent) !important;
+                    border-color: var(--color-accent) !important;
+                    color: var(--color-primary) !important;
+                }
+                </style>
+
                 <div class="related-products-section">
-                    <h3 class="related-title title-medium">Related <span class="title-serif">Creations</span></h3>
-                    <div class="product-grid">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 25px;">
+                        <h3 class="related-title title-medium" style="margin: 0;">Related <span class="title-serif">Creations</span></h3>
+                        <div class="slider-nav-arrows" style="display: flex; gap: 10px;">
+                            <button id="related-slide-prev" class="slider-nav-btn" aria-label="Previous Creations" style="width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid var(--color-panel-border); background: transparent; color: var(--color-text); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease;">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </button>
+                            <button id="related-slide-next" class="slider-nav-btn" aria-label="Next Creations" style="width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid var(--color-panel-border); background: transparent; color: var(--color-text); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease;">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="product-grid" id="related-products-grid">
                         <?php 
-                            // Select up to 3 related products
+                            // Select up to 8 related products
                             $related_count = 0;
                             foreach ($PRODUCTS_DB as $pid => $p) {
                                 if ($pid === $product['id']) continue;
-                                if ($related_count >= 3) break;
+                                if ($related_count >= 8) break;
                                 
-                                // Prioritize same category first
-                                if ($p['category'] === $product['category'] || $related_count < 2) {
+                                // Strictly select products of the exact same category
+                                if (strtolower($p['category']) === strtolower($product['category'])) {
                                     $related_count++;
                                     ?>
                                     <div class="product-card" data-category="<?php echo htmlspecialchars($p['category']); ?>" data-id="<?php echo htmlspecialchars($p['id']); ?>">
@@ -480,12 +534,6 @@ function render_scale_graph($h, $w, $l) {
                                             <div class="product-actions">
                                                 <button class="product-action-btn" data-action="quick-view" data-id="<?php echo htmlspecialchars($p['id']); ?>" aria-label="Quick View">
                                                     <i class="fa-regular fa-eye"></i>
-                                                </button>
-                                                <button class="product-action-btn" data-action="add-to-wishlist" data-id="<?php echo htmlspecialchars($p['id']); ?>" aria-label="Add to Wishlist">
-                                                    <i class="fa-regular fa-heart"></i>
-                                                </button>
-                                                <button class="product-action-btn" data-action="add-to-cart" data-id="<?php echo htmlspecialchars($p['id']); ?>" aria-label="Add to Cart">
-                                                    <i class="fa-solid fa-cart-shopping"></i>
                                                 </button>
                                             </div>
                                         </div>
@@ -502,11 +550,228 @@ function render_scale_graph($h, $w, $l) {
                             }
                         ?>
                     </div>
+                    
+                    <script>
+                    document.addEventListener('DOMContentLoaded', () => {
+                        const relatedGrid = document.getElementById('related-products-grid');
+                        const prevBtn = document.getElementById('related-slide-prev');
+                        const nextBtn = document.getElementById('related-slide-next');
+                        
+                        if (relatedGrid && prevBtn && nextBtn) {
+                            prevBtn.addEventListener('click', () => {
+                                // Scroll by the width of one card + gap
+                                relatedGrid.scrollBy({ left: -340, behavior: 'smooth' });
+                            });
+                            nextBtn.addEventListener('click', () => {
+                                relatedGrid.scrollBy({ left: 340, behavior: 'smooth' });
+                            });
+                        }
+                    });
+                    </script>
                 </div>
             <?php endif; ?>
         </div>
     </section>
 </main>
+
+<!-- Interactive AR View in Space Modal & Style Override -->
+<style>
+#btn-view-in-space:hover {
+    background: var(--color-accent) !important;
+    color: var(--color-primary) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(200, 162, 118, 0.25);
+}
+#btn-view-in-space:active {
+    transform: translateY(0);
+}
+.ar-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(10, 46, 36, 0.45);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    padding: 20px;
+}
+.ar-modal-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+.ar-modal-container {
+    background: var(--color-bg);
+    border: 1px solid var(--color-panel-border);
+    border-radius: 12px;
+    width: 680px;
+    max-width: 100%;
+    padding: 40px;
+    position: relative;
+    box-shadow: 0 30px 70px rgba(0,0,0,0.5);
+    box-sizing: border-box;
+    transform: scale(0.95);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ar-modal-overlay.active .ar-modal-container {
+    transform: scale(1);
+}
+#ar-modal-close:hover {
+    color: var(--color-accent) !important;
+    opacity: 1 !important;
+}
+
+/* Responsive adjustments for mobile view */
+@media (max-width: 767px) {
+    .ar-modal-container {
+        padding: 30px 20px !important;
+        width: 100% !important;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    .ar-modal-grid {
+        grid-template-columns: 1fr !important;
+        gap: 30px !important;
+        text-align: center;
+    }
+    .ar-modal-steps {
+        text-align: left !important;
+    }
+    .ar-modal-qr-col {
+        margin-top: 10px;
+    }
+}
+</style>
+
+<div class="ar-modal-overlay" id="ar-view-modal">
+    <div class="ar-modal-container">
+        <button id="ar-modal-close" aria-label="Close Modal" style="position: absolute; top: 20px; right: 20px; background: transparent; border: none; font-size: 1.5rem; color: var(--color-text); cursor: pointer; transition: color 0.3s ease; opacity: 0.7;">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        
+        <div class="ar-modal-grid" style="display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 40px; align-items: center;">
+            <div>
+                <span class="section-tag" style="margin-bottom: 12px; display: inline-block;">Augmented Reality</span>
+                <h3 class="title-medium" style="font-size: 2.1rem; margin: 0 0 15px 0; color: var(--color-text); font-family: var(--font-title); font-weight: 700;">View in <span class="title-serif" style="font-family: var(--font-serif); font-style: italic; font-weight: 400; color: var(--color-accent);">Your Space</span></h3>
+                <p style="opacity: 0.8; font-size: 0.92rem; margin-bottom: 25px; line-height: 1.6; color: var(--color-text);">
+                    Experience our bespoke creations in real-time dimensions. Project 3D furniture files directly into your room to preview size, finishes, and space compatibility.
+                </p>
+                
+                <div class="ar-modal-steps" style="display: flex; flex-direction: column; gap: 15px;">
+                      <div style="display: flex; gap: 12px; align-items: flex-start;">
+                          <span style="width: 24px; height: 24px; border-radius: 50%; background: var(--color-accent); color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; flex-shrink: 0; margin-top: 2px;">1</span>
+                          <div>
+                              <h4 style="font-family: var(--font-title); font-size: 0.9rem; font-weight: 700; margin: 0 0 3px 0; color: var(--color-text);">Scan QR Code</h4>
+                              <p style="margin: 0; font-size: 0.82rem; opacity: 0.7; line-height: 1.4;">Aim your smartphone or tablet camera at the locator code on the right.</p>
+                          </div>
+                      </div>
+                      
+                      <div style="display: flex; gap: 12px; align-items: flex-start;">
+                          <span style="width: 24px; height: 24px; border-radius: 50%; background: var(--color-accent); color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; flex-shrink: 0; margin-top: 2px;">2</span>
+                          <div>
+                              <h4 style="font-family: var(--font-title); font-size: 0.9rem; font-weight: 700; margin: 0 0 3px 0; color: var(--color-text);">Calibrate Floor</h4>
+                              <p style="margin: 0; font-size: 0.82rem; opacity: 0.7; line-height: 1.4;">Point your camera at the floor surface and pan slowly to detect scale and layout.</p>
+                          </div>
+                      </div>
+                      
+                      <div style="display: flex; gap: 12px; align-items: flex-start;">
+                          <span style="width: 24px; height: 24px; border-radius: 50%; background: var(--color-accent); color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; flex-shrink: 0; margin-top: 2px;">3</span>
+                          <div>
+                              <h4 style="font-family: var(--font-title); font-size: 0.9rem; font-weight: 700; margin: 0 0 3px 0; color: var(--color-text);">Place and Rotate</h4>
+                              <p style="margin: 0; font-size: 0.82rem; opacity: 0.7; line-height: 1.4;">Drag the 3D model to reposition or use two fingers to rotate the piece.</p>
+                          </div>
+                      </div>
+                </div>
+            </div>
+            
+            <div class="ar-modal-qr-col" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px;">
+                <div style="background: #ffffff; padding: 12px; border-radius: 16px; border: 4px solid var(--color-accent); display: flex; align-items: center; justify-content: center; box-shadow: 0 15px 40px rgba(0,0,0,0.15); box-sizing: border-box; width: 230px; height: 230px; position: relative; overflow: hidden;">
+                    <!-- Real Dynamic QR Code API (Encodes the Server Network URL) -->
+                    <?php
+                        $host_ip = gethostbyname(gethostname());
+                        if ($host_ip === '127.0.0.1' || empty($host_ip)) {
+                            $host_ip = $_SERVER['SERVER_ADDR'] ?? 'localhost';
+                        }
+                        // Check if request is over HTTPS or HTTP
+                        $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https://' : 'http://';
+                        $network_url = $protocol . $host_ip . $_SERVER['REQUEST_URI'];
+                        $qr_api_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=0a2e24&data=" . urlencode($network_url);
+                    ?>
+                    <img src="<?php echo $qr_api_url; ?>" alt="Scan QR Code to View in AR" style="width: 100%; height: 100%; object-fit: contain; z-index: 2;">
+                </div>
+                <div style="text-align: center; max-width: 220px;">
+                    <span style="font-family: var(--font-title); font-size: 0.72rem; font-weight: 700; color: var(--color-accent); text-transform: uppercase; letter-spacing: 2px; display: block; margin-bottom: 2px;">Scan with Camera</span>
+                    <span style="font-size: 0.75rem; opacity: 0.8; color: var(--color-text); word-break: break-all; display: block; font-family: monospace; line-height: 1.3; margin-top: 5px;">
+                        <?php echo htmlspecialchars($network_url); ?>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Interactive Mobile AR Camera Sandbox Overlay -->
+<div id="ar-camera-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000000; z-index: 100000; display: none; flex-direction: column; overflow: hidden; font-family: sans-serif;">
+    <!-- Live Video Stream -->
+    <video id="ar-video" autoplay playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;"></video>
+    
+    <!-- Fallback Luxury Room Backdrop (Visible only if camera permission is denied/fails) -->
+    <div id="ar-fallback-backdrop" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=80') no-repeat center center; background-size: cover; z-index: 0; display: none;"></div>
+
+    <!-- HUD Header Controls -->
+    <div style="position: absolute; top: 20px; left: 20px; right: 20px; z-index: 10; display: flex; justify-content: space-between; align-items: center; pointer-events: none;">
+        <span class="ar-hud-badge" style="background: rgba(10, 46, 36, 0.85); backdrop-filter: blur(8px); border: 1px solid var(--color-accent); color: var(--color-accent); padding: 8px 16px; border-radius: 30px; font-size: 0.75rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; pointer-events: auto;">
+            <i class="fa-solid fa-cube"></i> AR Sandbox Active
+        </span>
+        <button id="ar-camera-close" aria-label="Close AR" style="background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255,255,255,0.2); color: #ffffff; border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.2rem; pointer-events: auto; transition: background 0.3s; border: none;">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+    
+    <!-- Camera Warning Banner (Insecure HTTP Origin block notification) -->
+    <div id="ar-camera-warning" style="position: absolute; top: 80px; left: 20px; right: 20px; z-index: 10; background: rgba(220, 95, 0, 0.95); backdrop-filter: blur(12px); border: 1px solid var(--color-accent); color: #ffffff; padding: 12px 16px; border-radius: 8px; font-size: 0.78rem; font-weight: 600; line-height: 1.5; display: none; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); box-sizing: border-box;">
+        <i class="fa-solid fa-circle-exclamation" style="color: var(--color-accent); margin-right: 5px;"></i> Browsers block camera access on <strong>HTTP</strong> connections. Please access via <strong>HTTPS</strong> (secure origin) to unlock your real-time room camera stream.
+    </div>
+
+    <!-- The Draggable Product Image Wrapper -->
+    <div id="ar-projection-space" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none;">
+        <div id="ar-furniture-wrapper" style="position: absolute; top: 35%; left: 15%; width: 260px; pointer-events: auto; display: flex; align-items: center; justify-content: center; transform: translate3d(0, 0, 0) scale(1) rotate(0deg); touch-action: none; cursor: move; user-select: none;">
+            <img id="ar-furniture-img" src="" style="width: 100%; height: auto; pointer-events: none; filter: drop-shadow(0 15px 25px rgba(0,0,0,0.35)); transition: filter 0.3s ease;">
+        </div>
+    </div>
+
+    <!-- HUD Footer Controls panel -->
+    <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 70%, transparent 100%); padding: 30px 20px 40px 20px; z-index: 10; display: flex; flex-direction: column; gap: 15px; align-items: center;">
+        
+        <!-- Controls Grid -->
+        <div style="width: 100%; max-width: 320px; background: rgba(0,0,0,0.55); backdrop-filter: blur(12px); border-radius: 16px; border: 1px solid rgba(255,255,255,0.15); padding: 15px 20px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box;">
+            <!-- Scale Control Row -->
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
+                <span style="color: #ffffff; font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; width: 60px; opacity: 0.85;">Scale</span>
+                <input type="range" id="ar-scale-slider" min="50" max="200" value="100" style="flex-grow: 1; accent-color: var(--color-accent); cursor: pointer; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.3); outline: none; border: none;">
+                <span id="ar-scale-val" style="color: var(--color-accent); font-size: 0.75rem; font-family: monospace; font-weight: 700; width: 35px; text-align: right;">100%</span>
+            </div>
+            
+            <!-- Rotate Control Row -->
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
+                <span style="color: #ffffff; font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; width: 60px; opacity: 0.85;">Rotate</span>
+                <input type="range" id="ar-rotate-slider" min="0" max="360" value="0" style="flex-grow: 1; accent-color: var(--color-accent); cursor: pointer; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.3); outline: none; border: none;">
+                <span id="ar-rotate-val" style="color: var(--color-accent); font-size: 0.75rem; font-family: monospace; font-weight: 700; width: 35px; text-align: right;">0°</span>
+            </div>
+        </div>
+        
+        <!-- Quick Guidance Text -->
+        <span style="color: #ffffff; font-size: 0.75rem; opacity: 0.7; font-weight: 500; text-align: center; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">
+            Drag creation to position. Use sliders to scale and rotate.
+        </span>
+    </div>
+</div>
 
 <!-- Concierge Consultation Modal -->
 <div class="consultation-modal-overlay" id="consultation-modal">
@@ -603,43 +868,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Gallery Zoom Effect (Magnifier calculates active view state)
+    // Gallery Zoom Effect: Disabled mousefollow zoom to keep the main image container fixed.
     const zoomBox = document.getElementById('gallery-zoom-box');
     const zoomImg = document.getElementById('gallery-main-img');
-    
-    if (zoomBox && zoomImg) {
-        zoomBox.addEventListener('mousemove', (e) => {
-            const activeBtn = document.querySelector('.thumbnail-btn.active');
-            const view = activeBtn ? activeBtn.getAttribute('data-view') : '';
-            
-            // Only perform image zoom if we're not in the Scale Graph blueprint tab
-            if (view === 'scale') return;
-            
-            const { left, top, width, height } = zoomBox.getBoundingClientRect();
-            const x = ((e.clientX - left) / width) * 100;
-            const y = ((e.clientY - top) / height) * 100;
-            
-            zoomImg.style.transformOrigin = `${x}% ${y}%`;
-            
-            let scaleFactor = 1.5;
-            if (view === 'detail') {
-                scaleFactor = 2.2; // Deep detail zoom
-            }
-            zoomImg.style.transform = `scale(${scaleFactor})`;
-        });
-        
-        zoomBox.addEventListener('mouseleave', () => {
-            const activeBtn = document.querySelector('.thumbnail-btn.active');
-            const view = activeBtn ? activeBtn.getAttribute('data-view') : '';
-            
-            zoomImg.style.transformOrigin = 'center center';
-            if (view === 'detail') {
-                zoomImg.style.transform = 'scale(1.4)';
-            } else {
-                zoomImg.style.transform = 'scale(1)';
-            }
-        });
-    }
+
 
     // Gallery View Switcher
     const thumbBtns = document.querySelectorAll('.thumbnail-btn');
@@ -823,6 +1055,225 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // AR Viewer & Sandbox Controller
+    const arBtn = document.getElementById('btn-view-in-space');
+    const arModal = document.getElementById('ar-view-modal');
+    const arClose = document.getElementById('ar-modal-close');
+    
+    // Camera Sandbox Elements
+    const cameraOverlay = document.getElementById('ar-camera-overlay');
+    const cameraClose = document.getElementById('ar-camera-close');
+    const arVideo = document.getElementById('ar-video');
+    const arFallback = document.getElementById('ar-fallback-backdrop');
+    const arFurnitureWrapper = document.getElementById('ar-furniture-wrapper');
+    const arFurnitureImg = document.getElementById('ar-furniture-img');
+    const scaleSlider = document.getElementById('ar-scale-slider');
+    const scaleVal = document.getElementById('ar-scale-val');
+    const rotateSlider = document.getElementById('ar-rotate-slider');
+    const rotateVal = document.getElementById('ar-rotate-val');
+    
+    let activeStream = null;
+    let scale = 1;
+    let rotation = 0;
+    
+    // Touch Drag Engine Variables
+    let activeDrag = false;
+    let currentX = 0;
+    let currentY = 0;
+    let initialX = 0;
+    let initialY = 0;
+    let xOffset = 0;
+    let yOffset = 0;
+    
+    // Check if user is on mobile
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    
+    if (arBtn) {
+        arBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            if (isMobile) {
+                // Launch Live Camera AR Sandbox Directly
+                launchARCamera();
+            } else {
+                // Show Desktop Instruction Modal with working QR Code
+                if (arModal) arModal.classList.add('active');
+                if (window.lenis) window.lenis.stop();
+            }
+        });
+    }
+    
+    if (arModal && arClose) {
+        arClose.addEventListener('click', () => {
+            arModal.classList.remove('active');
+            if (window.lenis) window.lenis.start();
+        });
+        arModal.addEventListener('click', (e) => {
+            if (e.target === arModal) {
+                arModal.classList.remove('active');
+                if (window.lenis) window.lenis.start();
+            }
+        });
+    }
+    
+    // Live Camera AR Activation Function
+    function launchARCamera() {
+        if (!cameraOverlay || !arFurnitureImg) return;
+        
+        // Retrieve current active image from the zoom box
+        const currentImgSrc = document.getElementById('gallery-main-img').src;
+        arFurnitureImg.src = currentImgSrc;
+        
+        // Open the full-screen overlay
+        cameraOverlay.style.display = 'flex';
+        if (window.lenis) window.lenis.stop();
+        
+        // Reset scale, rotate, and offsets
+        scale = 1;
+        rotation = 0;
+        xOffset = 0;
+        yOffset = 0;
+        currentX = 0;
+        currentY = 0;
+        initialX = 0;
+        initialY = 0;
+        
+        if (scaleSlider) scaleSlider.value = 100;
+        if (scaleVal) scaleVal.textContent = '100%';
+        if (rotateSlider) rotateSlider.value = 0;
+        if (rotateVal) rotateVal.textContent = '0°';
+        updateTransform();
+        
+        // Hide warning banner initially
+        const warningBanner = document.getElementById('ar-camera-warning');
+        if (warningBanner) warningBanner.style.display = 'none';
+        
+        // Attempt live environment camera stream
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "environment" },
+                audio: false
+            })
+            .then(stream => {
+                activeStream = stream;
+                if (arVideo) {
+                    arVideo.srcObject = stream;
+                    arVideo.style.display = 'block';
+                    arVideo.play();
+                }
+                if (arFallback) arFallback.style.display = 'none';
+            })
+            .catch(err => {
+                console.warn("Back camera environment mode failed, trying generic camera:", err);
+                // Retry with generic camera constraints
+                navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+                .then(stream => {
+                    activeStream = stream;
+                    if (arVideo) {
+                        arVideo.srcObject = stream;
+                        arVideo.style.display = 'block';
+                        arVideo.play();
+                    }
+                    if (arFallback) arFallback.style.display = 'none';
+                })
+                .catch(err2 => {
+                    console.error("Camera streaming completely failed:", err2);
+                    startCameraFallback();
+                });
+            });
+        } else {
+            startCameraFallback();
+        }
+    }
+    
+    function startCameraFallback() {
+        if (arVideo) arVideo.style.display = 'none';
+        if (arFallback) arFallback.style.display = 'block';
+        
+        // Show warning banner explaining HTTP network restrictions
+        const warningBanner = document.getElementById('ar-camera-warning');
+        if (warningBanner) {
+            warningBanner.style.display = 'block';
+        }
+    }
+    
+    // Close AR Sandbox function
+    function closeARCamera() {
+        if (cameraOverlay) cameraOverlay.style.display = 'none';
+        if (window.lenis) window.lenis.start();
+        
+        // Hide warning banner
+        const warningBanner = document.getElementById('ar-camera-warning');
+        if (warningBanner) warningBanner.style.display = 'none';
+        
+        // Stop stream tracks
+        if (activeStream) {
+            activeStream.getTracks().forEach(track => track.stop());
+            activeStream = null;
+        }
+        if (arVideo) {
+            arVideo.srcObject = null;
+        }
+    }
+    
+    if (cameraClose) {
+        cameraClose.addEventListener('click', closeARCamera);
+    }
+    
+    // Sliders event listeners
+    if (scaleSlider && scaleVal) {
+        scaleSlider.addEventListener('input', () => {
+            scale = parseInt(scaleSlider.value) / 100;
+            scaleVal.textContent = `${scaleSlider.value}%`;
+            updateTransform();
+        });
+    }
+    
+    if (rotateSlider && rotateVal) {
+        rotateSlider.addEventListener('input', () => {
+            rotation = rotateSlider.value;
+            rotateVal.textContent = `${rotation}°`;
+            updateTransform();
+        });
+    }
+    
+    function updateTransform() {
+        if (!arFurnitureWrapper) return;
+        arFurnitureWrapper.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0) scale(${scale}) rotate(${rotation}deg)`;
+    }
+    
+    // Touch Drag Engine for moving furniture image on screen
+    if (arFurnitureWrapper) {
+        arFurnitureWrapper.addEventListener('touchstart', dragStart, { passive: false });
+        arFurnitureWrapper.addEventListener('touchend', dragEnd, { passive: true });
+        arFurnitureWrapper.addEventListener('touchmove', drag, { passive: false });
+    }
+    
+    function dragStart(e) {
+        if (e.touches.length === 1) {
+            initialX = e.touches[0].clientX - xOffset;
+            initialY = e.touches[0].clientY - yOffset;
+            activeDrag = true;
+        }
+    }
+    
+    function dragEnd() {
+        initialX = currentX;
+        initialY = currentY;
+        activeDrag = false;
+    }
+    
+    function drag(e) {
+        if (activeDrag && e.touches.length === 1) {
+            e.preventDefault();
+            currentX = e.touches[0].clientX - initialX;
+            currentY = e.touches[0].clientY - initialY;
+            xOffset = currentX;
+            yOffset = currentY;
+            updateTransform();
+        }
+    }
+
     // Lightbox Gallery Controller
     const lightbox = document.getElementById('gallery-lightbox');
     const lightboxImg = document.getElementById('lightbox-img');
@@ -873,14 +1324,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Apply special filters for detail/shadow view inside lightbox
         lightboxImg.className = '';
-        if (item.view === 'detail') {
-            lightboxImg.style.transform = 'scale(1.4)';
-            lightboxImg.style.filter = '';
-        } else if (item.view === 'shadow') {
-            lightboxImg.style.transform = '';
+        lightboxImg.style.transform = '';
+        if (item.view === 'shadow') {
             lightboxImg.style.filter = 'contrast(1.4) brightness(0.85) saturate(0.65)';
         } else {
-            lightboxImg.style.transform = '';
             lightboxImg.style.filter = '';
         }
         
@@ -938,6 +1385,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 </script>
+
 
 <?php
 // Load Footer

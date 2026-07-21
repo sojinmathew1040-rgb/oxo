@@ -6,6 +6,20 @@
 
 // 1. Load Header Layout
 require_once __DIR__ . '/includes/header.php';
+
+// Copy generated assets for About page if not already present in the workspace
+$generated_craftsman = 'C:\\Users\\sojin\\.gemini\\antigravity-ide\\brain\\de2a8e5a-b9fd-4554-a7fb-416cecf0e467\\craftsman_polishing_wood_1784621148970.png';
+$dest_craftsman = __DIR__ . '/assets/images/about-craftsman.png';
+if (file_exists($generated_craftsman) && !file_exists($dest_craftsman)) {
+    @copy($generated_craftsman, $dest_craftsman);
+}
+
+// User-supplied showroom facade photograph
+$user_facade = 'C:\\Users\\sojin\\.gemini\\antigravity-ide\\brain\\de2a8e5a-b9fd-4554-a7fb-416cecf0e467\\media__1784621937810.jpg';
+$dest_facade = __DIR__ . '/assets/images/flagship-facade.jpg';
+if (file_exists($user_facade)) {
+    @copy($user_facade, $dest_facade);
+}
 ?>
 
 <main id="scroll-container">
@@ -71,17 +85,20 @@ require_once __DIR__ . '/includes/header.php';
             overflow: hidden;
             border: 1px solid var(--color-panel-border);
             box-shadow: 0 15px 40px rgba(0,0,0,0.05);
-            aspect-ratio: 4/3;
+            aspect-ratio: 16/9;
             background: linear-gradient(135deg, #18221D, #0C1511);
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        .about-image-wrapper i {
-            font-size: 5rem;
-            color: var(--color-accent);
-            opacity: 0.25;
-            animation: pulse-icon 4s infinite ease-in-out;
+        .about-image-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .about-image-wrapper img:hover {
+            transform: scale(1.06);
         }
 
         .philosophy-section {
@@ -277,10 +294,17 @@ require_once __DIR__ . '/includes/header.php';
             text-transform: uppercase;
         }
         .feature-card p {
-            font-size: 0.8rem;
-            line-height: 1.5;
             color: #8E9C94;
             margin: 0;
+        }
+        .flagship-image-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .flagship-image-card:hover img {
+            transform: scale(1.05);
         }
 
         /* --- DEPARTMENTS SECTION STYLES --- */
@@ -433,7 +457,7 @@ require_once __DIR__ . '/includes/header.php';
                 </div>
 
                 <div class="about-image-wrapper">
-                    <i class="fa-solid fa-leaf"></i>
+                    <img src="assets/images/flagship-facade.jpg" alt="OXO Flagship Showroom Facade">
                 </div>
 
             </div>
@@ -535,7 +559,7 @@ require_once __DIR__ . '/includes/header.php';
     </section>
 
     <!-- 3. Core Philosophy Section -->
-    <section class="philosophy-section">
+    <section class="philosophy-section" id="philosophy">
         <div class="container">
             <div style="text-align: center;">
                 <span class="section-tag">Guiding Values</span>
@@ -624,6 +648,20 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </section>
 
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof gsap !== 'undefined') {
+            // Hero animation (runs immediately on load)
+            gsap.from('.about-hero-section > *', {
+                opacity: 0,
+                y: 30,
+                duration: 1.2,
+                stagger: 0.15,
+                ease: "power4.out"
+            });
+        }
+    });
+    </script>
 </main>
 
 <!-- Drawers Overlays -->

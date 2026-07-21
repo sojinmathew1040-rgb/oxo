@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initMagneticButtons();
     initShopState();
     initNavBehavior();
+    checkUrlHash();
 });
 
 // --- 2. LENIS SMOOTH SCROLLING ---
@@ -37,6 +38,21 @@ function initLenis() {
     });
 
     gsap.ticker.lagSmoothing(0);
+}
+
+function checkUrlHash() {
+    if (window.location.hash) {
+        const target = document.querySelector(window.location.hash);
+        if (target) {
+            setTimeout(() => {
+                if (lenis) {
+                    lenis.scrollTo(target, { offset: -50 });
+                } else {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 600);
+        }
+    }
 }
 
 // --- 3. THREE.JS / WEBGL PARTICLE BG ---
@@ -340,15 +356,16 @@ function initShopState() {
     const closeBtns = document.querySelectorAll('.drawer-close');
 
     function openDrawer(drawer) {
-        drawerOverlay.classList.add('active');
+        if (!drawer) return;
+        if (drawerOverlay) drawerOverlay.classList.add('active');
         drawer.classList.add('active');
         if (lenis) lenis.stop(); // Stop scroll when drawer is open
     }
 
     function closeAllDrawers() {
-        drawerOverlay.classList.remove('active');
-        cartDrawer.classList.remove('active');
-        wishlistDrawer.classList.remove('active');
+        if (drawerOverlay) drawerOverlay.classList.remove('active');
+        if (cartDrawer) cartDrawer.classList.remove('active');
+        if (wishlistDrawer) wishlistDrawer.classList.remove('active');
         if (lenis) lenis.start(); // Resume scroll
     }
 
@@ -615,9 +632,9 @@ function setupQuickView(pid) {
     modal.querySelector('.modal-visual img').src = product.image;
     
     // Setup action button in modal
-    const actionBtn = modal.querySelector('.modal-actions button');
-    if (actionBtn) {
-        actionBtn.setAttribute('data-id', pid);
+    const viewDetailsBtn = modal.querySelector('#modal-view-details');
+    if (viewDetailsBtn) {
+        viewDetailsBtn.setAttribute('href', `product.php?id=${pid}`);
     }
 }
 
@@ -822,12 +839,12 @@ function initNavBehavior() {
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             const href = link.getAttribute('href');
-            if (href.startsWith('index.php')) {
+            if (href.startsWith('index.php') || href.startsWith('about.php')) {
                 if (navMenu && navMenu.classList.contains('active')) {
                     navMenu.classList.remove('active');
                     if (menuToggle) menuToggle.querySelector('i').className = 'fa-solid fa-bars-staggered';
                 }
-                return; // Let standard link navigation happen to index.php
+                return; // Let standard link navigation happen
             }
 
             e.preventDefault();

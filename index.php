@@ -32,12 +32,6 @@ require_once __DIR__ . '/includes/header.php';
 <!-- Drawers Overlays -->
 <div class="drawer-overlay" id="drawer-overlay"></div>
 
-<!-- 7. Shopping Cart slide-out panel -->
-<?php require_once __DIR__ . '/components/cart.php'; ?>
-
-<!-- 8. Wishlist slide-out panel -->
-<?php require_once __DIR__ . '/components/wishlist.php'; ?>
-
 <!-- 9. Product Quick View modal popup -->
 <?php require_once __DIR__ . '/components/product-detail.php'; ?>
 
