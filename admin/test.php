@@ -1,1 +1,0 @@
-<?php // Temp cleaner file ?>

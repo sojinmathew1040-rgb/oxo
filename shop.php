@@ -587,6 +587,7 @@ if (empty($materials)) {
                          data-price="<?php echo (int)$p['price']; ?>"
                          data-brand="<?php echo htmlspecialchars((string)$p['brand_id']); ?>"
                          data-colors="<?php echo implode(',', $card_color_ids); ?>"
+                         data-original-image="<?php echo htmlspecialchars($p['image']); ?>"
                          data-id="<?php echo htmlspecialchars($p['id']); ?>">
                         <div class="product-image-container">
                             <img src="<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['title']); ?>" loading="lazy">
@@ -648,6 +649,137 @@ if (empty($materials)) {
 <?php require_once __DIR__ . '/components/product-detail.php'; ?>
 
 <script>
+    function getCategory() {
+        const selected = document.querySelector('input[name="shop_category"]:checked');
+        return selected ? selected.value : 'all';
+    }
+
+    function getMaterial() {
+        const selected = document.querySelector('input[name="shop_material"]:checked');
+        return selected ? selected.value : 'all';
+    }
+
+    function getBrand() {
+        const selected = document.querySelector('input[name="shop_brand"]:checked');
+        return selected ? selected.value : 'all';
+    }
+
+    function getColor() {
+        const activeBtn = document.querySelector('.sidebar-color-btn.active');
+        return activeBtn ? activeBtn.getAttribute('data-color-id') : 'all';
+    }
+
+    function getMaxPrice() {
+        const priceRange = document.getElementById('price-range');
+        return priceRange ? parseInt(priceRange.value) : 600000;
+    }
+
+    function runShopFilter() {
+        const cat = getCategory();
+        const mat = getMaterial();
+        const brand = getBrand();
+        const color = getColor();
+        const maxPrice = getMaxPrice();
+
+        const productCards = document.querySelectorAll('.product-card');
+        
+        // Update tags instantly
+        updateActiveTags();
+        
+        // Use GSAP animation timeline if available
+        if (typeof gsap !== 'undefined') {
+            gsap.to(productCards, {
+                opacity: 0,
+                scale: 0.95,
+                duration: 0.25,
+                ease: "power2.in",
+                onComplete: () => {
+                    productCards.forEach(card => {
+                        const cardCat = card.getAttribute('data-category');
+                        const cardMat = card.getAttribute('data-material') || '';
+                        const cardPrice = parseInt(card.getAttribute('data-price')) || 0;
+                        const cardBrand = card.getAttribute('data-brand') || '';
+                        const cardColors = (card.getAttribute('data-colors') || '').split(',');
+
+                        const catMatches = (cat === 'all' || cardCat === cat);
+                        const matMatches = (mat === 'all' || cardMat === mat);
+                        const priceMatches = (cardPrice <= maxPrice);
+                        const brandMatches = (brand === 'all' || cardBrand === brand);
+                        const colorMatches = (color === 'all' || cardColors.includes(color));
+
+                        if (catMatches && matMatches && priceMatches && brandMatches && colorMatches) {
+                            card.style.display = 'flex';
+
+                            // Switch card main image to match selected color filter if active
+                            const cardImg = card.querySelector('.product-image-container img');
+                            if (cardImg) {
+                                if (color !== 'all') {
+                                    const matchingDot = card.querySelector(`.card-color-dot[data-color-id="${color}"]`);
+                                    if (matchingDot && matchingDot.getAttribute('data-image')) {
+                                        cardImg.src = matchingDot.getAttribute('data-image');
+                                    }
+                                } else {
+                                    const origImg = card.getAttribute('data-original-image');
+                                    if (origImg) cardImg.src = origImg;
+                                }
+                            }
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+
+                    const visibleCards = Array.from(productCards).filter(c => c.style.display === 'flex');
+                    if (visibleCards.length > 0) {
+                        gsap.to(visibleCards, {
+                            opacity: 1,
+                            scale: 1,
+                            duration: 0.4,
+                            stagger: 0.02,
+                            ease: "power3.out"
+                        });
+                    }
+                    if (typeof ScrollTrigger !== 'undefined') {
+                        ScrollTrigger.refresh();
+                    }
+                }
+            });
+        } else {
+            // Native fallback
+            productCards.forEach(card => {
+                const cardCat = card.getAttribute('data-category');
+                const cardMat = card.getAttribute('data-material') || '';
+                const cardPrice = parseInt(card.getAttribute('data-price')) || 0;
+                const cardBrand = card.getAttribute('data-brand') || '';
+                const cardColors = (card.getAttribute('data-colors') || '').split(',');
+
+                const catMatches = (cat === 'all' || cardCat === cat);
+                const matMatches = (mat === 'all' || cardMat === mat);
+                const priceMatches = (cardPrice <= maxPrice);
+                const brandMatches = (brand === 'all' || cardBrand === brand);
+                const colorMatches = (color === 'all' || cardColors.includes(color));
+
+                if (catMatches && matMatches && priceMatches && brandMatches && colorMatches) {
+                    card.style.display = 'flex';
+
+                    const cardImg = card.querySelector('.product-image-container img');
+                    if (cardImg) {
+                        if (color !== 'all') {
+                            const matchingDot = card.querySelector(`.card-color-dot[data-color-id="${color}"]`);
+                            if (matchingDot && matchingDot.getAttribute('data-image')) {
+                                cardImg.src = matchingDot.getAttribute('data-image');
+                            }
+                        } else {
+                            const origImg = card.getAttribute('data-original-image');
+                            if (origImg) cardImg.src = origImg;
+                        }
+                    }
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+    }
+
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Hover/Click Color Swatches on individual product cards
     const dots = document.querySelectorAll('.card-color-dot');
@@ -863,6 +995,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         if (catMatches && matMatches && priceMatches && brandMatches && colorMatches) {
                             card.style.display = 'flex';
+
+                            // Color Filter Image Swap
+                            const cardImg = card.querySelector('.product-image-container img');
+                            if (cardImg) {
+                                if (color !== 'all') {
+                                    const matchingDot = card.querySelector(`.card-color-dot[data-color-id="${color}"]`);
+                                    if (matchingDot && matchingDot.getAttribute('data-image')) {
+                                        cardImg.src = matchingDot.getAttribute('data-image');
+                                    }
+                                } else {
+                                    const origImg = card.getAttribute('data-original-image');
+                                    if (origImg) cardImg.src = origImg;
+                                }
+                            }
                         } else {
                             card.style.display = 'none';
                         }
@@ -900,6 +1046,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (catMatches && matMatches && priceMatches && brandMatches && colorMatches) {
                     card.style.display = 'flex';
+
+                    // Color Filter Image Swap
+                    const cardImg = card.querySelector('.product-image-container img');
+                    if (cardImg) {
+                        if (color !== 'all') {
+                            const matchingDot = card.querySelector(`.card-color-dot[data-color-id="${color}"]`);
+                            if (matchingDot && matchingDot.getAttribute('data-image')) {
+                                cardImg.src = matchingDot.getAttribute('data-image');
+                            }
+                        } else {
+                            const origImg = card.getAttribute('data-original-image');
+                            if (origImg) cardImg.src = origImg;
+                        }
+                    }
                 } else {
                     card.style.display = 'none';
                 }

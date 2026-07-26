@@ -262,14 +262,17 @@ function render_scale_graph($h, $w, $l) {
                             <img src="<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['title']); ?>" id="gallery-main-img" class="zoom-image" style="transition: opacity 0.3s ease;">
                             
                             <!-- Dimensions Scale Graph container -->
-                            <div id="gallery-scale-container" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: #faf9f6; border-radius: 8px; pointer-events: none; z-index: 5; border: 1px solid rgba(191, 143, 84, 0.15);">
-                                <?php 
-                                $h_val = isset($product['height_cm']) ? (int)$product['height_cm'] : 85;
-                                $w_val = isset($product['width_cm']) ? (int)$product['width_cm'] : 100;
-                                $l_val = isset($product['length_cm']) ? (int)$product['length_cm'] : 240;
-                                echo render_scale_graph($h_val, $w_val, $l_val);
-                                ?>
-                            </div>
+                            <?php 
+                            $h_val = isset($product['height_cm']) ? (int)$product['height_cm'] : 0;
+                            $w_val = isset($product['width_cm']) ? (int)$product['width_cm'] : 0;
+                            $l_val = isset($product['length_cm']) ? (int)$product['length_cm'] : 0;
+                            $has_dimensions = ($h_val > 0 || $w_val > 0 || $l_val > 0);
+                            ?>
+                            <?php if ($has_dimensions): ?>
+                                <div id="gallery-scale-container" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: #faf9f6; border-radius: 8px; pointer-events: none; z-index: 5; border: 1px solid rgba(191, 143, 84, 0.15);">
+                                    <?php echo render_scale_graph($h_val ?: 85, $w_val ?: 100, $l_val ?: 240); ?>
+                                </div>
+                            <?php endif; ?>
                             <div class="zoom-indicator" id="gallery-zoom-indicator"><i class="fa-solid fa-magnifying-glass-plus"></i> Hover to zoom</div>
                         </div>
                         
@@ -299,15 +302,15 @@ function render_scale_graph($h, $w, $l) {
                             endif; 
                             ?>
 
-
-
-                            <!-- Dimensions blueprint -->
-                            <button class="thumbnail-btn" data-view="scale" aria-label="View Dimensions Scale Graph">
-                                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: var(--color-bg-panel); border-radius: 4px; border: 1px solid var(--color-panel-border); font-size: 1.1rem; color: var(--color-accent);">
-                                    <i class="fa-solid fa-ruler-combined"></i>
-                                </div>
-                                <span class="thumb-label">Scale Graph</span>
-                            </button>
+                            <?php if ($has_dimensions): ?>
+                                <!-- Dimensions blueprint -->
+                                <button class="thumbnail-btn" data-view="scale" aria-label="View Dimensions Scale Graph">
+                                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: var(--color-bg-panel); border-radius: 4px; border: 1px solid var(--color-panel-border); font-size: 1.1rem; color: var(--color-accent);">
+                                        <i class="fa-solid fa-ruler-combined"></i>
+                                    </div>
+                                    <span class="thumb-label">Scale Graph</span>
+                                </button>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -764,11 +767,19 @@ function render_scale_graph($h, $w, $l) {
                 <input type="range" id="ar-rotate-slider" min="0" max="360" value="0" style="flex-grow: 1; accent-color: var(--color-accent); cursor: pointer; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.3); outline: none; border: none;">
                 <span id="ar-rotate-val" style="color: var(--color-accent); font-size: 0.75rem; font-family: monospace; font-weight: 700; width: 35px; text-align: right;">0°</span>
             </div>
+
+            <!-- Background Isolation Toggle Row -->
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
+                <span style="color: #ffffff; font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; opacity: 0.85;">Real Furniture View</span>
+                <button id="ar-blend-toggle" style="background: rgba(200, 162, 118, 0.2); border: 1px solid var(--color-accent); color: var(--color-accent); border-radius: 20px; padding: 4px 12px; font-size: 0.7rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease;">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Remove BG
+                </button>
+            </div>
         </div>
         
         <!-- Quick Guidance Text -->
         <span style="color: #ffffff; font-size: 0.75rem; opacity: 0.7; font-weight: 500; text-align: center; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">
-            Drag creation to position. Use sliders to scale and rotate.
+            Drag creation to position. Scale, rotate & tap "Remove BG" for realistic room view.
         </span>
     </div>
 </div>
@@ -1234,6 +1245,27 @@ document.addEventListener('DOMContentLoaded', () => {
             rotation = rotateSlider.value;
             rotateVal.textContent = `${rotation}°`;
             updateTransform();
+        });
+    }
+
+    const blendToggle = document.getElementById('ar-blend-toggle');
+    let isBlended = false;
+    if (blendToggle && arFurnitureImg) {
+        blendToggle.addEventListener('click', () => {
+            isBlended = !isBlended;
+            if (isBlended) {
+                arFurnitureImg.style.mixBlendMode = 'multiply';
+                arFurnitureImg.style.filter = 'contrast(1.2) saturate(1.1) drop-shadow(0 18px 30px rgba(0,0,0,0.45))';
+                blendToggle.style.background = 'var(--color-accent)';
+                blendToggle.style.color = '#000000';
+                blendToggle.innerHTML = '<i class="fa-solid fa-check"></i> Isolated Mode';
+            } else {
+                arFurnitureImg.style.mixBlendMode = 'normal';
+                arFurnitureImg.style.filter = 'drop-shadow(0 15px 25px rgba(0,0,0,0.35))';
+                blendToggle.style.background = 'rgba(200, 162, 118, 0.2)';
+                blendToggle.style.color = 'var(--color-accent)';
+                blendToggle.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Remove BG';
+            }
         });
     }
     

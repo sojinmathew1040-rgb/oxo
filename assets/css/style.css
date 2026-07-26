@@ -1911,6 +1911,7 @@ textarea.form-input {
 /* Gallery main container */
 .product-gallery {
     width: 100%;
+    min-width: 0;
 }
 
 .gallery-main-container {
@@ -1939,6 +1940,9 @@ textarea.form-input {
 .product-detail-panel {
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .product-detail-category {
@@ -2220,8 +2224,10 @@ textarea.form-input {
 /* Gallery Thumbnails */
 .gallery-thumbnails {
     display: flex;
-    gap: 15px;
+    flex-wrap: wrap;
+    gap: 12px;
     margin-top: 15px;
+    max-width: 100%;
 }
 
 .thumbnail-btn {

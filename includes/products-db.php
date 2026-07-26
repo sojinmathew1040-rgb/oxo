@@ -11,6 +11,13 @@ $db = get_db_connection();
 if ($db) {
     try {
         $stmt = $db->query("SELECT * FROM `oxo_products` ORDER BY `created_at` DESC");
+        // Fetch Nilkamal brand ID for fallback mapping
+        $nk_brand_id = null;
+        try {
+            $nk_stmt = $db->query("SELECT `id` FROM `oxo_brands` WHERE LOWER(`name`) LIKE '%nilkamal%' LIMIT 1");
+            $nk_brand_id = $nk_stmt->fetchColumn();
+        } catch (\Exception $e) {}
+
         $db_products = $stmt->fetchAll();
         foreach ($db_products as $p) {
             // Parse dimensions from specs as fallback if defaults or missing
@@ -34,6 +41,16 @@ if ($db) {
                 }
             }
 
+            // Auto-heal missing brand_id for Nilkamal products
+            $b_id = isset($p['brand_id']) && $p['brand_id'] !== '' && $p['brand_id'] !== null ? (int)$p['brand_id'] : null;
+            if (!$b_id && $nk_brand_id && (strpos($p['id'], 'nk-') === 0 || stripos($p['specs'], 'nilkamal') !== false || stripos($p['title'], 'nilkamal') !== false)) {
+                $b_id = (int)$nk_brand_id;
+                try {
+                    $up_stmt = $db->prepare("UPDATE `oxo_products` SET `brand_id` = ? WHERE `id` = ?");
+                    $up_stmt->execute([$b_id, $p['id']]);
+                } catch (\Exception $e) {}
+            }
+
             $PRODUCTS_DB[$p['id']] = [
                 "id" => $p['id'],
                 "title" => $p['title'],
@@ -44,7 +61,7 @@ if ($db) {
                 "specs" => $p['specs'],
                 "details" => json_decode($p['details'], true),
                 "material_slug" => isset($p['material_slug']) ? $p['material_slug'] : 'wood',
-                "brand_id" => isset($p['brand_id']) ? (int)$p['brand_id'] : null,
+                "brand_id" => $b_id,
                 "gallery" => isset($p['gallery']) ? $p['gallery'] : '',
                 "height_cm" => $h,
                 "width_cm" => $w,

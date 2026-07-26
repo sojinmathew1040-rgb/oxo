@@ -5,6 +5,7 @@
 
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/generate-docs.php';
 
 // Force authentication
 require_admin_login();
@@ -157,9 +158,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Validation Rules
     if (!$is_edit) {
-        // Auto-generate ID slug from Title
-        $id = strtolower(preg_replace('/[^a-zA-Z0-9\-]+/', '-', $title));
-        $id = trim($id, '-');
+        // Auto-generate short clean ID slug from Title (e.g. nk-ludo-table)
+        $clean_words = array_filter(explode('-', preg_replace('/[^a-z0-9\-]/', '', strtolower($title))));
+        $stop_words = ['with', 'set', 'for', 'and', 'the', 'in', 'of', 'by', 'furniture'];
+        $filtered = array_filter($clean_words, function($w) use ($stop_words) { return !in_array($w, $stop_words) && strlen($w) > 1; });
+        $short_slug = implode('-', array_slice(!empty($filtered) ? $filtered : $clean_words, 0, 3));
+        $id = 'nk-' . ($short_slug ?: 'item-' . rand(100, 999));
+        if (strlen($id) > 25) $id = rtrim(substr($id, 0, 25), '-');
         
         if (empty($id)) {
             $errors[] = "A valid Product Title is required to generate the identifier.";
@@ -168,7 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $check_stmt = $db->prepare("SELECT COUNT(*) FROM `oxo_products` WHERE `id` = ?");
             $check_stmt->execute([$id]);
             if ($check_stmt->fetchColumn() > 0) {
-                $id .= '-' . substr(md5(time() . rand()), 0, 4);
+                $id .= '-' . rand(10, 99);
             }
         }
     }
@@ -204,12 +209,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $new_file_name = $target_id . '_asset_' . $i . '_' . time() . '.' . $file_ext;
                     $target_file = $upload_dir . $new_file_name;
                     if (move_uploaded_file($_FILES['gallery_files']['tmp_name'][$i], $target_file)) {
+                        compress_editor_image($target_file, 78);
                         $upload_map["file:{$i}"] = 'assets/images/uploads/' . $new_file_name;
                     }
                 }
             }
         }
     }
+
+function compress_editor_image($source_filepath, $quality = 78) {
+    if (!file_exists($source_filepath) || filesize($source_filepath) === 0) return;
+    $info = @getimagesize($source_filepath);
+    if (!$info) return;
+
+    $mime = $info['mime'];
+    $width = $info[0];
+    $height = $info[1];
+    $max_dim = 1200;
+
+    if ($width > $max_dim || $height > $max_dim) {
+        $ratio = min($max_dim / $width, $max_dim / $height);
+        $new_width = (int)round($width * $ratio);
+        $new_height = (int)round($height * $ratio);
+    } else {
+        $new_width = $width;
+        $new_height = $height;
+    }
+
+    $image = null;
+    switch ($mime) {
+        case 'image/jpeg':
+        case 'image/jpg':
+            if (function_exists('imagecreatefromjpeg')) $image = @imagecreatefromjpeg($source_filepath);
+            break;
+        case 'image/png':
+            if (function_exists('imagecreatefrompng')) $image = @imagecreatefrompng($source_filepath);
+            break;
+        case 'image/webp':
+            if (function_exists('imagecreatefromwebp')) $image = @imagecreatefromwebp($source_filepath);
+            break;
+    }
+
+    if ($image) {
+        $canvas = imagecreatetruecolor($new_width, $new_height);
+        $bg = imagecolorallocate($canvas, 255, 255, 255);
+        imagefill($canvas, 0, 0, $bg);
+        imagecopyresampled($canvas, $image, 0, 0, 0, 0, $new_width, $new_height, $width, $height);
+        @imagejpeg($canvas, $source_filepath, $quality);
+        imagedestroy($image);
+        imagedestroy($canvas);
+    }
+}
     
     // Parse order JSON
     $image_order_json = isset($_POST['image_order_json']) ? trim($_POST['image_order_json']) : '';
@@ -325,6 +375,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $success_msg = "Creation updated successfully!";
                 $image = $image_path; // update current state image
                 $gallery = $gallery_json; // update gallery state
+                auto_sync_documentation();
             } else {
                 // Insert Entry
                 $stmt = $db->prepare("INSERT INTO `oxo_products` 
@@ -348,6 +399,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $color_id
                 ]);
                 
+                auto_sync_documentation();
                 // Redirect back to dashboard on successful add to prevent double post
                 header("Location: index.php?msg=added");
                 exit;

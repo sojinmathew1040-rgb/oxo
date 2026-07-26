@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OXO Furniture — Developer Technical Architecture</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true, theme: 'dark'});</script>
+    <style>        :root {
+            --primary: #0A2E24;
+            --primary-light: #164638;
+            --accent: #D4AF37;
+            --accent-glow: #F3E5AB;
+            --secondary: #2C3E50;
+            --gradient-1: linear-gradient(135deg, #0A2E24 0%, #164638 50%, #225C4B 100%);
+            --gradient-gold: linear-gradient(135deg, #BF8F54 0%, #D4AF37 50%, #F3E5AB 100%);
+            --gradient-purple: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+            --gradient-blue: linear-gradient(135deg, #0984e3 0%, #74b9ff 100%);
+            --gradient-emerald: linear-gradient(135deg, #00b894 0%, #55efc4 100%);
+            --gradient-orange: linear-gradient(135deg, #e17055 0%, #fab1a0 100%);
+            --bg-dark: #071712;
+            --bg-card: #0E251E;
+            --text-light: #F4F6F5;
+            --text-muted: #A0B2AC;
+            --border-color: rgba(212, 175, 55, 0.25);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            line-height: 1.6;
+            padding: 30px 20px;
+        }
+
+        .nav-switch-bar {
+            max-width: 1240px;
+            margin: 0 auto 25px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(14, 37, 30, 0.9);
+            border: 1px solid var(--border-color);
+            padding: 12px 20px;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .switch-tabs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .switch-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-decoration: none;
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.05);
+            transition: all 0.25s ease;
+            border: 1px solid transparent;
+        }
+
+        .switch-btn:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .switch-btn.active {
+            background: var(--gradient-gold);
+            color: #000;
+            border-color: var(--accent);
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .doc-container {
+            max-width: 1240px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        .doc-header {
+            background: var(--gradient-1);
+            padding: 50px 40px;
+            border-bottom: 2px solid var(--accent);
+            position: relative;
+        }
+
+        .doc-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .brand-badge {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--accent);
+            letter-spacing: 3px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .type-badge.dev { background: rgba(52, 152, 219, 0.2); color: #3498db; border: 1px solid #3498db; }
+        .type-badge.admin { background: rgba(46, 204, 113, 0.2); color: #2ecc71; border: 1px solid #2ecc71; }
+
+        .print-btn {
+            background: var(--gradient-gold);
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 8px 18px rgba(212, 175, 55, 0.3);
+            transition: all 0.3s ease;
+        }
+        .print-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 22px rgba(212, 175, 55, 0.4);
+        }
+
+        .doc-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.6rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #FFFFFF, var(--accent-glow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .doc-subtitle {
+            color: var(--text-muted);
+            font-size: 1.05rem;
+            font-weight: 500;
+        }
+
+        .doc-body { padding: 45px 40px; }
+
+        .section-block { margin-bottom: 45px; }
+
+        .section-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.7rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 22px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+            padding-bottom: 10px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+            gap: 16px;
+            margin-bottom: 35px;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 20px 12px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 110px;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 4px;
+        }
+        .metric-card.c-gold::before { background: var(--gradient-gold); }
+        .metric-card.c-purple::before { background: var(--gradient-purple); }
+        .metric-card.c-blue::before { background: var(--gradient-blue); }
+        .metric-card.c-emerald::before { background: var(--gradient-emerald); }
+        .metric-card.c-orange::before { background: var(--gradient-orange); }
+
+        .metric-val {
+            font-family: 'Syne', sans-serif;
+            font-size: 2rem;
+            font-weight: 800;
+            color: #FFF;
+            margin-bottom: 4px;
+            white-space: nowrap;
+        }
+
+        .metric-val.price-val {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.45rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: #FFFFFF;
+        }
+
+        .metric-lbl {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 600;
+        }
+
+        .flowchart-box {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1.5px solid var(--border-color);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 35px;
+            overflow-x: auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 22px;
+        }
+
+        .feature-box {
+            background: rgba(22, 70, 56, 0.4);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 18px;
+            padding: 25px;
+        }
+
+        .feature-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            background: var(--gradient-gold);
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+        }
+
+        .feature-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #FFF;
+            margin-bottom: 10px;
+        }
+
+        .feature-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .guide-step-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .step-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--accent);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 14px 18px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: rgba(10, 46, 36, 0.8);
+            color: var(--accent);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--accent-glow);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .doc-footer {
+            background: #05120E;
+            padding: 30px 40px;
+            border-top: 1px solid rgba(212, 175, 55, 0.15);
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        @media print {
+            body { background: #fff; color: #000; padding: 0; }
+            .nav-switch-bar, .print-btn { display: none !important; }
+            .doc-container { border: none; box-shadow: none; max-width: 100%; background: #fff; }
+            .doc-header { background: #0A2E24 !important; color: #fff !important; }
+            .doc-title { -webkit-text-fill-color: #fff !important; }
+            .flowchart-box, .metric-card, .feature-box, .guide-step-card { background: #f8f9fa !important; border: 1px solid #ddd !important; color: #000 !important; }
+            .metric-val, .feature-title { color: #000 !important; }
+            .feature-desc, .metric-lbl { color: #555 !important; }
+            th { background: #0A2E24 !important; color: #D4AF37 !important; }
+            td { color: #222 !important; border-bottom: 1px solid #eee !important; }
+            code { background: #eee !important; color: #111 !important; border: 1px solid #ccc; }
+        }</style>
+</head>
+<body>
+
+    <div class="nav-switch-bar">
+        <div class="switch-tabs">
+            <a href="generate-docs.php?type=developer" class="switch-btn active">
+                <i class="fa-solid fa-code"></i> Developer Technical Architecture
+            </a>
+            <a href="generate-docs.php?type=admin" class="switch-btn">
+                <i class="fa-solid fa-user-gear"></i> Admin Operational User Guide
+            </a>
+        </div>
+        <button onclick="window.print()" class="print-btn">
+            <i class="fa-solid fa-file-pdf"></i> Save / Print PDF
+        </button>
+    </div>
+
+    <div class="doc-container">
+        <div class="doc-header">
+            <div class="doc-header-top">
+                <div class="brand-badge"><i class="fa-solid fa-gem"></i> OXO CONTROL STUDIO</div>
+                <span class="type-badge dev"><i class="fa-solid fa-code"></i> Developer Specification</span>
+            </div>
+            <h1 class="doc-title">Technical Architecture & Developer Guide</h1>
+            <p class="doc-subtitle">Codebase Execution Cascades, Mermaid Data Flow Diagrams, Schema References & API Structures</p>
+        </div>
+
+        <div class="doc-body">
+            <!-- SECTION 1: LIVE SYSTEM METRICS -->
+            <div class="section-block">
+                <h3 class="section-title"><i class="fa-solid fa-chart-pie"></i> System Database Metrics</h3>
+                <div class="metrics-grid">
+                    <div class="metric-card c-gold">
+                        <div class="metric-val">10</div>
+                        <div class="metric-lbl">Catalog Products</div>
+                    </div>
+                    <div class="metric-card c-purple">
+                        <div class="metric-val">5</div>
+                        <div class="metric-lbl">Partner Brands</div>
+                    </div>
+                    <div class="metric-card c-blue">
+                        <div class="metric-val">7</div>
+                        <div class="metric-lbl">Categories</div>
+                    </div>
+                    <div class="metric-card c-emerald">
+                        <div class="metric-val">7</div>
+                        <div class="metric-lbl">Materials</div>
+                    </div>
+                    <div class="metric-card c-orange">
+                        <div class="metric-val">16</div>
+                        <div class="metric-lbl">Color Palettes</div>
+                    </div>
+                    <div class="metric-card c-gold">
+                        <div class="metric-val">5</div>
+                        <div class="metric-lbl">Consultations</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2: MERMAID DATA FLOW DIAGRAM -->
+            <div class="section-block">
+                <h3 class="section-title"><i class="fa-solid fa-diagram-project"></i> Execution Data Flow Diagram</h3>
+                <div class="flowchart-box">
+                    <pre class="mermaid">
+flowchart TD
+    classDef admin fill:#0A2E24,stroke:#D4AF37,stroke-width:2px,color:#FFF;
+    classDef process fill:#164638,stroke:#00b894,stroke-width:1px,color:#FFF;
+    classDef store fill:#2C3E50,stroke:#0984e3,stroke-width:1px,color:#FFF;
+    classDef db fill:#071712,stroke:#D4AF37,stroke-width:2px,color:#D4AF37;
+
+    A[Admin User] -->|Paste URL Link| B(Universal Importer admin/import-universal.php)
+    
+    subgraph ImportEngine [4-Tier Universal Extraction Cascade]
+        B --> Tier1[1. Shopify JSON API /products.json]
+        B --> Tier2[2. HTML JSON-LD Microdata]
+        B --> Tier3[3. OpenGraph Meta Tags]
+        B --> Tier4[4. DOM Scraper / Gallery Showcase Scraper]
+    end
+
+    ImportEngine --> C{Brand Exists in DB?}
+    C -->|No| D[Auto-Create Brand Record & Download Favicon Logo]
+    C -->|Yes| E[Reuse Existing Brand ID - Deduplication]
+
+    ImportEngine --> F{Collection Attributes Missing?}
+    F -->|Category / Material / Color Missing| G[Auto-Insert into oxo_categories, oxo_materials, oxo_colors]
+    F -->|Attributes Found| H[Map Slugs & Parse Dimensions W x D x H]
+
+    D & E & G & H --> I(PHP GD Image Compressor Engine)
+    I -->|Compress 3MB-5MB Raw Photos| J[Lightweight 60KB-150KB Web Format Image]
+    
+    J --> K[(MySQL Database oxo_db.sql)]
+
+    subgraph Storefront [Storefront Experience & AR Engine]
+        K --> L[Shop Catalog shop.php]
+        L -->|Color Filter Selected| M[Dynamic Product Card Image Swap]
+        L -->|Product Click| N[Product Detail Page product.php]
+        N -->|Dimensions Present| O[Render 2D Scale Graph Blueprint]
+        N -->|Tap View in Space| P[Mobile Camera AR Projection Overlay]
+    end
+
+    subgraph SystemTools [Admin Operations & Backup Engine]
+        A -->|Click Backup Database| R[admin/export-db.php]
+        R -->|Download SQL Backup| S[(db/oxo_db.sql)]
+        A -->|Upload SQL File| T[admin/import-db.php]
+        T -->|Execute & Restore Schema| K
+    end
+
+    class A,B admin;
+    class Tier1,Tier2,Tier3,Tier4,C,D,E,F,G,H,I,J process;
+    class L,M,N,O,P store;
+    class K,S db;
+                    </pre>
+                </div>
+            </div>
+
+            <!-- SECTION 3: TECHNICAL ARCHITECTURE & MODULES -->
+            <div class="section-block">
+                <h3 class="section-title"><i class="fa-solid fa-cubes"></i> Architecture Modules</h3>
+                <div class="features-grid">
+                    <div class="feature-box">
+                        <div class="feature-icon"><i class="fa-solid fa-cloud-arrow-down"></i></div>
+                        <div class="feature-title">Universal Product Importer</div>
+                        <div class="feature-desc">
+                            4-Tier extraction cascade parsing Shopify JSON endpoints, Microdata JSON-LD, OpenGraph tags, and DOM selectors. Features showcase gallery batch importing.
+                        </div>
+                    </div>
+                    <div class="feature-box">
+                        <div class="feature-icon"><i class="fa-solid fa-file-image"></i></div>
+                        <div class="feature-title">PHP GD Optimization Engine</div>
+                        <div class="feature-desc">
+                            Automatically resizes and re-compresses raw 3MB-5MB product images into optimized 60KB-150KB web images during import/creation.
+                        </div>
+                    </div>
+                    <div class="feature-box">
+                        <div class="feature-icon"><i class="fa-solid fa-database"></i></div>
+                        <div class="feature-title">Database Exporter & Importer</div>
+                        <div class="feature-desc">
+                            Single master <code>oxo_db.sql</code> engine. Features 1-click browser download backups (<code>admin/export-db.php</code>) and SQL file restoration (<code>admin/import-db.php</code>).
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 4: DATABASE TABLES SCHEMA SUMMARY -->
+            <div class="section-block">
+                <h3 class="section-title"><i class="fa-solid fa-table"></i> MySQL Database Schema Summary</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Table Name</th>
+                            <th>Purpose / Primary Function</th>
+                            <th>Total Rows</th>
+                            <th>Key Columns</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>oxo_products</code></td>
+                            <td>Main furniture catalog database</td>
+                            <td>10</td>
+                            <td><code>id, title, price, category, image, material_slug, brand_id, height_cm, width_cm, length_cm, details</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>oxo_brands</code></td>
+                            <td>Partner brands & logo paths</td>
+                            <td>5</td>
+                            <td><code>id, name, logo_path</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>oxo_categories</code></td>
+                            <td>Product furniture categories</td>
+                            <td>7</td>
+                            <td><code>id, slug, name, bg_color</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>oxo_materials</code></td>
+                            <td>Furniture construction materials</td>
+                            <td>7</td>
+                            <td><code>id, slug, name</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>oxo_colors</code></td>
+                            <td>Color options & hex codes</td>
+                            <td>16</td>
+                            <td><code>id, name, hex</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>oxo_consultations</code></td>
+                            <td>Client design consultation inquiries</td>
+                            <td>5</td>
+                            <td><code>id, name, email, whatsapp, message, product_title, status, created_at</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>oxo_admins</code></td>
+                            <td>Admin user accounts & credentials</td>
+                            <td>1</td>
+                            <td><code>id, username, password, whatsapp</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="doc-footer">
+            <p>OXO Furniture Studio — Developer Technical Architecture Suite</p>
+            <p style="margin-top: 5px; opacity: 0.7;">Auto-generated via <code>admin/generate-docs.php</code> — July 26, 2026 — 7:56 AM</p>
+        </div>
+    </div>
+</body>
+</html>

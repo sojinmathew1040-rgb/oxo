@@ -157,12 +157,20 @@ function initialize_tables($pdo) {
             ["chairs", "Chairs", "#FAF9F6"],
             ["tables", "Tables", "rgba(10, 46, 36, 0.02)"],
             ["lighting", "Lighting", "rgba(200, 162, 118, 0.035)"],
-            ["storage", "Storage", "rgba(30, 40, 36, 0.015)"]
+            ["storage", "Storage", "rgba(30, 40, 36, 0.015)"],
+            ["beds", "Beds & Mattresses", "rgba(180, 140, 90, 0.03)"]
         ];
         foreach ($default_cats as $cat) {
             $insert_cat->execute([$cat[0], $cat[1], $cat[2]]);
         }
     } else {
+        // Migration: ensure beds category exists
+        $check_beds = $pdo->query("SELECT COUNT(*) FROM `oxo_categories` WHERE `slug` = 'beds'")->fetchColumn();
+        if ($check_beds == 0) {
+            $insert_cat = $pdo->prepare("INSERT INTO `oxo_categories` (`slug`, `name`, `bg_color`) VALUES (?, ?, ?)");
+            $insert_cat->execute(["beds", "Beds & Mattresses", "rgba(180, 140, 90, 0.03)"]);
+        }
+
         // Seed colors for existing categories if empty
         $pdo->exec("UPDATE `oxo_categories` SET `bg_color` = '#FAF9F6' WHERE `slug` = 'chairs' AND (`bg_color` IS NULL OR `bg_color` = '')");
         $pdo->exec("UPDATE `oxo_categories` SET `bg_color` = 'rgba(200, 162, 118, 0.035)' WHERE `slug` = 'lighting' AND (`bg_color` IS NULL OR `bg_color` = '')");
@@ -229,6 +237,12 @@ function initialize_tables($pdo) {
     $col_stmt = $pdo->query("SHOW COLUMNS FROM `oxo_products` LIKE 'length_cm'");
     if (!$col_stmt->fetch()) {
         $pdo->exec("ALTER TABLE `oxo_products` ADD COLUMN `length_cm` INT DEFAULT 240");
+    }
+    
+    // Check if column source_url exists in oxo_products, add if missing
+    $col_stmt = $pdo->query("SHOW COLUMNS FROM `oxo_products` LIKE 'source_url'");
+    if (!$col_stmt->fetch()) {
+        $pdo->exec("ALTER TABLE `oxo_products` ADD COLUMN `source_url` TEXT DEFAULT NULL");
     }
     
     // Create colors table

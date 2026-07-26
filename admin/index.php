@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/generate-docs.php';
 
 // Force authentication
 require_admin_login();
@@ -22,6 +23,51 @@ if ($current_tab === 'brands') {
 $valid_tabs = ['products', 'add_product', 'analytics', 'settings', 'collections'];
 if (!in_array($current_tab, $valid_tabs)) {
     $current_tab = 'products';
+}
+
+// Compress and optimize uploaded images to small KB format for fast loading
+function compress_admin_uploaded_image($source_filepath, $quality = 78) {
+    if (!file_exists($source_filepath) || filesize($source_filepath) === 0) return;
+    $info = @getimagesize($source_filepath);
+    if (!$info) return;
+
+    $mime = $info['mime'];
+    $width = $info[0];
+    $height = $info[1];
+    $max_dim = 1200;
+
+    if ($width > $max_dim || $height > $max_dim) {
+        $ratio = min($max_dim / $width, $max_dim / $height);
+        $new_width = (int)round($width * $ratio);
+        $new_height = (int)round($height * $ratio);
+    } else {
+        $new_width = $width;
+        $new_height = $height;
+    }
+
+    $image = null;
+    switch ($mime) {
+        case 'image/jpeg':
+        case 'image/jpg':
+            if (function_exists('imagecreatefromjpeg')) $image = @imagecreatefromjpeg($source_filepath);
+            break;
+        case 'image/png':
+            if (function_exists('imagecreatefrompng')) $image = @imagecreatefrompng($source_filepath);
+            break;
+        case 'image/webp':
+            if (function_exists('imagecreatefromwebp')) $image = @imagecreatefromwebp($source_filepath);
+            break;
+    }
+
+    if ($image) {
+        $canvas = imagecreatetruecolor($new_width, $new_height);
+        $bg = imagecolorallocate($canvas, 255, 255, 255);
+        imagefill($canvas, 0, 0, $bg);
+        imagecopyresampled($canvas, $image, 0, 0, 0, 0, $new_width, $new_height, $width, $height);
+        @imagejpeg($canvas, $source_filepath, $quality);
+        imagedestroy($image);
+        imagedestroy($canvas);
+    }
 }
 
 // 1. ACTION: Handle product deletion
@@ -42,6 +88,7 @@ if ($current_tab === 'products' && isset($_GET['action']) && $_GET['action'] ===
                 if ($img_path && file_exists(__DIR__ . '/../' . $img_path) && strpos($img_path, 'uploads/') !== false) {
                     @unlink(__DIR__ . '/../' . $img_path);
                 }
+                auto_sync_documentation();
                 $message = "Creation '{$delete_id}' was successfully archived and deleted.";
                 $message_type = 'success';
             } else {
@@ -197,6 +244,7 @@ if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && i
                         $target_file = $upload_dir . $new_file_name;
                         
                         if (move_uploaded_file($_FILES['logo_file']['tmp_name'], $target_file)) {
+                            compress_admin_uploaded_image($target_file, 78);
                             $logo_path = 'assets/images/uploads/' . $new_file_name;
                         } else {
                             $message = "Failed to upload logo image file.";
@@ -511,8 +559,12 @@ if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && i
 if ($current_tab === 'add_product' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'add_product') {
     $prod_title = isset($_POST['title']) ? trim($_POST['title']) : '';
     // Auto-generate ID slug from Title
-    $prod_id = strtolower(preg_replace('/[^a-zA-Z0-9\-]+/', '-', $prod_title));
-    $prod_id = trim($prod_id, '-');
+    $clean_words = array_filter(explode('-', preg_replace('/[^a-z0-9\-]/', '', strtolower($prod_title))));
+    $stop_words = ['with', 'set', 'for', 'and', 'the', 'in', 'of', 'by', 'furniture'];
+    $filtered = array_filter($clean_words, function($w) use ($stop_words) { return !in_array($w, $stop_words) && strlen($w) > 1; });
+    $short_slug = implode('-', array_slice(!empty($filtered) ? $filtered : $clean_words, 0, 3));
+    $prod_id = 'nk-' . ($short_slug ?: 'item-' . rand(100, 999));
+    if (strlen($prod_id) > 25) $prod_id = rtrim(substr($prod_id, 0, 25), '-');
     
     $prod_price = isset($_POST['price']) ? (int)$_POST['price'] : 0;
     $prod_category = isset($_POST['category']) ? trim($_POST['category']) : '';
@@ -579,6 +631,7 @@ if ($current_tab === 'add_product' && $_SERVER['REQUEST_METHOD'] === 'POST' && i
                     $new_file_name = $prod_id . '_asset_' . $i . '_' . time() . '.' . $file_ext;
                     $target_file = $upload_dir . $new_file_name;
                     if (move_uploaded_file($_FILES['gallery_files']['tmp_name'][$i], $target_file)) {
+                        compress_admin_uploaded_image($target_file, 78);
                         $upload_map["file:{$i}"] = 'assets/images/uploads/' . $new_file_name;
                     }
                 }
@@ -813,6 +866,9 @@ if (!function_exists('format_inr_admin')) {
                 <a href="index.php?tab=add_product" class="sidebar-link <?php echo $current_tab === 'add_product' ? 'active' : ''; ?>">
                     <i class="fa-solid fa-circle-plus"></i> Add Product
                 </a>
+                <a href="import-universal.php" class="sidebar-link">
+                    <i class="fa-solid fa-cloud-arrow-down"></i> Universal Importer
+                </a>
                 <a href="index.php?tab=analytics" class="sidebar-link <?php echo $current_tab === 'analytics' ? 'active' : ''; ?>">
                     <i class="fa-solid fa-chart-line"></i> Analytics & Inquiries
                     <?php if ($pending_inquiries > 0): ?>
@@ -824,6 +880,9 @@ if (!function_exists('format_inr_admin')) {
                 </a>
                 <a href="index.php?tab=settings" class="sidebar-link <?php echo $current_tab === 'settings' ? 'active' : ''; ?>">
                     <i class="fa-solid fa-gears"></i> Settings
+                </a>
+                <a href="generate-docs.php" onclick="document.getElementById('docsModal').style.display='flex'; return false;" class="sidebar-link" title="Generate & Download Developer Specs or Admin User Guide">
+                    <i class="fa-solid fa-file-pdf" style="color: #F3E5AB;"></i> System Documentation
                 </a>
                 <a href="../index.php" target="_blank" class="sidebar-link">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i> View Store
@@ -861,17 +920,47 @@ if (!function_exists('format_inr_admin')) {
             </div>
             
             <?php if ($current_tab === 'products' && $db): ?>
-                <a href="product-editor.php" class="action-btn">
-                    <i class="fa-solid fa-plus"></i> Add New Creation
-                </a>
+                <div style="display: flex; gap: 10px;">
+                    <a href="sync-prices.php?action=sync_all" class="action-btn" style="background: rgba(155, 89, 182, 0.15); color: #a855f7; border: 1px solid #a855f7; text-decoration: none;" title="Re-scrape source URLs and update product prices automatically">
+                        <i class="fa-solid fa-rotate"></i> Sync Live Prices
+                    </a>
+                    <a href="export-db.php" class="action-btn" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid #2ecc71; text-decoration: none;" title="Download current database backup SQL file">
+                        <i class="fa-solid fa-download"></i> Backup Database
+                    </a>
+                    <button type="button" onclick="document.getElementById('importDbModal').style.display='flex'" class="action-btn" style="background: rgba(52, 152, 219, 0.15); color: #3498db; border: 1px solid #3498db; cursor: pointer;" title="Upload and restore SQL database backup">
+                        <i class="fa-solid fa-file-import"></i> Import Database
+                    </button>
+                    <a href="product-editor.php" class="action-btn">
+                        <i class="fa-solid fa-plus"></i> Add New Creation
+                    </a>
+                </div>
             <?php endif; ?>
         </div>
 
         <!-- System Alerts -->
+        <?php 
+        $message = '';
+        $message_type = '';
+        if (isset($_GET['backup']) && $_GET['backup'] === 'success') {
+            $message = "Database backup created successfully! Downloaded oxo_db.sql";
+            $message_type = 'success';
+        } elseif (isset($_GET['import'])) {
+            if ($_GET['import'] === 'success') {
+                $message = "Database restored successfully from uploaded SQL backup file!";
+                $message_type = 'success';
+            } else {
+                $message = "Database import failed: " . htmlspecialchars($_GET['message'] ?? 'Unknown error');
+                $message_type = 'error';
+            }
+        } elseif (isset($_GET['sync'])) {
+            $message = htmlspecialchars($_GET['message'] ?? 'Price sync completed.');
+            $message_type = $_GET['sync'] === 'error' ? 'error' : 'success';
+        }
+        ?>
         <?php if (!empty($message)): ?>
-            <div class="alert <?php echo $message_type === 'success' ? 'alert-success' : ''; ?>" style="margin-bottom: 30px;">
+            <div class="alert <?php echo $message_type === 'success' ? 'alert-success' : 'alert-danger'; ?>" style="margin-bottom: 30px; <?php echo $message_type === 'error' ? 'background: rgba(231, 76, 60, 0.15); color: #e74c3c; border: 1px solid #e74c3c; padding: 12px 18px; border-radius: 8px;' : ''; ?>">
                 <i class="fa-solid <?php echo $message_type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'; ?>" style="margin-right: 8px;"></i>
-                <?php echo htmlspecialchars($message); ?>
+                <?php echo $message; ?>
             </div>
         <?php endif; ?>
 
@@ -1362,6 +1451,22 @@ if (!function_exists('format_inr_admin')) {
                             <i class="fa-solid fa-key"></i> Update Credentials
                         </button>
                     </form>
+                </div>
+
+                <!-- Database Backup & Restore Card -->
+                <div class="settings-card">
+                    <h3 class="editor-card-title"><i class="fa-solid fa-database" style="margin-right: 8px; color: #3498db;"></i> Database Backup & Restore</h3>
+                    <p style="font-size: 0.85rem; color: var(--color-gray); margin-bottom: 20px;">
+                        Export full SQL database backups or upload an SQL backup file to restore database tables and catalog state.
+                    </p>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <a href="export-db.php" class="action-btn" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid #2ecc71; text-decoration: none;">
+                            <i class="fa-solid fa-download"></i> Backup SQL Database
+                        </a>
+                        <button type="button" onclick="document.getElementById('importDbModal').style.display='flex'" class="action-btn" style="background: rgba(52, 152, 219, 0.15); color: #3498db; border: 1px solid #3498db; cursor: pointer;">
+                            <i class="fa-solid fa-file-import"></i> Restore from SQL File
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2962,6 +3067,85 @@ if (!function_exists('format_inr_admin')) {
     window.addEventListener('click', (e) => {
         if (e.target.classList.contains('edit-modal')) {
             closeEditModal(e.target.id);
+        }
+    });
+    </script>
+    <!-- Import Database Modal -->
+    <div id="importDbModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: #ffffff; padding: 30px; border-radius: 12px; max-width: 480px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative;">
+            <button type="button" onclick="document.getElementById('importDbModal').style.display='none'" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #888;">&times;</button>
+            <h3 style="margin-top: 0; font-size: 1.25rem; font-weight: 600; color: #1a1a1a; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-database" style="color: #3498db;"></i> Import & Restore Database
+            </h3>
+            <p style="color: #666; font-size: 0.9rem; margin-top: 10px; margin-bottom: 20px; line-height: 1.4;">
+                Select a <code>.sql</code> backup file to restore database tables.
+                <br><strong style="color: #e74c3c;">Note:</strong> Existing tables will be updated with data from the SQL file.
+            </p>
+            <form action="import-db.php" method="POST" enctype="multipart/form-data">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="sql_file" style="display: block; font-weight: 500; margin-bottom: 8px; font-size: 0.9rem;">Select SQL File (*.sql)</label>
+                    <input type="file" id="sql_file" name="sql_file" accept=".sql" required class="input-control" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;">
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="document.getElementById('importDbModal').style.display='none'" class="action-btn" style="background: #f1f2f6; color: #333; border: 1px solid #ccc; cursor: pointer;">Cancel</button>
+                    <button type="submit" class="action-btn" style="background: #3498db; border-color: #2980b9; color: #fff; cursor: pointer;">
+                        <i class="fa-solid fa-upload"></i> Upload & Import
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- System Documentation Type Selection Modal -->
+    <div id="docsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: #ffffff; padding: 35px 30px; border-radius: 20px; max-width: 520px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.3); position: relative; text-align: center;">
+            <button type="button" onclick="document.getElementById('docsModal').style.display='none'" style="position: absolute; top: 16px; right: 18px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">&times;</button>
+            
+            <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(10, 46, 36, 0.08); color: #0A2E24; display: inline-flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 15px;">
+                <i class="fa-solid fa-file-pdf" style="color: #D4AF37;"></i>
+            </div>
+
+            <h3 style="font-size: 1.35rem; font-weight: 700; color: #1a1a1a; margin-bottom: 8px;">Generate System Documentation</h3>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 25px;">Please select the documentation suite format to generate or print to PDF:</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px; text-align: left;">
+                <!-- Developer Docs Option -->
+                <a href="generate-docs.php?type=developer" target="_blank" onclick="document.getElementById('docsModal').style.display='none'" style="display: flex; align-items: center; gap: 16px; padding: 18px; background: #f8f9fa; border: 1.5px solid #e2e8f0; border-radius: 14px; text-decoration: none; transition: all 0.25s ease;">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; background: #0A2E24; color: #D4AF37; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; shrink: 0;">
+                        <i class="fa-solid fa-code"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <strong style="display: block; font-size: 1.02rem; color: #0A2E24; font-weight: 700;">For Developers</strong>
+                        <span style="font-size: 0.82rem; color: #64748b; line-height: 1.4; display: block; margin-top: 2px;">Technical architecture specs, Mermaid data flow diagrams, database schemas & code module maps.</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right" style="color: #94a3b8; font-size: 0.9rem;"></i>
+                </a>
+
+                <!-- Admin User Guide Option -->
+                <a href="generate-docs.php?type=admin" target="_blank" onclick="document.getElementById('docsModal').style.display='none'" style="display: flex; align-items: center; gap: 16px; padding: 18px; background: #f8f9fa; border: 1.5px solid #e2e8f0; border-radius: 14px; text-decoration: none; transition: all 0.25s ease;">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; background: #2563eb; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; shrink: 0;">
+                        <i class="fa-solid fa-user-gear"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <strong style="display: block; font-size: 1.02rem; color: #1e40af; font-weight: 700;">For Admin & Management</strong>
+                        <span style="font-size: 0.82rem; color: #64748b; line-height: 1.4; display: block; margin-top: 2px;">Operational user guide, catalog management, business stats, price analytics & DB backup/import manuals.</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right" style="color: #94a3b8; font-size: 0.9rem;"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Close modals when clicking backdrop
+    window.addEventListener('click', (e) => {
+        const importModal = document.getElementById('importDbModal');
+        const docsModal = document.getElementById('docsModal');
+        if (e.target === importModal) {
+            importModal.style.display = 'none';
+        }
+        if (e.target === docsModal) {
+            docsModal.style.display = 'none';
         }
     });
     </script>

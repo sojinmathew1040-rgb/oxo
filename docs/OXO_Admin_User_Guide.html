@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OXO Furniture — Admin Operational User Guide</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>        :root {
+            --primary: #0A2E24;
+            --primary-light: #164638;
+            --accent: #D4AF37;
+            --accent-glow: #F3E5AB;
+            --secondary: #2C3E50;
+            --gradient-1: linear-gradient(135deg, #0A2E24 0%, #164638 50%, #225C4B 100%);
+            --gradient-gold: linear-gradient(135deg, #BF8F54 0%, #D4AF37 50%, #F3E5AB 100%);
+            --gradient-purple: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+            --gradient-blue: linear-gradient(135deg, #0984e3 0%, #74b9ff 100%);
+            --gradient-emerald: linear-gradient(135deg, #00b894 0%, #55efc4 100%);
+            --gradient-orange: linear-gradient(135deg, #e17055 0%, #fab1a0 100%);
+            --bg-dark: #071712;
+            --bg-card: #0E251E;
+            --text-light: #F4F6F5;
+            --text-muted: #A0B2AC;
+            --border-color: rgba(212, 175, 55, 0.25);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            line-height: 1.6;
+            padding: 30px 20px;
+        }
+
+        .nav-switch-bar {
+            max-width: 1240px;
+            margin: 0 auto 25px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(14, 37, 30, 0.9);
+            border: 1px solid var(--border-color);
+            padding: 12px 20px;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .switch-tabs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .switch-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-decoration: none;
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.05);
+            transition: all 0.25s ease;
+            border: 1px solid transparent;
+        }
+
+        .switch-btn:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .switch-btn.active {
+            background: var(--gradient-gold);
+            color: #000;
+            border-color: var(--accent);
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .doc-container {
+            max-width: 1240px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        .doc-header {
+            background: var(--gradient-1);
+            padding: 50px 40px;
+            border-bottom: 2px solid var(--accent);
+            position: relative;
+        }
+
+        .doc-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .brand-badge {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--accent);
+            letter-spacing: 3px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .type-badge.dev { background: rgba(52, 152, 219, 0.2); color: #3498db; border: 1px solid #3498db; }
+        .type-badge.admin { background: rgba(46, 204, 113, 0.2); color: #2ecc71; border: 1px solid #2ecc71; }
+
+        .print-btn {
+            background: var(--gradient-gold);
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 8px 18px rgba(212, 175, 55, 0.3);
+            transition: all 0.3s ease;
+        }
+        .print-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 22px rgba(212, 175, 55, 0.4);
+        }
+
+        .doc-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.6rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #FFFFFF, var(--accent-glow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .doc-subtitle {
+            color: var(--text-muted);
+            font-size: 1.05rem;
+            font-weight: 500;
+        }
+
+        .doc-body { padding: 45px 40px; }
+
+        .section-block { margin-bottom: 45px; }
+
+        .section-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.7rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 22px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+            padding-bottom: 10px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+            gap: 16px;
+            margin-bottom: 35px;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 20px 12px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 110px;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 4px;
+        }
+        .metric-card.c-gold::before { background: var(--gradient-gold); }
+        .metric-card.c-purple::before { background: var(--gradient-purple); }
+        .metric-card.c-blue::before { background: var(--gradient-blue); }
+        .metric-card.c-emerald::before { background: var(--gradient-emerald); }
+        .metric-card.c-orange::before { background: var(--gradient-orange); }
+
+        .metric-val {
+            font-family: 'Syne', sans-serif;
+            font-size: 2rem;
+            font-weight: 800;
+            color: #FFF;
+            margin-bottom: 4px;
+            white-space: nowrap;
+        }
+
+        .metric-val.price-val {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.45rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: #FFFFFF;
+        }
+
+        .metric-lbl {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 600;
+        }
+
+        .flowchart-box {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1.5px solid var(--border-color);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 35px;
+            overflow-x: auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 22px;
+        }
+
+        .feature-box {
+            background: rgba(22, 70, 56, 0.4);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 18px;
+            padding: 25px;
+        }
+
+        .feature-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            background: var(--gradient-gold);
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+        }
+
+        .feature-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #FFF;
+            margin-bottom: 10px;
+        }
+
+        .feature-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .guide-step-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .step-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--accent);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 14px 18px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: rgba(10, 46, 36, 0.8);
+            color: var(--accent);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--accent-glow);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .doc-footer {
+            background: #05120E;
+            padding: 30px 40px;
+            border-top: 1px solid rgba(212, 175, 55, 0.15);
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        @media print {
+            body { background: #fff; color: #000; padding: 0; }
+            .nav-switch-bar, .print-btn { display: none !important; }
+            .doc-container { border: none; box-shadow: none; max-width: 100%; background: #fff; }
+            .doc-header { background: #0A2E24 !important; color: #fff !important; }
+            .doc-title { -webkit-text-fill-color: #fff !important; }
+            .flowchart-box, .metric-card, .feature-box, .guide-step-card { background: #f8f9fa !important; border: 1px solid #ddd !important; color: #000 !important; }
+            .metric-val, .feature-title { color: #000 !important; }
+            .feature-desc, .metric-lbl { color: #555 !important; }
+            th { background: #0A2E24 !important; color: #D4AF37 !important; }
+            td { color: #222 !important; border-bottom: 1px solid #eee !important; }
+            code { background: #eee !important; color: #111 !important; border: 1px solid #ccc; }
+        }</style>
+</head>
+<body>
+
+    <div class="nav-switch-bar">
+        <div class="switch-tabs">
+            <a href="generate-docs.php?type=developer" class="switch-btn">
+                <i class="fa-solid fa-code"></i> Developer Technical Architecture
+            </a>
+            <a href="generate-docs.php?type=admin" class="switch-btn active">
+                <i class="fa-solid fa-user-gear"></i> Admin Operational User Guide
+            </a>
+        </div>
+        <button onclick="window.print()" class="print-btn">
+            <i class="fa-solid fa-file-pdf"></i> Save / Print PDF
+        </button>
+    </div>
+
+    <div class="doc-container">
+        <div class="doc-header">
+            <div class="doc-header-top">
+                <div class="brand-badge"><i class="fa-solid fa-gem"></i> OXO CONTROL STUDIO</div>
+                <span class="type-badge admin"><i class="fa-solid fa-user-gear"></i> Admin User Guide</span>
+            </div>
+            <h1 class="doc-title">Admin Operational User Manual</h1>
+            <p class="doc-subtitle">Studio Management, Inventory Logistics, Business Statistics & Database Control Operations</p>
+        </div>
+
+        <div class="doc-body">
+            <!-- SECTION 1: BUSINESS & CATALOG METRICS SUMMARY -->
+            <div class="section-block">
+                <h3 class="section-title"><i class="fa-solid fa-chart-line"></i> Business & Catalog Overview</h3>
+                <div class="metrics-grid">
+                    <div class="metric-card c-gold">
+                        <div class="metric-val">10</div>
+                        <div class="metric-lbl">Total Creations</div>
+                    </div>
+                    <div class="metric-card c-purple">
+                        <div class="metric-val">5</div>
+                        <div class="metric-lbl">Partner Brands</div>
+                    </div>
+                    <div class="metric-card c-emerald">
+                        <div class="metric-val">5</div>
+                        <div class="metric-lbl">Total Inquiries</div>
+                    </div>
+                    <div class="metric-card c-orange">
+                        <div class="metric-val">0</div>
+                        <div class="metric-lbl">Pending Quotes</div>
+                    </div>
+                    <div class="metric-card c-blue">
+                        <div class="metric-val price-val">₹2,370</div>
+                        <div class="metric-lbl">Min Product Price</div>
+                    </div>
+                    <div class="metric-card c-gold">
+                        <div class="metric-val price-val">₹240,000</div>
+                        <div class="metric-lbl">Max Product Price</div>
+                    </div>
+                </div>
+
+                <div style="background: rgba(212, 175, 55, 0.08); border: 1px solid rgba(212, 175, 55, 0.25); padding: 18px 24px; border-radius: 16px; margin-top: 15px;">
+                    <p style="font-size: 0.95rem; color: #FFF; display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-sack-dollar" style="color: var(--accent); font-size: 1.2rem;"></i>
+                        <strong>Average Product Catalog Price:</strong> ₹83,270 across 10 active luxury items.
+                    </p>
+                </div>
+            </div>
+
+            <!-- SECTION 2: STUDIO OPERATIONS MANUAL -->
+            <div class="section-block">
+                <h3 class="section-title"><i class="fa-solid fa-book-open"></i> Studio Operations Manual</h3>
+
+                <!-- Step 1: Product Management -->
+                <div class="guide-step-card">
+                    <div class="step-badge"><i class="fa-solid fa-couch"></i> 1. Product Catalog Management</div>
+                    <h4 style="font-size: 1.15rem; color: #FFF; margin-bottom: 8px;">Adding & Editing Furniture Designs</h4>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;">
+                        Admins can manage the entire luxury catalog directly from the <strong>Products Tab</strong> or via the <strong>Add New Creation</strong> button:
+                    </p>
+                    <ul style="color: var(--text-muted); font-size: 0.9rem; margin-left: 20px; line-height: 1.6;">
+                        <li><strong>Add New Creation:</strong> Click <em>Add New Creation</em>, fill in product title, category, price, dimensions (Height, Width, Depth/Length in cm), description, specs, materials, and upload high-res showcase photos.</li>
+                        <li><strong>Universal Importer:</strong> Click <em>Universal Importer</em>, paste any furniture URL or showcase category link to extract product data and photos automatically.</li>
+                        <li><strong>Editing Creations:</strong> Click the edit icon on any product card in the control center to adjust pricing, update gallery photos, or modify scale graph dimensions.</li>
+                        <li><strong>Deleting Items:</strong> Click delete to remove obsolete inventory from the store.</li>
+                    </ul>
+                </div>
+
+                <!-- Step 2: Brand & Collection Management -->
+                <div class="guide-step-card">
+                    <div class="step-badge"><i class="fa-solid fa-shapes"></i> 2. Brands & Collections Management</div>
+                    <h4 style="font-size: 1.15rem; color: #FFF; margin-bottom: 8px;">Partner Brands, Categories & Swatches</h4>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;">
+                        Control how partner brand logos display in the homepage sliding marquee and map custom swatches:
+                    </p>
+                    <ul style="color: var(--text-muted); font-size: 0.9rem; margin-left: 20px; line-height: 1.6;">
+                        <li><strong>Brands:</strong> Add partner studio brand names and upload SVG/PNG logos. Logos display smoothly in the storefront marquee.</li>
+                        <li><strong>Categories:</strong> Add or edit furniture category titles (Sofas, Chairs, Tables, Lighting, Storage, Beds) and assign background accent colors.</li>
+                        <li><strong>Materials & Color Palettes:</strong> Register new construction materials (Solid Wood, Brushed Metal, Fabric) and custom color swatches with HEX color pickers.</li>
+                    </ul>
+                </div>
+
+                <!-- Step 3: Inquiries & WhatsApp -->
+                <div class="guide-step-card">
+                    <div class="step-badge"><i class="fa-solid fa-comments"></i> 3. Consultation Requests & WhatsApp Integration</div>
+                    <h4 style="font-size: 1.15rem; color: #FFF; margin-bottom: 8px;">Managing Client Consultations</h4>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;">
+                        Access client inquiries under <strong>Analytics & Inquiries</strong> tab:
+                    </p>
+                    <ul style="color: var(--text-muted); font-size: 0.9rem; margin-left: 20px; line-height: 1.6;">
+                        <li><strong>View Inquiries:</strong> Review consultation requests submitted by clients from product pages or homepage.</li>
+                        <li><strong>Status Update:</strong> Toggle inquiry state between <code>Pending</code>, <code>Contacted</code>, and <code>Completed</code>.</li>
+                        <li><strong>1-Click WhatsApp Chat:</strong> Click the WhatsApp icon next to any inquiry to instantly start a direct WhatsApp conversation pre-filled with client inquiry details.</li>
+                    </ul>
+                </div>
+
+                <!-- Step 4: Settings & Credentials -->
+                <div class="guide-step-card">
+                    <div class="step-badge"><i class="fa-solid fa-gears"></i> 4. Settings & Security</div>
+                    <h4 style="font-size: 1.15rem; color: #FFF; margin-bottom: 8px;">WhatsApp Number & Admin Passwords</h4>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;">
+                        Configure contact channels and security under the <strong>Settings</strong> tab:
+                    </p>
+                    <ul style="color: var(--text-muted); font-size: 0.9rem; margin-left: 20px; line-height: 1.6;">
+                        <li><strong>WhatsApp Contact:</strong> Update the target admin WhatsApp phone number (with country code, e.g. <code>919876543210</code>). All storefront inquiry buttons automatically route to this number.</li>
+                        <li><strong>Admin Credentials:</strong> Change current admin password with secure password hashing.</li>
+                    </ul>
+                </div>
+
+                <!-- Step 5: Database Backup & Restore -->
+                <div class="guide-step-card">
+                    <div class="step-badge"><i class="fa-solid fa-database"></i> 5. Database Backup & Restoration</div>
+                    <h4 style="font-size: 1.15rem; color: #FFF; margin-bottom: 8px;">Exporting & Importing SQL Database Files</h4>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;">
+                        Maintain full data security with 1-click database backup and upload restoration:
+                    </p>
+                    <ul style="color: var(--text-muted); font-size: 0.9rem; margin-left: 20px; line-height: 1.6;">
+                        <li><strong>Backup Database:</strong> Click <em>Backup Database</em> in the top header panel or Settings tab. The system compiles all tables into <code>oxo_db.sql</code> and triggers an instant browser download.</li>
+                        <li><strong>Import Database:</strong> Click <em>Import Database</em>, select any valid <code>.sql</code> backup file, and submit. The system restores schema tables, seeds missing data, and syncs database contents instantly.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="doc-footer">
+            <p>OXO Furniture Studio — Admin Operational User Manual</p>
+            <p style="margin-top: 5px; opacity: 0.7;">Auto-generated via <code>admin/generate-docs.php</code> — July 26, 2026 — 7:56 AM</p>
+        </div>
+    </div>
+</body>
+</html>
