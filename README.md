@@ -1,13 +1,13 @@
 # 💎 OXO Control Studio — Luxury Furniture E-Commerce Engine
 
 > **Live Technical Documentation & System Architecture Guide**  
-> *Last Updated: July 28, 2026 — 7:17 AM*
+> *Last Updated: July 28, 2026 — 8:14 AM*
 
 ---
 
 ## 📊 Live System Statistics
-- **Total Catalog Products:** `12`
-- **Partner Brands:** `5`
+- **Total Catalog Products:** `13`
+- **Partner Brands:** `6`
 - **Categories:** `7`
 - **Materials:** `7`
 - **Color Palettes:** `17`

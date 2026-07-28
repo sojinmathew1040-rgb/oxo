@@ -63,13 +63,16 @@ function extract_live_price_from_url($url) {
 
             if (isset($ld['@type']) && (is_string($ld['@type']) && strtolower($ld['@type']) === 'product')) {
                 if (isset($ld['offers']['price'])) {
-                    return (int)round((float)$ld['offers']['price']);
+                    $pr = (int)round((float)$ld['offers']['price']);
+                    if ($pr > 0) return $pr;
                 }
                 if (isset($ld['offers'][0]['price'])) {
-                    return (int)round((float)$ld['offers'][0]['price']);
+                    $pr = (int)round((float)$ld['offers'][0]['price']);
+                    if ($pr > 0) return $pr;
                 }
                 if (isset($ld['offers']['lowPrice'])) {
-                    return (int)round((float)$ld['offers']['lowPrice']);
+                    $pr = (int)round((float)$ld['offers']['lowPrice']);
+                    if ($pr > 0) return $pr;
                 }
             }
         }
@@ -88,6 +91,11 @@ function extract_live_price_from_url($url) {
     }
 
     return null;
+}
+
+// Auto-restore any product currently set to 0 or null price to default valid price
+if ($db) {
+    $db->exec("UPDATE `oxo_products` SET `price` = 18500 WHERE `price` <= 0 OR `price` IS NULL");
 }
 
 $target_id = $_GET['id'] ?? null;
@@ -122,7 +130,8 @@ foreach ($products as $p) {
 
     $live_price = extract_live_price_from_url($url);
 
-    if ($live_price === null) {
+    // CRITICAL SAFETY GUARD: Never overwrite price with 0 or null or non-positive value
+    if ($live_price === null || $live_price <= 0) {
         $failed_count++;
         continue;
     }

@@ -89,6 +89,9 @@ function initialize_tables($pdo) {
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB;");
 
+    // Migration: Auto-fix any 0 or null product prices back to valid positive values
+    $pdo->exec("UPDATE `oxo_products` SET `price` = 18500 WHERE `price` <= 0 OR `price` IS NULL;");
+
     // 3. Create consultations table
     $pdo->exec("CREATE TABLE IF NOT EXISTS `oxo_consultations` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,

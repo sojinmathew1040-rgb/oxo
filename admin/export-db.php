@@ -20,8 +20,10 @@ while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
     $tables[] = $row[0];
 }
 
+date_default_timezone_set('Asia/Kolkata');
+
 $output = "-- OXO Furniture Database Backup\n";
-$output .= "-- Generated: " . date('Y-m-d H:i:s') . "\n";
+$output .= "-- Generated: " . date('Y-m-d H:i:s') . " IST\n";
 $output .= "-- Host: localhost | Database: oxo_db\n\n";
 $output .= "SET FOREIGN_KEY_CHECKS=0;\n\n";
 
