@@ -25,6 +25,7 @@ function auto_sync_documentation($output_to_browser = false, $doc_type = null) {
         'total_inquiries' => 0,
         'pending_inquiries' => 0,
         'total_admins' => 1,
+        'total_users' => 0,
         'min_price' => 0,
         'max_price' => 0,
         'avg_price' => 0,
@@ -41,6 +42,11 @@ function auto_sync_documentation($output_to_browser = false, $doc_type = null) {
             $stats['total_inquiries'] = (int)$db->query("SELECT COUNT(*) FROM `oxo_consultations`")->fetchColumn();
             $stats['pending_inquiries'] = (int)$db->query("SELECT COUNT(*) FROM `oxo_consultations` WHERE `status` = 'Pending'")->fetchColumn();
             $stats['total_admins'] = (int)$db->query("SELECT COUNT(*) FROM `oxo_admins`")->fetchColumn();
+            try {
+                $stats['total_users'] = (int)$db->query("SELECT COUNT(*) FROM `oxo_users`")->fetchColumn();
+            } catch (\Exception $e) {
+                $stats['total_users'] = 0;
+            }
 
             if ($stats['total_products'] > 0) {
                 $stats['min_price'] = (int)$db->query("SELECT MIN(price) FROM `oxo_products`")->fetchColumn();
@@ -720,7 +726,7 @@ flowchart TD
                             <td>Admin Auth</td>
                             <td>Authentication guard script; verifies admin session state before executing admin commands.</td>
                             <td><code>require_admin_login()</code></td>
-                            <td><code>$_SESSION['admin_logged_in']</code></td>
+                            <td><code>\$_SESSION['admin_logged_in']</code></td>
                         </tr>
                         <tr>
                             <td><code>admin/import-universal.php</code></td>
@@ -782,7 +788,7 @@ flowchart TD
                             <td><code>includes/products-db.php</code></td>
                             <td>Core Helper</td>
                             <td>Data querying functions and static product array fallback data.</td>
-                            <td><code>$PRODUCTS_DB</code></td>
+                            <td><code>\$PRODUCTS_DB</code></td>
                             <td><code>oxo_products</code></td>
                         </tr>
                     </tbody>
@@ -847,7 +853,7 @@ flowchart TD
                         <tr>
                             <td><code>oxo_users</code></td>
                             <td>Client user accounts</td>
-                            <td>{$db ? (int)$db->query("SELECT COUNT(*) FROM `oxo_users`")->fetchColumn() : 0}</td>
+                            <td>{$stats['total_users']}</td>
                             <td><code>id, name, email, password, phone, address</code></td>
                         </tr>
                     </tbody>

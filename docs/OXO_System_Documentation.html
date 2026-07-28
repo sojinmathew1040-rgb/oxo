@@ -400,7 +400,7 @@
                 <h3 class="section-title"><i class="fa-solid fa-chart-pie"></i> System Database Metrics</h3>
                 <div class="metrics-grid">
                     <div class="metric-card c-gold">
-                        <div class="metric-val">10</div>
+                        <div class="metric-val">11</div>
                         <div class="metric-lbl">Catalog Products</div>
                     </div>
                     <div class="metric-card c-purple">
@@ -416,7 +416,7 @@
                         <div class="metric-lbl">Materials</div>
                     </div>
                     <div class="metric-card c-orange">
-                        <div class="metric-val">16</div>
+                        <div class="metric-val">17</div>
                         <div class="metric-lbl">Color Palettes</div>
                     </div>
                     <div class="metric-card c-gold">
@@ -426,88 +426,206 @@
                 </div>
             </div>
 
-            <!-- SECTION 2: MERMAID DATA FLOW DIAGRAM -->
+            <!-- SECTION 2: ENHANCED PHP CODE EXECUTION FLOWCHART -->
             <div class="section-block">
-                <h3 class="section-title"><i class="fa-solid fa-diagram-project"></i> Execution Data Flow Diagram</h3>
+                <h3 class="section-title"><i class="fa-solid fa-diagram-project"></i> Code Architecture & Execution Flowchart</h3>
                 <div class="flowchart-box">
                     <pre class="mermaid">
 flowchart TD
+    classDef client fill:#2C3E50,stroke:#0984e3,stroke-width:2px,color:#FFF;
     classDef admin fill:#0A2E24,stroke:#D4AF37,stroke-width:2px,color:#FFF;
-    classDef process fill:#164638,stroke:#00b894,stroke-width:1px,color:#FFF;
-    classDef store fill:#2C3E50,stroke:#0984e3,stroke-width:1px,color:#FFF;
+    classDef core fill:#164638,stroke:#00b894,stroke-width:1px,color:#FFF;
     classDef db fill:#071712,stroke:#D4AF37,stroke-width:2px,color:#D4AF37;
 
-    A[Admin User] -->|Paste URL Link| B(Universal Importer admin/import-universal.php)
-    
-    subgraph ImportEngine [4-Tier Universal Extraction Cascade]
-        B --> Tier1[1. Shopify JSON API /products.json]
-        B --> Tier2[2. HTML JSON-LD Microdata]
-        B --> Tier3[3. OpenGraph Meta Tags]
-        B --> Tier4[4. DOM Scraper / Gallery Showcase Scraper]
+    subgraph StorefrontLayer [Client Storefront Execution Layer]
+        U1["index.php (Home Landing)"] --> C_Hero["components/hero.php"]
+        U1 --> C_Land["components/products-landing.php"]
+        U1 --> C_Brand["components/brands-marquee.php"]
+        
+        U2["shop.php (Catalog & Multi-Filter)"] -->|SQL Category/Brand/Color Filter| DB_Helper["includes/db.php Helper"]
+        U2 -->|Color Swatch Click| Swapper["Dynamic Product Image Swapper"]
+
+        U3["product.php (Item Detail & AR)"] -->|Product ID Lookup| DB_Helper
+        U3 --> Blueprint["2D Scale Blueprint Graph Rendering"]
+        U3 --> AR_Cam["Mobile Camera AR Room Sandbox"]
+        U3 -->|Form Submit| SubInq["submit-inquiry.php"]
+
+        U4["login.php & account.php"] --> Auth_Ajax["ajax/auth_action.php"]
     end
 
-    ImportEngine --> C{Brand Exists in DB?}
-    C -->|No| D[Auto-Create Brand Record & Download Favicon Logo]
-    C -->|Yes| E[Reuse Existing Brand ID - Deduplication]
+    subgraph AdminLayer [Admin Control Studio Execution Layer]
+        A_Auth["admin/auth.php Guard & admin/login.php"] -->|Validate Session| AdminDash["admin/index.php (Master Dashboard)"]
 
-    ImportEngine --> F{Collection Attributes Missing?}
-    F -->|Category / Material / Color Missing| G[Auto-Insert into oxo_categories, oxo_materials, oxo_colors]
-    F -->|Attributes Found| H[Map Slugs & Parse Dimensions W x D x H]
-
-    D & E & G & H --> I(PHP GD Image Compressor Engine)
-    I -->|Compress 3MB-5MB Raw Photos| J[Lightweight 60KB-150KB Web Format Image]
-    
-    J --> K[(MySQL Database oxo_db.sql)]
-
-    subgraph Storefront [Storefront Experience & AR Engine]
-        K --> L[Shop Catalog shop.php]
-        L -->|Color Filter Selected| M[Dynamic Product Card Image Swap]
-        L -->|Product Click| N[Product Detail Page product.php]
-        N -->|Dimensions Present| O[Render 2D Scale Graph Blueprint]
-        N -->|Tap View in Space| P[Mobile Camera AR Projection Overlay]
+        AdminDash -->|Tab: Product Editor| ProdEd["admin/product-editor.php"]
+        AdminDash -->|Tab: Universal Importer| UnivImp["admin/import-universal.php"]
+        AdminDash -->|Action: Export SQL| ExpDB["admin/export-db.php"]
+        AdminDash -->|Action: Import SQL| ImpDB["admin/import-db.php"]
+        AdminDash -->|Action: Live Price Sync| SyncPrice["admin/sync-prices.php"]
+        AdminDash -->|Action: Inquiry Status| UpInq["admin/update-inquiry-status.php"]
+        AdminDash -->|Action: Docs Generator| GenDocs["admin/generate-docs.php"]
     end
 
-    subgraph SystemTools [Admin Operations & Backup Engine]
-        A -->|Click Backup Database| R[admin/export-db.php]
-        R -->|Download SQL Backup| S[(db/oxo_db.sql)]
-        A -->|Upload SQL File| T[admin/import-db.php]
-        T -->|Execute & Restore Schema| K
+    subgraph EngineLayer [Core PHP Database Engine & Utilities]
+        UnivImp -->|PHP GD Engine| GD_Eng["assets/images/uploads/ Compression"]
+        DB_Helper -->|PDO Connection & Migrations| MySQL[("MySQL Database oxo_db")]
+        
+        ProdEd & UnivImp & ImpDB & SyncPrice & SubInq & Auth_Ajax --> DB_Helper
+        GenDocs -->|Auto Sync Docs| DocsOut["docs/ & README.md"]
     end
 
-    class A,B admin;
-    class Tier1,Tier2,Tier3,Tier4,C,D,E,F,G,H,I,J process;
-    class L,M,N,O,P store;
-    class K,S db;
+    class U1,U2,U3,U4,C_Hero,C_Land,C_Brand,Swapper,Blueprint,AR_Cam client;
+    class AdminDash,ProdEd,UnivImp,ExpDB,ImpDB,SyncPrice,UpInq,GenDocs admin;
+    class SubInq,Auth_Ajax,GD_Eng core;
+    class DB_Helper,MySQL,DocsOut db;
                     </pre>
                 </div>
             </div>
 
-            <!-- SECTION 3: TECHNICAL ARCHITECTURE & MODULES -->
+            <!-- SECTION 3: COMPREHENSIVE PHP SCRIPT DIRECTORY MAP -->
             <div class="section-block">
-                <h3 class="section-title"><i class="fa-solid fa-cubes"></i> Architecture Modules</h3>
-                <div class="features-grid">
-                    <div class="feature-box">
-                        <div class="feature-icon"><i class="fa-solid fa-cloud-arrow-down"></i></div>
-                        <div class="feature-title">Universal Product Importer</div>
-                        <div class="feature-desc">
-                            4-Tier extraction cascade parsing Shopify JSON endpoints, Microdata JSON-LD, OpenGraph tags, and DOM selectors. Features showcase gallery batch importing.
-                        </div>
-                    </div>
-                    <div class="feature-box">
-                        <div class="feature-icon"><i class="fa-solid fa-file-image"></i></div>
-                        <div class="feature-title">PHP GD Optimization Engine</div>
-                        <div class="feature-desc">
-                            Automatically resizes and re-compresses raw 3MB-5MB product images into optimized 60KB-150KB web images during import/creation.
-                        </div>
-                    </div>
-                    <div class="feature-box">
-                        <div class="feature-icon"><i class="fa-solid fa-database"></i></div>
-                        <div class="feature-title">Database Exporter & Importer</div>
-                        <div class="feature-desc">
-                            Single master <code>oxo_db.sql</code> engine. Features 1-click browser download backups (<code>admin/export-db.php</code>) and SQL file restoration (<code>admin/import-db.php</code>).
-                        </div>
-                    </div>
-                </div>
+                <h3 class="section-title"><i class="fa-solid fa-folder-tree"></i> PHP Script & Component Directory Map</h3>
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">
+                    Detailed inventory mapping each PHP script in the codebase to its operational responsibility, parameters, database interaction, and output:
+                </p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Script Path</th>
+                            <th>Module Category</th>
+                            <th>Core Responsibility & Functionality</th>
+                            <th>Key Actions / Parameters</th>
+                            <th>Database Tables Touched</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>index.php</code></td>
+                            <td>Storefront</td>
+                            <td>Home luxury landing page; renders hero banner, partner brand marquee, and featured collections.</td>
+                            <td>None (Default view)</td>
+                            <td><code>oxo_products</code>, <code>oxo_brands</code>, <code>oxo_categories</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>shop.php</code></td>
+                            <td>Storefront</td>
+                            <td>Catalog browser with multi-criteria filtering (Category, Brand, Material, Color, Price Range) and dynamic image swapper.</td>
+                            <td><code>GET: category, brand, material, color, search, price_min, price_max</code></td>
+                            <td><code>oxo_products</code>, <code>oxo_categories</code>, <code>oxo_brands</code>, <code>oxo_materials</code>, <code>oxo_colors</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>product.php</code></td>
+                            <td>Storefront</td>
+                            <td>Product detail showcase featuring 2D scale blueprints, mobile camera AR projection sandbox, and consultation modal form.</td>
+                            <td><code>GET: id</code> (Product ID)</td>
+                            <td><code>oxo_products</code>, <code>oxo_brands</code>, <code>oxo_colors</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>submit-inquiry.php</code></td>
+                            <td>Storefront API</td>
+                            <td>Processes consultation inquiry form submissions and sends notifications.</td>
+                            <td><code>POST: name, email, whatsapp, product_title, message</code></td>
+                            <td><code>oxo_consultations</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>about.php</code></td>
+                            <td>Storefront</td>
+                            <td>Studio heritage page detailing design philosophy and partner brand portfolio.</td>
+                            <td>None</td>
+                            <td><code>oxo_brands</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>login.php</code> & <code>account.php</code></td>
+                            <td>Client Auth</td>
+                            <td>Client authentication portal & profile management dashboard with Google OAuth integration.</td>
+                            <td><code>GET: action</code>, <code>POST: email, password</code></td>
+                            <td><code>oxo_users</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>ajax/auth_action.php</code></td>
+                            <td>Client API</td>
+                            <td>AJAX endpoint for user registration, password verification, and profile updates.</td>
+                            <td><code>POST: action=login|register|update_profile</code></td>
+                            <td><code>oxo_users</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>admin/index.php</code></td>
+                            <td>Admin Studio</td>
+                            <td>Master tabbed control center for catalog inventory, analytics, collections, and security.</td>
+                            <td><code>GET: tab=products|analytics|collections|settings</code></td>
+                            <td>All Database Tables</td>
+                        </tr>
+                        <tr>
+                            <td><code>admin/auth.php</code></td>
+                            <td>Admin Auth</td>
+                            <td>Authentication guard script; verifies admin session state before executing admin commands.</td>
+                            <td><code>require_admin_login()</code></td>
+                            <td><code>$_SESSION['admin_logged_in']</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>admin/import-universal.php</code></td>
+                            <td>Admin Tool</td>
+                            <td>4-Tier URL scraper extracting product specs, batch showcase galleries, and compressing images via PHP GD library.</td>
+                            <td><code>POST: product_url, action=extract_url|batch_confirm</code></td>
+                            <td><code>oxo_products</code>, <code>oxo_brands</code>, <code>oxo_categories</code>, <code>oxo_materials</code>, <code>oxo_colors</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>admin/product-editor.php</code></td>
+                            <td>Admin Tool</td>
+                            <td>Manual CRUD interface for creating new furniture designs, updating dimensions, and deleting catalog items.</td>
+                            <td><code>GET: id</code>, <code>POST: form_action=add|edit|delete</code></td>
+                            <td><code>oxo_products</code>, <code>oxo_brands</code>, <code>oxo_categories</code>, <code>oxo_materials</code>, <code>oxo_colors</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>admin/export-db.php</code></td>
+                            <td>Admin Tool</td>
+                            <td>Database exporter generating a complete SQL schema/data dump and streaming direct <code>oxo_db.sql</code> browser download.</td>
+                            <td>None (Direct GET trigger)</td>
+                            <td>All Database Tables (SHOW TABLES)</td>
+                        </tr>
+                        <tr>
+                            <td><code>admin/import-db.php</code></td>
+                            <td>Admin Tool</td>
+                            <td>Database restoration tool processing uploaded <code>.sql</code> files to execute schema updates.</td>
+                            <td><code>POST: sql_file</code> (Multipart upload)</td>
+                            <td>All Database Tables</td>
+                        </tr>
+                        <tr>
+                            <td><code>admin/sync-prices.php</code></td>
+                            <td>Admin Tool</td>
+                            <td>Live price sync engine re-scraping external <code>source_url</code> locations and updating modified catalog prices.</td>
+                            <td><code>GET: action=sync_all</code> or <code>GET: id=product_id</code></td>
+                            <td><code>oxo_products</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>admin/update-inquiry-status.php</code></td>
+                            <td>Admin Tool</td>
+                            <td>Updates client consultation inquiry states (<code>Pending</code>, <code>Contacted</code>, <code>Completed</code>).</td>
+                            <td><code>GET: inquiry_id, status</code></td>
+                            <td><code>oxo_consultations</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>admin/generate-docs.php</code></td>
+                            <td>Admin Tool</td>
+                            <td>Master documentation suite builder generating <code>README.md</code>, developer architecture specs, and admin user manuals.</td>
+                            <td><code>GET: type=developer|admin</code></td>
+                            <td>All Database Tables (SHOW TABLES)</td>
+                        </tr>
+                        <tr>
+                            <td><code>includes/db.php</code></td>
+                            <td>Core Helper</td>
+                            <td>PDO connection helper, database auto-creation (<code>oxo_db</code>), table initialization, and column migrations.</td>
+                            <td><code>get_db_connection()</code></td>
+                            <td>All Database Tables</td>
+                        </tr>
+                        <tr>
+                            <td><code>includes/products-db.php</code></td>
+                            <td>Core Helper</td>
+                            <td>Data querying functions and static product array fallback data.</td>
+                            <td><code>$PRODUCTS_DB</code></td>
+                            <td><code>oxo_products</code></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
 
             <!-- SECTION 4: DATABASE TABLES SCHEMA SUMMARY -->
@@ -526,8 +644,8 @@ flowchart TD
                         <tr>
                             <td><code>oxo_products</code></td>
                             <td>Main furniture catalog database</td>
-                            <td>10</td>
-                            <td><code>id, title, price, category, image, material_slug, brand_id, height_cm, width_cm, length_cm, details</code></td>
+                            <td>11</td>
+                            <td><code>id, title, price, category, image, material_slug, brand_id, height_cm, width_cm, length_cm, source_url, details</code></td>
                         </tr>
                         <tr>
                             <td><code>oxo_brands</code></td>
@@ -550,7 +668,7 @@ flowchart TD
                         <tr>
                             <td><code>oxo_colors</code></td>
                             <td>Color options & hex codes</td>
-                            <td>16</td>
+                            <td>17</td>
                             <td><code>id, name, hex</code></td>
                         </tr>
                         <tr>
@@ -565,6 +683,12 @@ flowchart TD
                             <td>1</td>
                             <td><code>id, username, password, whatsapp</code></td>
                         </tr>
+                        <tr>
+                            <td><code>oxo_users</code></td>
+                            <td>Client user accounts</td>
+                            <td>2</td>
+                            <td><code>id, name, email, password, phone, address</code></td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -572,7 +696,7 @@ flowchart TD
 
         <div class="doc-footer">
             <p>OXO Furniture Studio — Developer Technical Architecture Suite</p>
-            <p style="margin-top: 5px; opacity: 0.7;">Auto-generated via <code>admin/generate-docs.php</code> — July 26, 2026 — 7:56 AM</p>
+            <p style="margin-top: 5px; opacity: 0.7;">Auto-generated via <code>admin/generate-docs.php</code> — July 28, 2026 — 7:12 AM</p>
         </div>
     </div>
 </body>

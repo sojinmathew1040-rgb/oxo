@@ -1027,6 +1027,7 @@ $db_brands = $db ? $db->query("SELECT * FROM `oxo_brands` ORDER BY `name` ASC")-
         <div>
             <h2 class="fw-bold mb-1" style="color: #0a2e24;">Universal Brand Product Importer</h2>
             <p class="text-muted mb-0">Import products from Indroyal, Applecart, Supreme, Peps India, MM Foam, Evergreen Chair, Nilkamal & any brand site.</p>
+        </div>
         <div class="d-flex gap-2">
             <a href="sync-prices.php?action=sync_all" class="btn btn-sm btn-outline-primary" style="border-radius: 8px;">
                 <i class="bi bi-arrow-repeat me-1"></i> Sync Live Prices

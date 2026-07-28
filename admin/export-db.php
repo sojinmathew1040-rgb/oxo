@@ -58,14 +58,14 @@ if (!file_exists($db_dir)) {
     mkdir($db_dir, 0777, true);
 }
 
-// Remove any secondary dated backup files so ONLY single oxo_db.sql file remains
+// Remove any secondary backup files so ONLY single oxo_db.sql file remains
 foreach (glob($db_dir . '*.sql') as $file) {
     if (basename($file) !== 'oxo_db.sql') {
         @unlink($file);
     }
 }
 
-// Update single main backup file: oxo_db.sql
+// Update single master backup file: oxo_db.sql
 file_put_contents($db_dir . 'oxo_db.sql', $output);
 
 // Direct file download
