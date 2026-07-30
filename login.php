@@ -47,45 +47,45 @@ include 'includes/header.php';
 ?>
 
 <style>
-    /* Apple-Level Pro style overrides for login.php */
+    /* OXO Luxury Brand overrides for login.php */
     body {
-        background: #fbfbfd;
-        padding-top: 64px;
+        background: var(--color-secondary);
+        padding-top: 80px;
     }
 
     .pro-auth-section {
-        min-height: calc(100vh - 64px);
+        min-height: calc(100vh - 80px);
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 40px 20px;
+        padding: 60px 20px;
     }
 
     .pro-auth-card {
         width: 100%;
-        max-width: 420px;
-        background: #fff;
-        border-radius: 32px;
+        max-width: 440px;
+        background: #ffffff;
+        border-radius: 28px;
         padding: 50px 40px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.04);
+        box-shadow: 0 25px 60px rgba(10, 46, 36, 0.08);
         text-align: center;
-        border: 1px solid rgba(0, 0, 0, 0.02);
+        border: 1px solid rgba(10, 46, 36, 0.06);
     }
 
     .pro-auth-title {
         font-size: 32px;
         font-weight: 700;
-        color: #1d1d1f;
-        letter-spacing: -0.03em;
+        color: var(--color-primary);
+        letter-spacing: -0.02em;
         margin-bottom: 8px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-family: var(--font-title);
     }
 
     .pro-auth-subtitle {
-        font-size: 15px;
-        color: #86868b;
-        margin-bottom: 40px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-size: 14px;
+        color: var(--color-gray);
+        margin-bottom: 35px;
+        font-family: var(--font-body);
     }
 
     .pro-input-group {
@@ -95,31 +95,33 @@ include 'includes/header.php';
 
     .pro-input-group label {
         display: block;
-        font-size: 13px;
-        font-weight: 600;
-        color: #1d1d1f;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: var(--color-primary);
         margin-bottom: 8px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-family: var(--font-title);
     }
 
     .pro-input-group input {
         width: 100%;
-        padding: 16px;
-        border: 1px solid rgba(0, 0, 0, 0.08);
+        padding: 14px 18px;
+        border: 1px solid rgba(10, 46, 36, 0.1);
         border-radius: 14px;
-        font-size: 16px;
-        color: #1d1d1f;
-        background: #fcfcfd;
+        font-size: 15px;
+        color: var(--color-primary);
+        background: #FAF9F6;
         box-sizing: border-box;
-        transition: all 0.3s;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        transition: all 0.3s ease;
+        font-family: var(--font-body);
     }
 
     .pro-input-group input:focus {
         outline: none;
-        border-color: #007aff;
-        box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
-        background: #fff;
+        border-color: var(--color-accent);
+        background: #ffffff;
+        box-shadow: 0 0 0 3px rgba(200, 162, 118, 0.15);
     }
 
     .pro-auth-btn {

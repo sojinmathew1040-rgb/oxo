@@ -1,55 +1,65 @@
     <!-- Footer Section -->
-    <footer class="site-footer">
+    <footer class="site-footer-luxury">
         <div class="container">
-            <div class="footer-top">
-                <div class="footer-brand">
-                    <span class="footer-logo">OXO</span>
-                    <p class="footer-tagline">Crafting spaces of silent luxury, cinematic elegance, and premium comfort. Designed to wow, built to last.</p>
-                    <div class="social-links" style="margin-top: 10px;">
-                        <a href="#" class="social-link" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
-                        <a href="#" class="social-link" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
-                        <a href="#" class="social-link" aria-label="Pinterest"><i class="fa-brands fa-pinterest-p"></i></a>
-                        <a href="#" class="social-link" aria-label="Twitter"><i class="fa-brands fa-x-twitter"></i></a>
+            <div style="display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.2fr; gap: 50px; margin-bottom: 60px;">
+                
+                <!-- Col 1: Brand & Manifesto -->
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <a href="index.php" style="display: inline-block;">
+                        <img src="assets/images/logo.png" alt="OXO Luxury Furniture" style="height: 50px; width: auto; filter: brightness(0) invert(1);">
+                    </a>
+                    <p style="font-size: 0.9rem; line-height: 1.7; color: rgba(255, 255, 255, 0.65); margin: 0; max-width: 320px;">
+                        Architecting spaces of silent luxury, cinematic elegance, and bespoke Italian craftsmanship. Designed to inspire elite sanctuaries.
+                    </p>
+                    <div style="display: flex; gap: 12px; margin-top: 6px;">
+                        <a href="#" aria-label="Facebook" style="width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.06); color: #FFFFFF; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;"><i class="fa-brands fa-facebook-f" style="font-size: 0.85rem;"></i></a>
+                        <a href="#" aria-label="Instagram" style="width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.06); color: #FFFFFF; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;"><i class="fa-brands fa-instagram" style="font-size: 0.85rem;"></i></a>
+                        <a href="#" aria-label="Pinterest" style="width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.06); color: #FFFFFF; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;"><i class="fa-brands fa-pinterest-p" style="font-size: 0.85rem;"></i></a>
                     </div>
                 </div>
                 
-                <div class="footer-col">
-                    <span class="footer-col-title">Collections</span>
-                    <div class="footer-links">
-                        <a href="shop.php?filter=sofas" class="footer-link">Sofas & Lounges</a>
-                        <a href="shop.php?filter=chairs" class="footer-link">Accent Chairs</a>
-                        <a href="shop.php?filter=tables" class="footer-link">Dining Tables</a>
-                        <a href="shop.php?filter=lighting" class="footer-link">Architectural Lighting</a>
-                        <a href="shop.php?filter=storage" class="footer-link">Walnut Sideboards</a>
-                    </div>
+                <!-- Col 2: Collections -->
+                <div>
+                    <h4 style="font-family: var(--font-title); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--color-accent); font-weight: 700; margin-bottom: 20px;">Collections</h4>
+                    <ul style="display: flex; flex-direction: column; gap: 12px; font-size: 0.88rem;">
+                        <li><a href="shop.php?category=sofas" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Modular Sofas & Lounges</a></li>
+                        <li><a href="shop.php?category=chairs" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Accent Armchairs</a></li>
+                        <li><a href="shop.php?category=tables" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Calacatta Dining Tables</a></li>
+                        <li><a href="shop.php?category=lighting" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Architectural Lighting</a></li>
+                        <li><a href="shop.php?category=storage" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Walnut Sideboards</a></li>
+                    </ul>
+                </div>
+
+                <!-- Col 3: Brand & House -->
+                <div>
+                    <h4 style="font-family: var(--font-title); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--color-accent); font-weight: 700; margin-bottom: 20px;">The House</h4>
+                    <ul style="display: flex; flex-direction: column; gap: 12px; font-size: 0.88rem;">
+                        <li><a href="about.php" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Our Philosophy</a></li>
+                        <li><a href="about.php#craftsmanship" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Sourcing & Craftsmanship</a></li>
+                        <li><a href="account.php" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Bespoke Consultations</a></li>
+                        <li><a href="login.php" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Private Account</a></li>
+                    </ul>
                 </div>
                 
-                <div class="footer-col">
-                    <span class="footer-col-title">Information</span>
-                    <div class="footer-links">
-                        <a href="#about" class="footer-link">Our Philosophy</a>
-                        <a href="#about" class="footer-link">Sourcing & Craftsmanship</a>
-                        <a href="#" class="footer-link">Sustainability Pledge</a>
-                        <a href="#" class="footer-link">Shipping & Returns</a>
-                        <a href="#" class="footer-link">Privacy Policy</a>
+                <!-- Col 4: Newsletter -->
+                <div>
+                    <h4 style="font-family: var(--font-title); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--color-accent); font-weight: 700; margin-bottom: 20px;">Private Journal</h4>
+                    <p style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.65); line-height: 1.6; margin-bottom: 16px;">
+                        Subscribe to receive early access to private trunk shows and editorial lookbooks.
+                    </p>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="email" placeholder="Enter your email" style="flex: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 30px; padding: 12px 18px; color: #FFFFFF; font-size: 0.82rem;">
+                        <button aria-label="Subscribe" style="width: 44px; height: 44px; border-radius: 50%; background: var(--color-accent); color: var(--color-primary); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
                     </div>
                 </div>
-                
-                <div class="footer-col">
-                    <span class="footer-col-title">Newsletter</span>
-                    <div class="footer-newsletter">
-                        <p class="footer-tagline" style="font-size: 0.85rem; max-width: 100%;">Subscribe to receive notifications about new collections and editorial releases.</p>
-                        <div class="newsletter-input-group">
-                            <input type="email" placeholder="Your email address" class="newsletter-input" aria-label="Email address">
-                            <button class="newsletter-submit" aria-label="Subscribe"><i class="fa-solid fa-arrow-right"></i></button>
-                        </div>
-                    </div>
-                </div>
+
             </div>
             
-            <div class="footer-bottom">
-                <p>&copy; <?php echo date('Y'); ?> OXO Furniture. All rights reserved. Designed for elite spaces.</p>
-                <div class="footer-payments">
+            <div style="padding-top: 30px; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 0.78rem; color: rgba(255, 255, 255, 0.45);">
+                <p>&copy; <?php echo date('Y'); ?> OXO Furniture. All rights reserved. Architected for high-end residential interiors.</p>
+                <div style="display: flex; gap: 18px; font-size: 1.2rem; color: rgba(255, 255, 255, 0.35);">
                     <i class="fa-brands fa-cc-visa"></i>
                     <i class="fa-brands fa-cc-mastercard"></i>
                     <i class="fa-brands fa-cc-amex"></i>

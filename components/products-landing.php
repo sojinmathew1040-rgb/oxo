@@ -1,7 +1,8 @@
 <?php
 /**
- * Curated Landing Page Product Preview
- * Grouped into distinct luxury collections by category with direct shop redirect filters.
+ * OXO Premium Furniture Store
+ * Ultra-Luxury Landing Page Curated Collection Showcase
+ * Stacked Category Sections Layout
  */
 
 // 1. Group all available creations by their category
@@ -25,13 +26,14 @@ if (isset($db) && $db) {
 }
 if (empty($categories_to_show)) {
     $categories_to_show = [
-        ["slug" => "sofas", "name" => "Sofas"],
-        ["slug" => "chairs", "name" => "Chairs"],
-        ["slug" => "tables", "name" => "Tables"]
+        ["slug" => "sofas", "name" => "Modular Sofas"],
+        ["slug" => "chairs", "name" => "Accent Chairs"],
+        ["slug" => "tables", "name" => "Marble Tables"],
+        ["slug" => "lighting", "name" => "Designer Lighting"]
     ];
 }
 
-// 3. Define luxury background accent colors for each category section
+// Background tints for category sections
 $bg_colors = [
     'chairs'   => '#FAF9F6',
     'lighting' => 'rgba(200, 162, 118, 0.035)',
@@ -39,139 +41,152 @@ $bg_colors = [
     'tables'   => 'rgba(10, 46, 36, 0.02)',
     'storage'  => 'rgba(30, 40, 36, 0.015)'
 ];
-
-// Helper to generate a soft, premium HSL pastel background tint for dynamic categories
-if (!function_exists('get_dynamic_pastel_color')) {
-    function get_dynamic_pastel_color($slug) {
-        $hash = 0;
-        for ($i = 0; $i < strlen($slug); $i++) {
-            $hash = ord($slug[$i]) + (($hash << 5) - $hash);
-        }
-        $hue = abs($hash) % 360;
-        return "hsl(" . $hue . ", 28%, 97%)";
-    }
-}
 ?>
 
-<!-- Collections Preview Section -->
+<!-- Collections Stacked Container -->
 <div id="collections-container">
-    
-    <!-- SECTION 0: Curated All Products (At the Top) -->
-    <section id="collection-all" class="collection-landing-section" style="padding: 90px 0; background: #ffffff;">
+
+    <!-- SECTION 0: Curated Latest Creations (All Categories Overview) -->
+    <section id="collection-all" class="collection-landing-section" style="padding: 100px 0; background: #ffffff;">
         <div class="container">
-            <div class="products-header" style="margin-bottom: 45px; display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 15px;">
-                <div style="max-width: 70%;">
-                    <span class="section-tag" style="text-transform: uppercase; font-size: 0.72rem; letter-spacing: 2px; font-weight: 700; color: var(--color-accent); display: block; margin-bottom: 8px;">
-                        Our Collection
+            <div class="products-header" style="margin-bottom: 45px; display: flex; justify-content: space-between; align-items: flex-end; width: 100%; gap: 20px; flex-wrap: wrap;">
+                <div>
+                    <span class="oxo-badge oxo-badge-accent" style="margin-bottom: 10px;">
+                        <i class="fa-solid fa-sparkles" style="font-size: 0.65rem;"></i> Latest Release
                     </span>
-                    <h2 class="title-medium" style="margin: 0; font-family: var(--font-title); font-size: 2rem; color: var(--color-primary); font-weight: 700;">
-                        Curated <span class="title-serif">Creations</span>
+                    <h2 style="margin: 0; font-family: var(--font-title); font-size: 2.6rem; color: var(--color-primary); font-weight: 700; line-height: 1.15;">
+                        Curated Creations
                     </h2>
                 </div>
-                <div class="explore-catalog-cta" style="margin: 0 !important; width: auto !important; display: inline-flex !important; justify-content: flex-end !important; flex-shrink: 0;">
-                    <a href="shop.php" class="magnetic-btn secondary static-btn" style="border-radius: 30px; padding: 10px 20px; font-size: 0.78rem; border-color: rgba(10, 46, 36, 0.15); display: inline-flex; align-items: center; gap: 8px; background: #ffffff;">
-                        <span class="magnetic-btn-text">Explore Full Collection &nbsp; <i class="fa-solid fa-arrow-right-long"></i></span>
+                <div>
+                    <a href="shop.php" class="magnetic-btn" style="padding: 12px 26px; border-radius: 30px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(10, 46, 36, 0.15); color: var(--color-primary); font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.8px; background: #ffffff;">
+                        <span class="magnetic-btn-text">Explore Full Collection &nbsp; <i class="fa-solid fa-arrow-right-long" style="color: var(--color-accent);"></i></span>
                     </a>
                 </div>
             </div>
-            
+
+            <!-- Product Cards Grid -->
             <div class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; width: 100%;">
                 <?php 
                 $all_count = 0;
-                foreach ($PRODUCTS_DB as $p) {
+                foreach ($PRODUCTS_DB as $p):
                     if ($all_count >= 4) break;
                     $all_count++;
                 ?>
                     <div class="product-card" data-category="<?php echo htmlspecialchars($p['category']); ?>" data-id="<?php echo htmlspecialchars($p['id']); ?>">
                         <div class="product-image-container">
                             <img src="<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['title']); ?>" loading="lazy">
-                            <div class="product-actions">
-                                <button class="product-action-btn" data-action="quick-view" data-id="<?php echo htmlspecialchars($p['id']); ?>" aria-label="Quick View">
-                                    <i class="fa-regular fa-eye"></i>
+                            
+                            <div style="position: absolute; top: 12px; left: 12px;">
+                                <span class="oxo-badge" style="background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); font-size: 0.62rem;">
+                                    <?php echo htmlspecialchars(ucfirst($p['category'])); ?>
+                                </span>
+                            </div>
+
+                            <div class="product-actions" style="position: absolute; bottom: 12px; right: 12px;">
+                                <button class="product-action-btn" data-action="quick-view" data-id="<?php echo htmlspecialchars($p['id']); ?>" aria-label="Quick View" style="width: 42px; height: 42px; border-radius: 50%; background: #ffffff; color: var(--color-primary); border: none; box-shadow: 0 6px 16px rgba(0,0,0,0.12); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
+                                    <i class="fa-regular fa-eye" style="font-size: 0.95rem;"></i>
                                 </button>
                             </div>
                         </div>
+                        
                         <div class="product-info">
-                            <span class="product-category"><?php echo htmlspecialchars(ucfirst($p['category'])); ?></span>
-                            <h3 class="product-title">
+                            <h3 class="product-title" style="margin: 4px 0;">
                                 <a href="product.php?id=<?php echo htmlspecialchars($p['id']); ?>" style="color: inherit; text-decoration: none;">
                                     <?php echo htmlspecialchars($p['title']); ?>
                                 </a>
                             </h3>
-                            <span class="product-price"><?php echo format_inr($p['price']); ?></span>
+                            <p style="font-size: 0.8rem; color: var(--color-gray); margin: 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                <?php echo htmlspecialchars($p['description']); ?>
+                            </p>
+                        </div>
+
+                        <div class="product-card-footer">
+                            <span class="oxo-price-tag"><?php echo format_inr($p['price']); ?></span>
+                            <a href="product.php?id=<?php echo htmlspecialchars($p['id']); ?>" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.76rem; font-weight: 700; color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.8px;">
+                                View Details <i class="fa-solid fa-arrow-right-long" style="font-size: 0.7rem; color: var(--color-accent);"></i>
+                            </a>
                         </div>
                     </div>
-                <?php } ?>
+                <?php endforeach; ?>
             </div>
         </div>
     </section>
 
-    <!-- Category Sections -->
+    <!-- Stacked Category Sections -->
     <?php 
     foreach ($categories_to_show as $cat): 
         $cat_slug = $cat['slug'];
         $cat_name = $cat['name'];
         $cat_products = isset($grouped_products[$cat_slug]) ? $grouped_products[$cat_slug] : [];
-        if (empty($cat_products)) continue; // skip if no products in this category
+        if (empty($cat_products)) continue;
         
-        // Limit to 4 creations per category section on landing page
         $cat_products_limit = array_slice($cat_products, 0, 4);
-        
-        // Pick corresponding background color from DB, static list, or generate dynamically
-        if (!empty($cat['bg_color'])) {
-            $section_bg = $cat['bg_color'];
-        } elseif (isset($bg_colors[$cat_slug])) {
-            $section_bg = $bg_colors[$cat_slug];
-        } else {
-            $section_bg = get_dynamic_pastel_color($cat_slug);
-        }
+        $section_bg = isset($bg_colors[$cat_slug]) ? $bg_colors[$cat_slug] : '#FAF9F6';
     ?>
-        <section id="collection-<?php echo htmlspecialchars($cat_slug); ?>" class="collection-landing-section" style="padding: 90px 0; background: <?php echo $section_bg; ?>; border-top: 1px solid rgba(10, 46, 36, 0.05);">
+        <section id="collection-<?php echo htmlspecialchars($cat_slug); ?>" class="collection-landing-section" style="padding: 100px 0; background: <?php echo $section_bg; ?>; border-top: 1px solid rgba(10, 46, 36, 0.06);">
             <div class="container">
                 
-                <!-- Section Header with top-right action button -->
-                <div class="products-header" style="margin-bottom: 45px; display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 15px;">
-                    <div style="max-width: 70%;">
-                        <span class="section-tag" style="text-transform: uppercase; font-size: 0.72rem; letter-spacing: 2px; font-weight: 700; color: var(--color-accent); display: block; margin-bottom: 8px;">
-                            <?php echo htmlspecialchars($cat_name); ?> Collection
+                <!-- Section Header -->
+                <div class="products-header" style="margin-bottom: 45px; display: flex; justify-content: space-between; align-items: flex-end; width: 100%; gap: 20px; flex-wrap: wrap;">
+                    <div>
+                        <span class="oxo-badge" style="margin-bottom: 10px; background: rgba(10, 46, 36, 0.06);">
+                            <?php echo htmlspecialchars($cat_name); ?>
                         </span>
-                        <h2 class="title-medium" style="margin: 0; font-family: var(--font-title); font-size: 2rem; color: var(--color-primary); font-weight: 700;">
-                            Curated <span class="title-serif"><?php echo htmlspecialchars($cat_name); ?></span>
+                        <h2 style="margin: 0; font-family: var(--font-title); font-size: 2.4rem; color: var(--color-primary); font-weight: 700; line-height: 1.15;">
+                            Curated <?php echo htmlspecialchars($cat_name); ?>
                         </h2>
                     </div>
-                    <div class="explore-catalog-cta" style="margin: 0 !important; width: auto !important; display: inline-flex !important; justify-content: flex-end !important; flex-shrink: 0;">
-                        <a href="shop.php?category=<?php echo urlencode($cat_slug); ?>" class="magnetic-btn secondary static-btn" style="border-radius: 30px; padding: 10px 20px; font-size: 0.78rem; border-color: rgba(10, 46, 36, 0.15); display: inline-flex; align-items: center; gap: 8px; background: #ffffff;">
-                            <span class="magnetic-btn-text">View All <?php echo htmlspecialchars($cat_name); ?> &nbsp; <i class="fa-solid fa-arrow-right-long"></i></span>
+                    <div>
+                        <a href="shop.php?category=<?php echo urlencode($cat_slug); ?>" class="magnetic-btn" style="padding: 12px 24px; border-radius: 30px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(10, 46, 36, 0.15); color: var(--color-primary); font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.8px; background: #ffffff;">
+                            <span class="magnetic-btn-text">View All <?php echo htmlspecialchars($cat_name); ?> &nbsp; <i class="fa-solid fa-arrow-right-long" style="color: var(--color-accent);"></i></span>
                         </a>
                     </div>
                 </div>
-                
-                <!-- Curated Category Products Grid -->
+
+                <!-- 4 Product Grid for Category -->
                 <div class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; width: 100%;">
                     <?php foreach ($cat_products_limit as $p): ?>
                         <div class="product-card" data-category="<?php echo htmlspecialchars($p['category']); ?>" data-id="<?php echo htmlspecialchars($p['id']); ?>">
                             <div class="product-image-container">
                                 <img src="<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['title']); ?>" loading="lazy">
-                                <div class="product-actions">
-                                    <button class="product-action-btn" data-action="quick-view" data-id="<?php echo htmlspecialchars($p['id']); ?>" aria-label="Quick View">
-                                        <i class="fa-regular fa-eye"></i>
+                                
+                                <div style="position: absolute; top: 12px; left: 12px;">
+                                    <span class="oxo-badge" style="background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); font-size: 0.62rem;">
+                                        <?php echo htmlspecialchars(ucfirst($p['category'])); ?>
+                                    </span>
+                                </div>
+
+                                <div class="product-actions" style="position: absolute; bottom: 12px; right: 12px;">
+                                    <button class="product-action-btn" data-action="quick-view" data-id="<?php echo htmlspecialchars($p['id']); ?>" aria-label="Quick View" style="width: 42px; height: 42px; border-radius: 50%; background: #ffffff; color: var(--color-primary); border: none; box-shadow: 0 6px 16px rgba(0,0,0,0.12); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
+                                        <i class="fa-regular fa-eye" style="font-size: 0.95rem;"></i>
                                     </button>
                                 </div>
                             </div>
+                            
                             <div class="product-info">
-                                <span class="product-category"><?php echo htmlspecialchars(ucfirst($p['category'])); ?></span>
-                                <h3 class="product-title">
+                                <h3 class="product-title" style="margin: 4px 0;">
                                     <a href="product.php?id=<?php echo htmlspecialchars($p['id']); ?>" style="color: inherit; text-decoration: none;">
                                         <?php echo htmlspecialchars($p['title']); ?>
                                     </a>
                                 </h3>
-                                <span class="product-price"><?php echo format_inr($p['price']); ?></span>
+                                <p style="font-size: 0.8rem; color: var(--color-gray); margin: 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                    <?php echo htmlspecialchars($p['description']); ?>
+                                </p>
+                            </div>
+
+                            <div class="product-card-footer">
+                                <span class="oxo-price-tag"><?php echo format_inr($p['price']); ?></span>
+                                <a href="product.php?id=<?php echo htmlspecialchars($p['id']); ?>" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.76rem; font-weight: 700; color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.8px;">
+                                    View Details <i class="fa-solid fa-arrow-right-long" style="font-size: 0.7rem; color: var(--color-accent);"></i>
+                                </a>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
-                
+
             </div>
         </section>
     <?php endforeach; ?>
+
 </div>

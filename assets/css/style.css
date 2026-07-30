@@ -17,7 +17,7 @@
     /* Muted Sage/Leaf Green */
 
     --font-title: 'Outfit', sans-serif;
-    --font-serif: 'Playfair Display', serif;
+    --font-serif: 'Outfit', sans-serif;
     --font-body: 'Inter', sans-serif;
     --font-numeric: 'Outfit', sans-serif;
 
@@ -238,10 +238,11 @@ h6 {
 }
 
 .header-logo-img {
-    height: 38px;
+    height: 54px;
     width: auto;
     object-fit: contain;
     display: block;
+    transition: height 0.3s var(--transition-smooth), transform 0.3s var(--transition-smooth);
 }
 
 .logo-text {
@@ -2607,8 +2608,8 @@ textarea.consult-input {
 }
 
 .marquee-text-logo {
-    font-family: var(--font-serif);
-    font-style: italic;
+    font-family: var(--font-title);
+    font-style: normal;
     font-size: 1.5rem;
     font-weight: 700;
     color: rgba(10, 46, 36, 0.4);
@@ -3008,4 +3009,281 @@ textarea.consult-input {
         padding: 14px 24px !important;
     }
 }
+
+/* ==========================================================================
+   OXO ULTRA-LUXURY REDESIGN SUITE (LANDING SECTIONS & INNER SUBPAGES)
+   ========================================================================== */
+
+/* --- LUXURY DESIGN TOKENS & UTILITIES --- */
+.oxo-glass-card {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(10, 46, 36, 0.08);
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(10, 46, 36, 0.03);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.oxo-glass-card:hover {
+    box-shadow: 0 30px 60px rgba(10, 46, 36, 0.08);
+    transform: translateY(-3px);
+    border-color: rgba(200, 162, 118, 0.3);
+}
+
+.oxo-dark-card {
+    background: linear-gradient(145deg, #0A2E24, #061F18);
+    border: 1px solid rgba(200, 162, 118, 0.2);
+    border-radius: 24px;
+    color: #FFFFFF;
+    box-shadow: 0 25px 50px rgba(6, 31, 24, 0.25);
+    position: relative;
+    overflow: hidden;
+}
+.oxo-dark-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(200, 162, 118, 0.08) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+.oxo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 30px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    background: rgba(10, 46, 36, 0.05);
+    color: var(--color-primary);
+    border: 1px solid rgba(10, 46, 36, 0.08);
+}
+.oxo-badge-accent {
+    background: rgba(200, 162, 118, 0.15);
+    color: #A37943;
+    border-color: rgba(200, 162, 118, 0.3);
+}
+.oxo-badge-success {
+    background: rgba(46, 125, 50, 0.1);
+    color: #2E7D32;
+    border-color: rgba(46, 125, 50, 0.2);
+}
+
+.oxo-price-tag {
+    font-family: var(--font-numeric);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    letter-spacing: -0.02em;
+}
+
+/* --- CATEGORY TAB SWITCHER (LANDING PAGE) --- */
+.oxo-category-tabs {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(10, 46, 36, 0.04);
+    border: 1px solid rgba(10, 46, 36, 0.06);
+    padding: 5px;
+    border-radius: 40px;
+    gap: 4px;
+    margin-bottom: 35px;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.oxo-category-tabs::-webkit-scrollbar {
+    display: none;
+}
+.oxo-tab-btn {
+    padding: 10px 22px;
+    border-radius: 30px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--color-gray);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+.oxo-tab-btn:hover {
+    color: var(--color-primary);
+}
+.oxo-tab-btn.active {
+    background: #FFFFFF;
+    color: var(--color-primary);
+    box-shadow: 0 4px 15px rgba(10, 46, 36, 0.08);
+    font-weight: 700;
+}
+
+/* --- LUXURY PRODUCT CARDS --- */
+.product-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(10, 46, 36, 0.06);
+    border-radius: 20px;
+    padding: 16px;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+.product-card:hover {
+    border-color: rgba(200, 162, 118, 0.4);
+    box-shadow: 0 20px 40px rgba(10, 46, 36, 0.08);
+    transform: translateY(-4px);
+}
+.product-image-container {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #F7F7F5;
+    aspect-ratio: 4/3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.product-image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.product-card:hover .product-image-container img {
+    transform: scale(1.06);
+}
+.product-card .product-info {
+    padding: 16px 8px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.product-card .product-category {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    color: var(--color-accent);
+}
+.product-card .product-title {
+    font-family: var(--font-title);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    line-height: 1.3;
+}
+.product-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(10, 46, 36, 0.08);
+}
+
+/* --- PHILOSOPHY & ABOUT SECTION OVERHAUL --- */
+#about {
+    padding: 120px 0;
+    background: linear-gradient(180deg, var(--color-secondary) 0%, #FFFFFF 100%);
+}
+.about-grid-luxury {
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: 60px;
+    align-items: center;
+}
+.about-visual-card {
+    position: relative;
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 30px 70px rgba(10, 46, 36, 0.12);
+    border: 1px solid rgba(10, 46, 36, 0.08);
+}
+.about-visual-card img {
+    width: 100%;
+    height: 520px;
+    object-fit: cover;
+    transition: transform 0.8s ease;
+}
+.about-visual-card:hover img {
+    transform: scale(1.04);
+}
+.about-stat-badge-overlay {
+    position: absolute;
+    bottom: 25px;
+    left: 25px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 20px;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+/* --- CONCIERGE & CONTACT SECTION OVERHAUL --- */
+#contact {
+    padding: 100px 0;
+}
+.contact-glass-deck {
+    background: linear-gradient(135deg, #0A2E24 0%, #061F18 100%);
+    border-radius: 32px;
+    padding: 60px;
+    color: #FFFFFF;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(10, 46, 36, 0.2);
+    border: 1px solid rgba(200, 162, 118, 0.2);
+}
+.contact-glass-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: 50px;
+    align-items: center;
+}
+.concierge-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 16px 20px;
+    color: #FFFFFF;
+    font-size: 0.92rem;
+    transition: all 0.3s ease;
+}
+.concierge-input:focus {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 4px rgba(200, 162, 118, 0.15);
+}
+.concierge-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* --- FOOTER OVERHAUL --- */
+.site-footer-luxury {
+    background: #061F18;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 90px 0 40px;
+    border-top: 1px solid rgba(200, 162, 118, 0.15);
+}
+
+@media screen and (max-width: 992px) {
+    .about-grid-luxury,
+    .contact-glass-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+    .contact-glass-deck {
+        padding: 35px 25px;
+    }
 }

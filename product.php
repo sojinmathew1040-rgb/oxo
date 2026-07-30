@@ -414,9 +414,11 @@ function render_scale_graph($h, $w, $l) {
                                     </button>
                                 <?php endif; ?>
                             </div>
+                            <!-- View in Your Space (AR) Button - Commented for future feature release
                             <button class="btn-request-consult" id="btn-view-in-space" style="width: 100%; margin-top: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: transparent; border: 1.5px solid var(--color-accent); color: var(--color-accent); font-family: var(--font-title); font-weight: 700; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 2px; padding: 16px 24px; border-radius: 4px; cursor: pointer; transition: all 0.3s ease;">
                                 <span class="magnetic-btn-text"><i class="fa-solid fa-cube"></i> View in Your Space (AR)</span>
                             </button>
+                            -->
                         </div>
 
                         <!-- Luxury Trust Badges -->
@@ -577,7 +579,8 @@ function render_scale_graph($h, $w, $l) {
     </section>
 </main>
 
-<!-- Interactive AR View in Space Modal & Style Override -->
+<?php if (false): ?>
+<!-- Interactive AR View in Space Modal & Style Override (Commented for future release) -->
 <style>
 #btn-view-in-space:hover {
     background: var(--color-accent) !important;
@@ -661,7 +664,7 @@ function render_scale_graph($h, $w, $l) {
         <div class="ar-modal-grid" style="display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 40px; align-items: center;">
             <div>
                 <span class="section-tag" style="margin-bottom: 12px; display: inline-block;">Augmented Reality</span>
-                <h3 class="title-medium" style="font-size: 2.1rem; margin: 0 0 15px 0; color: var(--color-text); font-family: var(--font-title); font-weight: 700;">View in <span class="title-serif" style="font-family: var(--font-serif); font-style: italic; font-weight: 400; color: var(--color-accent);">Your Space</span></h3>
+                <h3 class="title-medium" style="font-size: 2.1rem; margin: 0 0 15px 0; color: var(--color-text); font-family: var(--font-title); font-weight: 700;">View in <span style="color: var(--color-accent);">Your Space</span></h3>
                 <p style="opacity: 0.8; font-size: 0.92rem; margin-bottom: 25px; line-height: 1.6; color: var(--color-text);">
                     Experience our bespoke creations in real-time dimensions. Project 3D furniture files directly into your room to preview size, finishes, and space compatibility.
                 </p>
@@ -783,7 +786,7 @@ function render_scale_graph($h, $w, $l) {
         </span>
     </div>
 </div>
-
+<?php endif; ?>
 <!-- Concierge Consultation Modal -->
 <div class="consultation-modal-overlay" id="consultation-modal">
     <div class="consultation-modal-container">
@@ -1066,7 +1069,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // AR Viewer & Sandbox Controller
+    /* ==========================================================================
+       AR Viewer & Sandbox Controller (Commented for future feature release)
+       ==========================================================================
     const arBtn = document.getElementById('btn-view-in-space');
     const arModal = document.getElementById('ar-view-modal');
     const arClose = document.getElementById('ar-modal-close');
@@ -1305,6 +1310,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateTransform();
         }
     }
+    ========================================================================== */
 
     // Lightbox Gallery Controller
     const lightbox = document.getElementById('gallery-lightbox');

@@ -409,10 +409,16 @@ if (empty($materials)) {
                 }
             </style>
 
-            <div class="shop-catalog-header" style="border-bottom: 1px solid rgba(10, 46, 36, 0.05); padding-bottom: 25px;">
-                <span class="section-tag">Explore All</span>
-                <h1 class="title-medium" style="margin: 5px 0 10px;">The <span class="title-serif">Catalog</span></h1>
-                <p class="shop-subtitle">Discover curated luxury creations, crafted for silent elegance and premium spaces.</p>
+            <div class="shop-catalog-header" style="border-bottom: 1px solid rgba(10, 46, 36, 0.08); padding-bottom: 35px; margin-top: 30px;">
+                <span class="oxo-badge oxo-badge-accent" style="margin-bottom: 12px;">
+                    <i class="fa-solid fa-layer-group" style="font-size: 0.65rem;"></i> Complete Portfolio
+                </span>
+                <h1 style="font-family: var(--font-title); font-size: 3.2rem; color: var(--color-primary); font-weight: 700; margin: 0 0 10px 0; line-height: 1.1;">
+                    The Architectural Catalog
+                </h1>
+                <p style="font-size: 1.05rem; color: var(--color-gray); max-width: 600px; margin: 0;">
+                    Explore our complete assembly of curated luxury furniture, sculpted for high-end residential interiors.
+                </p>
             </div>
 
             <!-- Filter Deck -->
