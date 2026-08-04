@@ -35,6 +35,9 @@ require_once __DIR__ . '/includes/header.php';
 <!-- 9. Product Quick View modal popup -->
 <?php require_once __DIR__ . '/components/product-detail.php'; ?>
 
+<!-- Announcement Poster Pop-up Modal -->
+<?php require_once __DIR__ . '/components/announcement-modal.php'; ?>
+
 <?php
 // 10. Layout Footer & Core Scripts
 require_once __DIR__ . '/includes/footer.php';

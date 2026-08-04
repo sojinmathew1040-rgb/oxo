@@ -15,38 +15,7 @@ if (!$data || !isset($data['action'])) {
     exit;
 }
 
-if ($data['action'] == 'signup') {
-    $name = trim($data['name'] ?? '');
-    $email = trim($data['email'] ?? '');
-    $password = $data['password'] ?? '';
-
-    if (empty($name) || empty($email) || empty($password)) {
-        echo json_encode(['success' => false, 'message' => 'All fields are required.']);
-        exit;
-    }
-
-    try {
-        // Check if email exists
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM `oxo_users` WHERE `email` = ?");
-        $stmt->execute([$email]);
-        if ($stmt->fetchColumn() > 0) {
-            echo json_encode(['success' => false, 'message' => 'Email already registered.']);
-            exit;
-        }
-
-        $hash = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $pdo->prepare("INSERT INTO `oxo_users` (`name`, `email`, `password`) VALUES (?, ?, ?)");
-        $stmt->execute([$name, $email, $hash]);
-
-        $user_id = $pdo->lastInsertId();
-        $_SESSION['user_logged_in'] = true;
-        $_SESSION['user_id'] = $user_id;
-
-        echo json_encode(['success' => true]);
-    } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
-    }
-} elseif ($data['action'] == 'login') {
+if ($data['action'] == 'login') {
     $email = trim($data['email'] ?? '');
     $password = $data['password'] ?? '';
 

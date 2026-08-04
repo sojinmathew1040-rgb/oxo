@@ -20,7 +20,7 @@ $current_tab = isset($_GET['tab']) ? trim($_GET['tab']) : 'products';
 if ($current_tab === 'brands') {
     $current_tab = 'collections';
 }
-$valid_tabs = ['products', 'add_product', 'analytics', 'settings', 'collections'];
+$valid_tabs = ['products', 'add_product', 'analytics', 'settings', 'collections', 'announcement'];
 if (!in_array($current_tab, $valid_tabs)) {
     $current_tab = 'products';
 }
@@ -70,26 +70,43 @@ function compress_admin_uploaded_image($source_filepath, $quality = 78) {
     }
 }
 
-// 1. ACTION: Handle product deletion
+// 1. ACTION: Handle single product deletion
 if ($current_tab === 'products' && isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $delete_id = trim($_GET['id']);
     if ($db) {
         try {
-            // First fetch the image path to delete the file if it's a local upload
-            $img_stmt = $db->prepare("SELECT `image` FROM `oxo_products` WHERE `id` = ?");
+            // Fetch main image and gallery images to delete local upload files
+            $img_stmt = $db->prepare("SELECT `image`, `gallery` FROM `oxo_products` WHERE `id` = ?");
             $img_stmt->execute([$delete_id]);
-            $img_path = $img_stmt->fetchColumn();
-            
-            // Delete product entry
+            $prod_data = $img_stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Delete product entry from DB
             $stmt = $db->prepare("DELETE FROM `oxo_products` WHERE `id` = ?");
             $stmt->execute([$delete_id]);
-            
+
             if ($stmt->rowCount() > 0) {
-                if ($img_path && file_exists(__DIR__ . '/../' . $img_path) && strpos($img_path, 'uploads/') !== false) {
-                    @unlink(__DIR__ . '/../' . $img_path);
+                $files_removed = 0;
+                if ($prod_data) {
+                    $img_path = $prod_data['image'] ?? null;
+                    if ($img_path && file_exists(__DIR__ . '/../' . $img_path) && strpos($img_path, 'uploads/') !== false) {
+                        @unlink(__DIR__ . '/../' . $img_path);
+                        $files_removed++;
+                    }
+                    if (!empty($prod_data['gallery'])) {
+                        $gal_arr = json_decode($prod_data['gallery'], true);
+                        if (is_array($gal_arr)) {
+                            foreach ($gal_arr as $g_item) {
+                                $g_path = is_array($g_item) ? ($g_item['path'] ?? '') : $g_item;
+                                if ($g_path && file_exists(__DIR__ . '/../' . $g_path) && strpos($g_path, 'uploads/') !== false) {
+                                    @unlink(__DIR__ . '/../' . $g_path);
+                                    $files_removed++;
+                                }
+                            }
+                        }
+                    }
                 }
                 auto_sync_documentation();
-                $message = "Creation '{$delete_id}' was successfully archived and deleted.";
+                $message = "Creation '{$delete_id}' and all associated files were successfully deleted.";
                 $message_type = 'success';
             } else {
                 $message = "Product not found or already deleted.";
@@ -101,6 +118,74 @@ if ($current_tab === 'products' && isset($_GET['action']) && $_GET['action'] ===
         }
     } else {
         $message = "Database offline. Deletion disabled.";
+        $message_type = 'danger';
+    }
+}
+
+// 1.5. ACTION: Handle bulk product deletion (multi-selection)
+if ($current_tab === 'products' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'bulk_delete_products' && $db) {
+    $selected_ids = isset($_POST['selected_product_ids']) && is_array($_POST['selected_product_ids']) ? $_POST['selected_product_ids'] : [];
+
+    if (!empty($selected_ids)) {
+        $deleted_count = 0;
+        $files_deleted_count = 0;
+
+        foreach ($selected_ids as $p_id) {
+            $p_id = trim($p_id);
+            if (empty($p_id)) continue;
+
+            try {
+                $stmt = $db->prepare("SELECT `image`, `gallery` FROM `oxo_products` WHERE `id` = ?");
+                $stmt->execute([$p_id]);
+                $prod = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($prod) {
+                    $img_path = $prod['image'] ?? '';
+                    if ($img_path && strpos($img_path, 'uploads/') !== false) {
+                        $full_main = __DIR__ . '/../' . $img_path;
+                        if (file_exists($full_main)) {
+                            @unlink($full_main);
+                            $files_deleted_count++;
+                        }
+                    }
+
+                    if (!empty($prod['gallery'])) {
+                        $gal_arr = json_decode($prod['gallery'], true);
+                        if (is_array($gal_arr)) {
+                            foreach ($gal_arr as $g_item) {
+                                $g_path = is_array($g_item) ? ($g_item['path'] ?? '') : $g_item;
+                                if ($g_path && strpos($g_path, 'uploads/') !== false) {
+                                    $full_gal = __DIR__ . '/../' . $g_path;
+                                    if (file_exists($full_gal)) {
+                                        @unlink($full_gal);
+                                        $files_deleted_count++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    $del_stmt = $db->prepare("DELETE FROM `oxo_products` WHERE `id` = ?");
+                    $del_stmt->execute([$p_id]);
+                    if ($del_stmt->rowCount() > 0) {
+                        $deleted_count++;
+                    }
+                }
+            } catch (\Exception $e) {
+                error_log("Failed to bulk delete product {$p_id}: " . $e->getMessage());
+            }
+        }
+
+        if ($deleted_count > 0) {
+            auto_sync_documentation();
+            $message = "Successfully deleted {$deleted_count} selected creation(s) from database and removed {$files_deleted_count} associated image file(s) from server disk.";
+            $message_type = 'success';
+        } else {
+            $message = "No items were deleted.";
+            $message_type = 'danger';
+        }
+    } else {
+        $message = "Please select at least one creation to delete.";
         $message_type = 'danger';
     }
 }
@@ -271,6 +356,83 @@ if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && i
             }
         } else {
             $message = "Database offline. Adding brand disabled.";
+            $message_type = 'danger';
+        }
+    }
+}
+
+// 5.5. ACTION: Handle Announcement Poster (Save, Toggle, Delete)
+if ($current_tab === 'announcement' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $db) {
+    $action = $_POST['form_action'];
+    if ($action === 'save_announcement') {
+        $title = isset($_POST['title']) ? trim($_POST['title']) : '';
+        $subtitle = isset($_POST['subtitle']) ? trim($_POST['subtitle']) : '';
+        $link_url = isset($_POST['link_url']) ? trim($_POST['link_url']) : '';
+        $is_active = isset($_POST['is_active']) ? 1 : 0;
+        $image_path = '';
+
+        if (isset($_FILES['poster_file']) && $_FILES['poster_file']['error'] === UPLOAD_ERR_OK) {
+            $upload_dir = __DIR__ . '/../assets/images/uploads/';
+            if (!file_exists($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+            $file_name = basename($_FILES['poster_file']['name']);
+            $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+            $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+            if (in_array($file_ext, $allowed)) {
+                $new_name = 'announcement_' . time() . '_' . rand(100, 999) . '.' . $file_ext;
+                $target = $upload_dir . $new_name;
+                if (move_uploaded_file($_FILES['poster_file']['tmp_name'], $target)) {
+                    compress_admin_uploaded_image($target, 85);
+                    $image_path = 'assets/images/uploads/' . $new_name;
+                }
+            }
+        } elseif (!empty($_POST['poster_url'])) {
+            $image_path = trim($_POST['poster_url']);
+        }
+
+        if (!empty($image_path)) {
+            try {
+                if ($is_active === 1) {
+                    $db->exec("UPDATE `oxo_announcements` SET `is_active` = 0");
+                }
+                $stmt = $db->prepare("INSERT INTO `oxo_announcements` (`title`, `subtitle`, `image_path`, `link_url`, `is_active`) VALUES (?, ?, ?, ?, ?)");
+                $stmt->execute([$title, $subtitle, $image_path, $link_url, $is_active]);
+
+                $message = "Announcement Poster saved successfully and set to " . ($is_active ? "Active" : "Inactive") . ".";
+                $message_type = 'success';
+            } catch (\Exception $e) {
+                $message = "Failed to save announcement poster: " . $e->getMessage();
+                $message_type = 'danger';
+            }
+        } else {
+            $message = "Please select a poster image file to upload or enter an image URL.";
+            $message_type = 'danger';
+        }
+    } elseif ($action === 'toggle_announcement' && isset($_POST['announcement_id'])) {
+        $ann_id = (int)$_POST['announcement_id'];
+        $new_status = isset($_POST['new_status']) ? (int)$_POST['new_status'] : 0;
+        try {
+            if ($new_status === 1) {
+                $db->exec("UPDATE `oxo_announcements` SET `is_active` = 0");
+            }
+            $stmt = $db->prepare("UPDATE `oxo_announcements` SET `is_active` = ? WHERE `id` = ?");
+            $stmt->execute([$new_status, $ann_id]);
+            $message = "Announcement Poster status updated successfully.";
+            $message_type = 'success';
+        } catch (\Exception $e) {
+            $message = "Failed to update status: " . $e->getMessage();
+            $message_type = 'danger';
+        }
+    } elseif ($action === 'delete_announcement' && isset($_POST['announcement_id'])) {
+        $ann_id = (int)$_POST['announcement_id'];
+        try {
+            $stmt = $db->prepare("DELETE FROM `oxo_announcements` WHERE `id` = ?");
+            $stmt->execute([$ann_id]);
+            $message = "Announcement Poster removed successfully.";
+            $message_type = 'success';
+        } catch (\Exception $e) {
+            $message = "Failed to delete poster: " . $e->getMessage();
             $message_type = 'danger';
         }
     }
@@ -878,6 +1040,9 @@ if (!function_exists('format_inr_admin')) {
                 <a href="index.php?tab=collections" class="sidebar-link <?php echo $current_tab === 'collections' ? 'active' : ''; ?>">
                     <i class="fa-solid fa-shapes"></i> Collections
                 </a>
+                <a href="index.php?tab=announcement" class="sidebar-link <?php echo $current_tab === 'announcement' ? 'active' : ''; ?>">
+                    <i class="fa-solid fa-bullhorn"></i> Announcement Poster
+                </a>
                 <a href="index.php?tab=settings" class="sidebar-link <?php echo $current_tab === 'settings' ? 'active' : ''; ?>">
                     <i class="fa-solid fa-gears"></i> Settings
                 </a>
@@ -910,6 +1075,9 @@ if (!function_exists('format_inr_admin')) {
                 <?php elseif ($current_tab === 'analytics'): ?>
                     <h2 class="page-title">Analytics & <span>Inquiries</span></h2>
                     <p style="color: var(--color-gray); font-size: 0.95rem; margin-top: 5px;">Analyze sales metrics, view trends, and answer client consultation inquiries.</p>
+                <?php elseif ($current_tab === 'announcement'): ?>
+                    <h2 class="page-title">Announcement <span>Poster</span></h2>
+                    <p style="color: var(--color-gray); font-size: 0.95rem; margin-top: 5px;">Post pop-up announcement banners that display automatically when the store loads.</p>
                 <?php elseif ($current_tab === 'brands'): ?>
                     <h2 class="page-title">Brand <span>Logos</span></h2>
                     <p style="color: var(--color-gray); font-size: 0.95rem; margin-top: 5px;">Manage partner brand logos displaying in the homepage sliding marquee.</p>
@@ -1005,69 +1173,93 @@ if (!function_exists('format_inr_admin')) {
                 </div>
             </section>
 
-            <!-- Table -->
-            <div class="table-card">
-                <div class="table-responsive">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 80px;">Design</th>
-                                <th style="width: 150px;">Product ID</th>
-                                <th>Title</th>
-                                <th>Category</th>
-                                <th>Price</th>
-                                <th style="width: 120px; text-align: right;">Operations</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($products)): ?>
+            <!-- Bulk Delete Action Form Wrapper -->
+            <form id="bulkDeleteForm" action="index.php?tab=products" method="POST">
+                <input type="hidden" name="form_action" value="bulk_delete_products">
+
+                <div style="display: flex; align-items: center; justify-content: space-between; background: var(--color-gray-dark); padding: 12px 20px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--color-panel-border);">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <input type="checkbox" id="selectAllProducts" onclick="toggleSelectAllProducts(this)" style="width: 18px; height: 18px; cursor: pointer; accent-color: #e74c3c;">
+                        <label for="selectAllProducts" style="font-weight: 600; cursor: pointer; color: var(--color-primary); font-size: 0.9rem;">Select All Creations</label>
+                        <span id="selectedCountBadge" style="background: rgba(231, 76, 60, 0.15); color: #e74c3c; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 700;">0 selected</span>
+                    </div>
+                    <div>
+                        <button type="submit" id="bulkDeleteBtn" class="action-btn" style="background: rgba(231, 76, 60, 0.15); color: #e74c3c; border: 1px solid #e74c3c; display: none; padding: 8px 16px; font-weight: 700; cursor: pointer;" onclick="return confirmBulkDelete();">
+                            <i class="fa-solid fa-trash-can" style="margin-right: 6px;"></i> Delete Selected Creations (<span id="btnSelectedCount">0</span>)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="table-card">
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
                                 <tr>
-                                    <td colspan="6" style="text-align: center; padding: 40px; color: var(--color-gray);">
-                                        No creations found in the catalog.
-                                    </td>
+                                    <th style="width: 40px; text-align: center;">
+                                        <input type="checkbox" id="headerSelectAll" onclick="toggleSelectAllProducts(this)" style="width: 16px; height: 16px; cursor: pointer; accent-color: #e74c3c;" title="Select / Deselect All">
+                                    </th>
+                                    <th style="width: 80px;">Design</th>
+                                    <th style="width: 150px;">Product ID</th>
+                                    <th>Title</th>
+                                    <th>Category</th>
+                                    <th>Price</th>
+                                    <th style="width: 120px; text-align: right;">Operations</th>
                                 </tr>
-                            <?php else: ?>
-                                <?php foreach ($products as $p): ?>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($products)): ?>
                                     <tr>
-                                        <td>
-                                            <img src="../<?php echo htmlspecialchars($p['image']); ?>" alt="" class="table-product-img" onerror="this.src='../assets/images/logo.png';">
-                                        </td>
-                                        <td>
-                                            <code style="color: var(--color-accent); font-family: var(--font-numeric); font-weight: 600; font-size: 0.85rem; background: var(--color-gray-dark); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--color-panel-border);">
-                                                <?php echo htmlspecialchars($p['id']); ?>
-                                            </code>
-                                        </td>
-                                        <td style="font-weight: 700; color: var(--color-primary);"><?php echo htmlspecialchars($p['title']); ?></td>
-                                        <td>
-                                            <span class="table-category-badge"><?php echo htmlspecialchars($p['category']); ?></span>
-                                        </td>
-                                        <td>
-                                            <span class="table-price"><?php echo format_inr_admin($p['price']); ?></span>
-                                        </td>
-                                        <td style="text-align: right;">
-                                            <div class="table-actions" style="justify-content: flex-end;">
-                                                <?php if ($db): ?>
-                                                    <a href="product-editor.php?action=edit&id=<?php echo urlencode($p['id']); ?>" class="btn-icon edit" title="Edit Design">
-                                                        <i class="fa-solid fa-pen"></i>
-                                                    </a>
-                                                    <a href="index.php?tab=products&action=delete&id=<?php echo urlencode($p['id']); ?>" 
-                                                       class="btn-icon delete" 
-                                                       title="Delete Design"
-                                                       onclick="return confirm('Are you sure you want to delete this premium creation: <?php echo htmlspecialchars($p['title']); ?>? This action cannot be undone.');">
-                                                        <i class="fa-solid fa-trash-can"></i>
-                                                    </a>
-                                                <?php else: ?>
-                                                    <span style="color: var(--color-gray); font-size: 0.8rem; font-style: italic;">Read Only</span>
-                                                <?php endif; ?>
-                                            </div>
+                                        <td colspan="7" style="text-align: center; padding: 40px; color: var(--color-gray);">
+                                            No creations found in the catalog.
                                         </td>
                                     </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+                                <?php else: ?>
+                                    <?php foreach ($products as $p): ?>
+                                        <tr>
+                                            <td style="text-align: center;">
+                                                <input type="checkbox" name="selected_product_ids[]" value="<?php echo htmlspecialchars($p['id']); ?>" class="product-select-chk" onchange="updateBulkDeleteState()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #e74c3c;">
+                                            </td>
+                                            <td>
+                                                <img src="../<?php echo htmlspecialchars($p['image']); ?>" alt="" class="table-product-img" onerror="this.src='../assets/images/logo.png';">
+                                            </td>
+                                            <td>
+                                                <code style="color: var(--color-accent); font-family: var(--font-numeric); font-weight: 600; font-size: 0.85rem; background: var(--color-gray-dark); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--color-panel-border);">
+                                                    <?php echo htmlspecialchars($p['id']); ?>
+                                                </code>
+                                            </td>
+                                            <td style="font-weight: 700; color: var(--color-primary);"><?php echo htmlspecialchars($p['title']); ?></td>
+                                            <td>
+                                                <span class="table-category-badge"><?php echo htmlspecialchars($p['category']); ?></span>
+                                            </td>
+                                            <td>
+                                                <span class="table-price"><?php echo format_inr_admin($p['price']); ?></span>
+                                            </td>
+                                            <td style="text-align: right;">
+                                                <div class="table-actions" style="justify-content: flex-end;">
+                                                    <?php if ($db): ?>
+                                                        <a href="product-editor.php?action=edit&id=<?php echo urlencode($p['id']); ?>" class="btn-icon edit" title="Edit Design">
+                                                            <i class="fa-solid fa-pen"></i>
+                                                        </a>
+                                                        <a href="index.php?tab=products&action=delete&id=<?php echo urlencode($p['id']); ?>" 
+                                                           class="btn-icon delete" 
+                                                           title="Delete Design"
+                                                           onclick="return confirm('Are you sure you want to delete this premium creation: <?php echo htmlspecialchars($p['title']); ?>? This action cannot be undone.');">
+                                                            <i class="fa-solid fa-trash-can"></i>
+                                                        </a>
+                                                    <?php else: ?>
+                                                        <span style="color: var(--color-gray); font-size: 0.8rem; font-style: italic;">Read Only</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            </form>
         </div>
 
         <!-- TAB B: ANALYTICS & INQUIRIES TAB -->
@@ -2436,6 +2628,139 @@ if (!function_exists('format_inr_admin')) {
 
         </div>
 
+        <!-- TAB F: ANNOUNCEMENT POSTER TAB -->
+        <?php
+        $announcements_list = [];
+        if ($db) {
+            try {
+                $ann_stmt = $db->query("SELECT * FROM `oxo_announcements` ORDER BY `id` DESC");
+                $announcements_list = $ann_stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\PDOException $e) {
+                $announcements_list = [];
+            }
+        }
+        ?>
+        <div class="tab-container <?php echo $current_tab === 'announcement' ? 'active' : ''; ?>">
+            <div class="brands-grid" style="grid-template-columns: 1.2fr 1fr; gap: 30px; margin-bottom: 50px;">
+                <!-- Left: Upload / Add New Announcement Form -->
+                <div class="brands-form-panel">
+                    <div class="editor-card" style="padding: 30px;">
+                        <h3 style="font-family: var(--font-title); font-size: 1.3rem; color: var(--color-primary); margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
+                            <i class="fa-solid fa-bullhorn" style="color: var(--color-accent);"></i> Post New Announcement
+                        </h3>
+                        <p style="color: var(--color-gray); font-size: 0.88rem; margin-bottom: 25px; line-height: 1.5;">
+                            Upload a high-resolution announcement poster image. When set to <strong>Active</strong>, it will automatically popup for visitors when the index page loads. If no poster is active, the index page loads normally.
+                        </p>
+
+                        <form action="index.php?tab=announcement" method="POST" enctype="multipart/form-data">
+                            <input type="hidden" name="form_action" value="save_announcement">
+
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label for="ann_poster_file" style="font-weight: 700;">Poster Image File (Upload)</label>
+                                <input type="file" id="ann_poster_file" name="poster_file" accept="image/*" class="input-control" style="padding: 10px;">
+                                <span style="font-size: 0.78rem; color: var(--color-gray); margin-top: 4px; display: block;">Supports JPG, PNG, WEBP, GIF. Image will be automatically compressed for fast loading.</span>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label for="ann_poster_url" style="font-weight: 700;">Or Image Relative URL</label>
+                                <input type="text" id="ann_poster_url" name="poster_url" class="input-control" placeholder="assets/images/announcement.jpg">
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label for="ann_title" style="font-weight: 700;">Announcement Headline / Title (Optional)</label>
+                                <input type="text" id="ann_title" name="title" class="input-control" placeholder="e.g. Exclusive Private Trunk Show 2026">
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label for="ann_subtitle" style="font-weight: 700;">Subtitle / Brief Description (Optional)</label>
+                                <textarea id="ann_subtitle" name="subtitle" class="input-control" rows="2" placeholder="e.g. Discover our limited edition Calacatta Marble & Walnut Collection before public release."></textarea>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label for="ann_link_url" style="font-weight: 700;">Click Link / Action Button URL (Optional)</label>
+                                <input type="text" id="ann_link_url" name="link_url" class="input-control" placeholder="e.g. shop.php?category=sofas or #contact">
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 25px; display: flex; align-items: center; gap: 12px; background: rgba(200, 162, 118, 0.08); padding: 16px; border-radius: 12px; border: 1px solid rgba(200, 162, 118, 0.2);">
+                                <input type="checkbox" id="ann_is_active" name="is_active" value="1" checked style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--color-primary);">
+                                <label for="ann_is_active" style="font-weight: 700; color: var(--color-primary); cursor: pointer; margin: 0;">
+                                    Set as Active Announcement Poster (Popup on index load)
+                                </label>
+                            </div>
+
+                            <button type="submit" class="action-btn" style="width: 100%; justify-content: center; padding: 14px 20px; font-size: 0.95rem;">
+                                <i class="fa-solid fa-cloud-arrow-up"></i> Publish Announcement Poster
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Right: Current Posters List & Status Management -->
+                <div class="brands-list-panel">
+                    <div class="editor-card" style="padding: 30px;">
+                        <h3 style="font-family: var(--font-title); font-size: 1.3rem; color: var(--color-primary); margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                            <i class="fa-solid fa-images" style="color: var(--color-accent);"></i> Posted Announcements
+                        </h3>
+
+                        <?php if (empty($announcements_list)): ?>
+                            <div style="text-align: center; padding: 40px 20px; background: var(--color-bg-body); border-radius: 16px; border: 1px dashed var(--color-panel-border);">
+                                <i class="fa-solid fa-bullhorn" style="font-size: 2.5rem; color: var(--color-gray); margin-bottom: 12px; display: block;"></i>
+                                <p style="color: var(--color-gray); font-size: 0.95rem; margin: 0;">No announcement posters posted yet.</p>
+                                <span style="font-size: 0.8rem; color: var(--color-gray); display: block; margin-top: 6px;">Index page will load normally without popups.</span>
+                            </div>
+                        <?php else: ?>
+                            <div style="display: flex; flex-direction: column; gap: 20px;">
+                                <?php foreach ($announcements_list as $ann): ?>
+                                    <div style="background: var(--color-bg-body); border-radius: 16px; padding: 20px; border: 1px solid <?php echo $ann['is_active'] ? 'var(--color-accent)' : 'var(--color-panel-border)'; ?>; position: relative;">
+                                        <div style="display: flex; gap: 18px; align-items: flex-start;">
+                                            <div style="width: 120px; height: 120px; border-radius: 12px; overflow: hidden; background: #000; flex-shrink: 0;">
+                                                <img src="../<?php echo htmlspecialchars($ann['image_path']); ?>" alt="Poster" style="width: 100%; height: 100%; object-fit: cover;">
+                                            </div>
+                                            <div style="flex: 1;">
+                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                                    <span style="padding: 4px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; <?php echo $ann['is_active'] ? 'background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid #2ecc71;' : 'background: rgba(149, 165, 166, 0.15); color: #7f8c8d; border: 1px solid #7f8c8d;'; ?>">
+                                                        <i class="fa-solid <?php echo $ann['is_active'] ? 'fa-circle-check' : 'fa-circle-pause'; ?>"></i> <?php echo $ann['is_active'] ? 'Active Popup' : 'Inactive'; ?>
+                                                    </span>
+                                                    <span style="font-size: 0.75rem; color: var(--color-gray); font-family: var(--font-numeric);">
+                                                        <?php echo date('M d, Y', strtotime($ann['created_at'])); ?>
+                                                    </span>
+                                                </div>
+                                                <?php if (!empty($ann['title'])): ?>
+                                                    <h4 style="font-family: var(--font-title); font-size: 1rem; color: var(--color-primary); margin: 0 0 4px 0;"><?php echo htmlspecialchars($ann['title']); ?></h4>
+                                                <?php endif; ?>
+                                                <?php if (!empty($ann['subtitle'])): ?>
+                                                    <p style="font-size: 0.82rem; color: var(--color-gray); margin: 0 0 12px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><?php echo htmlspecialchars($ann['subtitle']); ?></p>
+                                                <?php endif; ?>
+
+                                                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                                    <form action="index.php?tab=announcement" method="POST" style="display: inline;">
+                                                        <input type="hidden" name="form_action" value="toggle_announcement">
+                                                        <input type="hidden" name="announcement_id" value="<?php echo $ann['id']; ?>">
+                                                        <input type="hidden" name="new_status" value="<?php echo $ann['is_active'] ? 0 : 1; ?>">
+                                                        <button type="submit" class="action-btn" style="padding: 6px 14px; font-size: 0.78rem; <?php echo $ann['is_active'] ? 'background: rgba(230, 126, 34, 0.15); color: #d35400; border: 1px solid #e67e22;' : 'background: rgba(46, 204, 113, 0.15); color: #27ae60; border: 1px solid #2ecc71;'; ?>">
+                                                            <i class="fa-solid <?php echo $ann['is_active'] ? 'fa-pause' : 'fa-play'; ?>"></i> <?php echo $ann['is_active'] ? 'Deactivate' : 'Activate'; ?>
+                                                        </button>
+                                                    </form>
+
+                                                    <form action="index.php?tab=announcement" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this announcement poster?');">
+                                                        <input type="hidden" name="form_action" value="delete_announcement">
+                                                        <input type="hidden" name="announcement_id" value="<?php echo $ann['id']; ?>">
+                                                        <button type="submit" class="action-btn" style="padding: 6px 14px; font-size: 0.78rem; background: rgba(231, 76, 60, 0.15); color: #e74c3c; border: 1px solid #e74c3c;">
+                                                            <i class="fa-solid fa-trash-can"></i> Delete
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <script>
         document.addEventListener('DOMContentLoaded', () => {
             const logoInput = document.getElementById('logo_file');
@@ -3137,6 +3462,57 @@ if (!function_exists('format_inr_admin')) {
     </div>
 
     <script>
+    // Bulk Delete Selection JS
+    function toggleSelectAllProducts(master) {
+        const checkboxes = document.querySelectorAll('.product-select-chk');
+        checkboxes.forEach(chk => {
+            chk.checked = master.checked;
+        });
+        const headerChk = document.getElementById('headerSelectAll');
+        const masterChk = document.getElementById('selectAllProducts');
+        if (headerChk) headerChk.checked = master.checked;
+        if (masterChk) masterChk.checked = master.checked;
+        updateBulkDeleteState();
+    }
+
+    function updateBulkDeleteState() {
+        const checkboxes = document.querySelectorAll('.product-select-chk');
+        const selected = document.querySelectorAll('.product-select-chk:checked');
+        const count = selected.length;
+
+        const bulkBtn = document.getElementById('bulkDeleteBtn');
+        const badge = document.getElementById('selectedCountBadge');
+        const btnCount = document.getElementById('btnSelectedCount');
+
+        if (badge) badge.textContent = count + ' selected';
+        if (btnCount) btnCount.textContent = count;
+
+        if (bulkBtn) {
+            if (count > 0) {
+                bulkBtn.style.display = 'inline-flex';
+            } else {
+                bulkBtn.style.display = 'none';
+            }
+        }
+
+        const headerChk = document.getElementById('headerSelectAll');
+        const masterChk = document.getElementById('selectAllProducts');
+        if (checkboxes.length > 0) {
+            const allChecked = (count === checkboxes.length);
+            if (headerChk) headerChk.checked = allChecked;
+            if (masterChk) masterChk.checked = allChecked;
+        }
+    }
+
+    function confirmBulkDelete() {
+        const count = document.querySelectorAll('.product-select-chk:checked').length;
+        if (count === 0) {
+            alert('Please select at least one creation to delete.');
+            return false;
+        }
+        return confirm('WARNING: Are you sure you want to delete ' + count + ' selected creation(s)?\n\nThis will permanently delete the records from the database and remove all associated image files from the server disk.');
+    }
+
     // Close modals when clicking backdrop
     window.addEventListener('click', (e) => {
         const importModal = document.getElementById('importDbModal');

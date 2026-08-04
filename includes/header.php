@@ -69,17 +69,6 @@ if ($is_product_page && $current_product) {
             </nav>
             
             <div class="header-actions">
-
-                <?php if (isset($_SESSION['user_logged_in']) && $_SESSION['user_logged_in'] === true): ?>
-                    <a href="account.php" class="header-btn magnetic" aria-label="My Account" style="display: inline-flex; align-items: center; justify-content: center;">
-                        <span class="magnetic-btn-text"><i class="fa-regular fa-user"></i></span>
-                    </a>
-                <?php else: ?>
-                    <a href="login.php" class="header-btn magnetic" aria-label="Sign In" style="display: inline-flex; align-items: center; justify-content: center;">
-                        <span class="magnetic-btn-text"><i class="fa-regular fa-user"></i></span>
-                    </a>
-                <?php endif; ?>
-
                 <button class="menu-toggle" id="menu-toggle" aria-label="Toggle Menu">
                     <i class="fa-solid fa-bars-staggered"></i>
                 </button>

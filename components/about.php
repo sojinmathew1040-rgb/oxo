@@ -54,7 +54,7 @@
                 </div>
                 
                 <div style="margin-top: 10px;">
-                    <a href="about.php" class="magnetic-btn" style="padding: 12px 28px; border-radius: 30px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--color-accent); color: var(--color-primary); font-weight: 600; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                    <a href="about.php" class="magnetic-btn" style="padding: 12px 28px; border-radius: 30px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--color-accent); font-weight: 600; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px;">
                         <span class="magnetic-btn-text">Read Our Full Story &nbsp; <i class="fa-solid fa-arrow-right-long" style="color: var(--color-accent);"></i></span>
                     </a>
                 </div>

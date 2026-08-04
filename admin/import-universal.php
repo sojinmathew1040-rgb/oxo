@@ -215,7 +215,9 @@ function get_or_create_color_id($pdo, $color_name) {
         'beige' => '#F5F5DC',
         'cream' => '#FFFDD0',
         'gold' => '#BF8F54',
-        'silver' => '#BDC3C7'
+        'silver' => '#BDC3C7',
+        'aqua' => '#00CEC9',
+        'multi' => '#2C3E50'
     ];
 
     $hex = '#333333';
@@ -522,175 +524,405 @@ function generate_short_product_id($title_or_handle, $brand_name = '', $pdo = nu
     return $id;
 }
 
-// --- AJAX BULK CATALOG SYNC ENDPOINT ---
-if (isset($_GET['api']) && $_GET['api'] === 'bulk_batch') {
-    header('Content-Type: application/json');
-    $domain_input = trim($_GET['domain'] ?? 'nilkamalfurniture.com');
-    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-    $limit = 20;
+function filter_and_prioritize_product_images($images, $html = '') {
+    $clean_images = [];
 
-    $clean_domain = preg_replace('/^https?:\/\//', '', rtrim($domain_input, '/'));
-    $brand_id = get_or_create_brand($db, 'https://' . $clean_domain);
-    $brand_slug = preg_replace('/[^a-z0-9]/', '', strtolower($clean_domain));
-
-    $url = "https://{$clean_domain}/products.json?limit={$limit}&page={$page}";
-    $data_str = fetch_web_page($url);
-    $data = $data_str ? json_decode($data_str, true) : null;
-
-    if (!$data || empty($data['products'])) {
-        echo json_encode(['status' => 'complete', 'imported_count' => 0, 'message' => 'No more products to import for this brand catalog.']);
-        exit;
+    // 1. Search HTML DOM for high-resolution WooCommerce / E-commerce product gallery images
+    if (!empty($html)) {
+        if (preg_match_all('/<a[^>]+href=["\']([^"\']+\.(?:jpe?g|png|webp))["\'][^>]*class=["\'][^"\']*woocommerce-product-gallery__image/i', $html, $m)) {
+            foreach ($m[1] as $img_url) {
+                if (!in_array($img_url, $clean_images)) $clean_images[] = $img_url;
+            }
+        }
+        if (preg_match_all('/<img[^>]+data-large_image=["\']([^"\']+\.(?:jpe?g|png|webp))["\']/i', $html, $m)) {
+            foreach ($m[1] as $img_url) {
+                if (!in_array($img_url, $clean_images)) $clean_images[] = $img_url;
+            }
+        }
+        if (preg_match_all('/<img[^>]+src=["\']([^"\']+\.(?:jpe?g|png|webp))["\'][^>]*class=["\'][^"\']*wp-post-image/i', $html, $m)) {
+            foreach ($m[1] as $img_url) {
+                if (!in_array($img_url, $clean_images)) $clean_images[] = $img_url;
+            }
+        }
     }
 
-    $imported_in_batch = 0;
-    $imported_titles = [];
-
-    foreach ($data['products'] as $p) {
-        $product_id = generate_short_product_id($p['handle'] ?: $p['title'], $clean_domain, $db);
-        $title = $p['title'];
-        $raw_price = isset($p['variants'][0]['price']) ? (float)$p['variants'][0]['price'] : 0;
-        $price = (int)round($raw_price);
-
-        $raw_desc = $p['body_html'] ?? '';
-        $clean_desc = html_entity_decode($raw_desc, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $clean_desc = trim(preg_replace('/\s+/', ' ', strip_tags($clean_desc)));
-        if (strlen($clean_desc) > 800) {
-            $clean_desc = substr($clean_desc, 0, 797) . '...';
+    // 2. Append candidate images (OpenGraph, JSON-LD, etc.)
+    if (is_array($images)) {
+        foreach ($images as $img) {
+            if (!empty($img) && is_string($img)) {
+                if (!in_array($img, $clean_images)) {
+                    $clean_images[] = $img;
+                }
+            }
         }
-        if (empty($clean_desc)) {
-            $clean_desc = $title . ' from Brand Catalog Collection.';
-        }
+    }
 
-        $category = map_universal_category($p['product_type'] ?? '', $title, $raw_desc);
-        $material = map_universal_material($title, $raw_desc);
-        $specs = "Brand Partner | Model: " . $title . " | SKU: " . ($p['variants'][0]['sku'] ?? 'PROD-' . $p['id']);
+    // 3. Filter out junk, chart, icon, and overlay graphics
+    $filtered = [];
+    $junk_keywords = [
+        'logo', 'icon', 'star', 'rating', 'chart', 'feature', 'features',
+        'badge', 'trust', 'payment', 'search', 'overlay', 'button', 'svg',
+        'banner', 'footer', 'header', 'avatar', '100x100', '150x150', '300x300',
+        'sprite', 'arrow', 'check', 'tick'
+    ];
 
-        $details = [
-            "Material" => ucfirst($material),
-            "Construction" => "Engineered for high durability and ergonomic support.",
-            "Care Instructions" => "Wipe clean with a soft dry cloth. Avoid harsh chemicals.",
-            "Shipping" => "Delivered directly to doorstep with assembly."
-        ];
-        $details_json = json_encode($details);
-
-        // Color & Variant Processing
-        $variant_color_map = [];
-        $color_ids_set = [];
-        $primary_color_id = null;
-
-        $options = $p['options'] ?? [];
-        $color_option_index = null;
-        foreach ($options as $opt_idx => $opt) {
-            $opt_name = strtolower($opt['name'] ?? '');
-            if (strpos($opt_name, 'color') !== false || strpos($opt_name, 'colour') !== false || strpos($opt_name, 'finish') !== false) {
-                $color_option_index = 'option' . ($opt_idx + 1);
+    foreach ($clean_images as $url) {
+        $url_lower = strtolower($url);
+        $is_junk = false;
+        foreach ($junk_keywords as $kw) {
+            if (strpos($url_lower, $kw) !== false) {
+                $is_junk = true;
                 break;
             }
         }
+        if (!$is_junk) {
+            $filtered[] = $url;
+        }
+    }
 
-        $variants = $p['variants'] ?? [];
-        foreach ($variants as $v) {
-            $c_name = '';
-            if ($color_option_index && isset($v[$color_option_index])) {
-                $c_name = $v[$color_option_index];
-            } else {
-                $v_title = $v['title'] ?? '';
-                foreach (['Red', 'Pink', 'Green', 'Yellow', 'Blue', 'Black', 'White', 'Grey', 'Orange', 'Purple', 'Brown'] as $known_c) {
-                    if (stripos($v_title, $known_c) !== false) {
-                        $c_name = $known_c;
+    return !empty($filtered) ? array_values(array_unique($filtered)) : array_values(array_unique($clean_images));
+}
+
+function extract_original_site_color_options($html, $shopify_json = null, $pdo = null) {
+    $found_color_names = [];
+
+    // 1. Shopify JSON API Options
+    if ($shopify_json && isset($shopify_json['product']['options'])) {
+        foreach ($shopify_json['product']['options'] as $opt) {
+            $opt_name = strtolower($opt['name'] ?? '');
+            if (strpos($opt_name, 'color') !== false || strpos($opt_name, 'colour') !== false || strpos($opt_name, 'shade') !== false || strpos($opt_name, 'finish') !== false) {
+                if (!empty($opt['values'])) {
+                    foreach ($opt['values'] as $val) {
+                        if (is_string($val) && !empty(trim($val))) {
+                            $found_color_names[] = trim($val);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. WooCommerce Form Variations JSON attribute (data-product_variations)
+    if (!empty($html)) {
+        if (preg_match('/data-product_variations=["\'](.*?)["\']/s', $html, $m)) {
+            $variations_json = html_entity_decode($m[1], ENT_QUOTES, 'UTF-8');
+            $variations_data = json_decode($variations_json, true);
+            if (is_array($variations_data)) {
+                foreach ($variations_data as $var_item) {
+                    if (isset($var_item['attributes']) && is_array($var_item['attributes'])) {
+                        foreach ($var_item['attributes'] as $attr_key => $attr_val) {
+                            if (strpos(strtolower($attr_key), 'color') !== false || strpos(strtolower($attr_key), 'colour') !== false) {
+                                if (!empty($attr_val)) {
+                                    $found_color_names[] = ucfirst(trim(str_replace(['-', '_'], ' ', $attr_val)));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. WooCommerce / Standard Select Dropdown for Color (<select name="attribute_pa_color">)
+        if (preg_match_all('/<select[^>]+name=["\'][^"\']*(?:color|colour)[^"\']*["\'][^>]*>(.*?)<\/select>/is', $html, $m)) {
+            foreach ($m[1] as $select_inner) {
+                if (preg_match_all('/<option[^>]+value=["\']([^"\']*)["\'][^>]*>(.*?)<\/option>/is', $select_inner, $opt_m)) {
+                    foreach ($opt_m[2] as $idx => $opt_text) {
+                        $c_text = trim(strip_tags($opt_text));
+                        $c_val = trim($opt_m[1][$idx]);
+                        if (!empty($c_text) && !preg_match('/(choose|select|option)/i', $c_text)) {
+                            $found_color_names[] = $c_text;
+                        } else if (!empty($c_val) && !preg_match('/(choose|select|option)/i', $c_val)) {
+                            $found_color_names[] = ucfirst(str_replace(['-', '_'], ' ', $c_val));
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. WooCommerce Swatch Elements (class="color-variable-wrapper", data-title="Red", etc.)
+        if (preg_match_all('/<(?:li|div|span|button)[^>]+(?:data-title|data-value|title|aria-label)=["\']([^"\']+)["\'][^>]*class=["\'][^"\']*(?:color|swatch|variable-item)[^"\']*["\']/i', $html, $m)) {
+            foreach ($m[1] as $c_title) {
+                $c_title = trim($c_title);
+                if (!empty($c_title) && strlen($c_title) < 25 && !preg_match('/(select|choose|button|close|zoom)/i', $c_title)) {
+                    $found_color_names[] = $c_title;
+                }
+            }
+        }
+
+        // 5. Schema.org JSON-LD ("color": ["Red", "Blue"])
+        if (preg_match_all('/<script[^>]+type=["\']application\/ld\+json["\'][^>]*>(.*?)<\/script>/is', $html, $m_ld)) {
+            foreach ($m_ld[1] as $ld_str) {
+                $ld_arr = json_decode($ld_str, true);
+                if (!$ld_arr) continue;
+                $nodes = isset($ld_arr['@graph']) ? $ld_arr['@graph'] : [$ld_arr];
+                foreach ($nodes as $node) {
+                    if (isset($node['color'])) {
+                        $colors_in_ld = is_array($node['color']) ? $node['color'] : [$node['color']];
+                        foreach ($colors_in_ld as $c_ld) {
+                            if (is_string($c_ld) && !empty(trim($c_ld))) {
+                                $found_color_names[] = trim($c_ld);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    $color_ids = [];
+    $found_color_names = array_values(array_unique(array_filter($found_color_names)));
+
+    if (!empty($found_color_names) && $pdo) {
+        foreach ($found_color_names as $cname) {
+            $cid = get_or_create_color_id($pdo, $cname);
+            if ($cid) {
+                $color_ids[$cid] = true;
+            }
+        }
+    }
+
+    return array_keys($color_ids);
+}
+
+function detect_product_colors($title, $description, $html, $images, $pdo, $shopify_json = null) {
+    if (!$pdo) return [];
+
+    // 1. Extract exact original site color options (WooCommerce swatches, Shopify API options, JSON-LD)
+    $original_colors = extract_original_site_color_options($html, $shopify_json, $pdo);
+    if (!empty($original_colors)) {
+        return $original_colors;
+    }
+
+    // 2. Fallback: Keyword search in Title, Description, Image filenames
+    $text = strtolower($title . ' ' . $description);
+    if (is_array($images)) {
+        foreach ($images as $img) {
+            $text .= ' ' . strtolower($img);
+        }
+    }
+
+    $color_keywords = [
+        'red', 'pink', 'green', 'yellow', 'blue', 'navy', 'black', 'white',
+        'grey', 'gray', 'orange', 'purple', 'violet', 'brown', 'walnut',
+        'oak', 'teak', 'beige', 'cream', 'gold', 'silver', 'maroon', 'ivory'
+    ];
+
+    $found_color_ids = [];
+    foreach ($color_keywords as $c) {
+        if (preg_match('/\b' . preg_quote($c, '/') . '\b/i', $text)) {
+            $cid = get_or_create_color_id($pdo, ucfirst($c));
+            if ($cid) {
+                $found_color_ids[$cid] = true;
+            }
+        }
+    }
+
+    return array_keys($found_color_ids);
+}
+
+function match_image_color_id($img_url, $color_ids, $shopify_json = null, $pdo = null) {
+    if (empty($color_ids) || !$pdo) return null;
+
+    $color_ids_flat = array_values(array_filter(array_map('intval', (array)$color_ids)));
+    if (empty($color_ids_flat)) return null;
+
+    $placeholders = implode(',', array_fill(0, count($color_ids_flat), '?'));
+    try {
+        $stmt = $pdo->prepare("SELECT `id`, `name` FROM `oxo_colors` WHERE `id` IN ($placeholders)");
+        $stmt->execute($color_ids_flat);
+        $colors = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (\Exception $e) {
+        return null;
+    }
+
+    if (empty($colors)) return null;
+
+    // 1. Check Shopify JSON metadata (image alt or variant_ids)
+    if (!empty($shopify_json) && isset($shopify_json['product']['images'])) {
+        $clean_target = basename(strtok($img_url, '?'));
+        foreach ($shopify_json['product']['images'] as $simg) {
+            $s_src = basename(strtok($simg['src'] ?? '', '?'));
+            if ($s_src === $clean_target || (!empty($clean_target) && strpos($s_src, $clean_target) !== false) || (!empty($s_src) && strpos($clean_target, $s_src) !== false)) {
+                // Check alt text
+                $alt = trim($simg['alt'] ?? '');
+                if (!empty($alt)) {
+                    foreach ($colors as $c) {
+                        if (strcasecmp($alt, $c['name']) === 0 || stripos($alt, $c['name']) !== false || stripos($c['name'], $alt) !== false) {
+                            return (int)$c['id'];
+                        }
+                    }
+                }
+                // Check variant_ids
+                if (!empty($simg['variant_ids']) && isset($shopify_json['product']['variants'])) {
+                    foreach ($shopify_json['product']['variants'] as $v) {
+                        if (in_array($v['id'], $simg['variant_ids'])) {
+                            $v_title = trim($v['title'] ?? '');
+                            foreach ($colors as $c) {
+                                if (strcasecmp($v_title, $c['name']) === 0 || stripos($v_title, $c['name']) !== false) {
+                                    return (int)$c['id'];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. URL / Filename / Keyword string matching
+    $url_clean = strtolower($img_url);
+
+    // Sort color names by length descending so longer specific names match first (e.g. "AQUA BLUE" before "BLUE")
+    usort($colors, function($a, $b) {
+        return strlen($b['name']) - strlen($a['name']);
+    });
+
+    foreach ($colors as $c) {
+        $cname = strtolower($c['name']);
+        $cname_norm = preg_replace('/[^a-z0-9]/', '', $cname);
+        $url_norm = preg_replace('/[^a-z0-9]/', '', $url_clean);
+
+        if (strpos($url_clean, $cname) !== false) {
+            return (int)$c['id'];
+        }
+        if (!empty($cname_norm) && strpos($url_norm, $cname_norm) !== false) {
+            return (int)$c['id'];
+        }
+        // Aliases for multi-colour
+        if (strpos($cname, 'multi') !== false && (strpos($url_clean, 'multi') !== false || strpos($url_clean, 'm.color') !== false || strpos($url_clean, 'm_color') !== false)) {
+            return (int)$c['id'];
+        }
+        // Aliases for aqua blue
+        if (strpos($cname, 'aqua') !== false && (strpos($url_clean, 'aqua') !== false || strpos($url_clean, 'blue') !== false)) {
+            return (int)$c['id'];
+        }
+    }
+
+    return null;
+}
+
+function build_extracted_images_meta($images, $detected_color_ids, $html = '', $shopify_json = null, $pdo = null) {
+    if (!$pdo || empty($images)) return [];
+
+    $colors = [];
+    if (!empty($detected_color_ids)) {
+        $color_ids_flat = array_values(array_filter(array_map('intval', (array)$detected_color_ids)));
+        if (!empty($color_ids_flat)) {
+            $placeholders = implode(',', array_fill(0, count($color_ids_flat), '?'));
+            try {
+                $stmt = $pdo->prepare("SELECT `id`, `name` FROM `oxo_colors` WHERE `id` IN ($placeholders)");
+                $stmt->execute($color_ids_flat);
+                $colors = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e) {}
+        }
+    }
+
+    $images_meta = [];
+    $current_group_color_id = !empty($colors) ? (int)$colors[0]['id'] : null;
+
+    // Build variant_id to color_id map if shopify_json exists
+    $variant_color_map = [];
+    if ($shopify_json && isset($shopify_json['product']['variants'])) {
+        foreach ($shopify_json['product']['variants'] as $var) {
+            $v_id = $var['id'];
+            $v_title = trim($var['title'] ?? '');
+            foreach ($colors as $c) {
+                if (strcasecmp($v_title, $c['name']) === 0 || stripos($v_title, $c['name']) !== false || stripos($c['name'], $v_title) !== false) {
+                    $variant_color_map[$v_id] = (int)$c['id'];
+                    break;
+                }
+            }
+        }
+    }
+
+    // Build shopify image_src/id to alt/color_id map
+    $shopify_img_color_map = [];
+    if ($shopify_json && isset($shopify_json['product']['images'])) {
+        foreach ($shopify_json['product']['images'] as $simg) {
+            $s_src = strtok($simg['src'] ?? '', '?');
+            $s_alt = trim($simg['alt'] ?? '');
+            $s_color_id = null;
+
+            if (!empty($s_alt)) {
+                foreach ($colors as $c) {
+                    if (strcasecmp($s_alt, $c['name']) === 0 || stripos($s_alt, $c['name']) !== false || stripos($c['name'], $s_alt) !== false) {
+                        $s_color_id = (int)$c['id'];
                         break;
                     }
                 }
             }
 
-            if ($c_name) {
-                $cid = get_or_create_color_id($db, $c_name);
-                if ($cid) {
-                    $variant_color_map[$v['id']] = $cid;
-                    $color_ids_set[$cid] = true;
-                    if ($primary_color_id === null) $primary_color_id = $cid;
-                }
-            }
-        }
-
-        $images = $p['images'] ?? [];
-        $local_main_image = 'assets/images/chair_1.png';
-        $gallery_items = [];
-
-        if (!empty($images)) {
-            foreach ($images as $idx => $img_obj) {
-                $img_src = is_array($img_obj) ? ($img_obj['src'] ?? '') : $img_obj;
-                $img_var_ids = is_array($img_obj) ? ($img_obj['variant_ids'] ?? []) : [];
-
-                $assigned_color_id = null;
-                if (!empty($img_var_ids)) {
-                    foreach ($img_var_ids as $vid) {
-                        if (isset($variant_color_map[$vid])) {
-                            $assigned_color_id = $variant_color_map[$vid];
-                            break;
-                        }
-                    }
-                }
-
-                if (!$assigned_color_id) {
-                    $img_name_lower = strtolower($img_src);
-                    foreach (['red', 'pink', 'green', 'yellow', 'blue', 'black', 'white', 'grey', 'orange', 'purple', 'brown'] as $known_c) {
-                        if (strpos($img_name_lower, $known_c) !== false) {
-                            $assigned_color_id = get_or_create_color_id($db, ucfirst($known_c));
-                            if ($assigned_color_id) $color_ids_set[$assigned_color_id] = true;
-                            break;
-                        }
-                    }
-                }
-
-                if ($img_src) {
-                    $saved_path = download_universal_image($img_src, $brand_slug, $p['handle'] ?: 'product', $idx);
-                    if ($saved_path) {
-                        if ($idx === 0) $local_main_image = $saved_path;
-                        $gallery_items[] = [
-                            'path' => $saved_path,
-                            'color_id' => $assigned_color_id
-                        ];
+            if (!$s_color_id && !empty($simg['variant_ids'])) {
+                foreach ($simg['variant_ids'] as $vid) {
+                    if (isset($variant_color_map[$vid])) {
+                        $s_color_id = $variant_color_map[$vid];
+                        break;
                     }
                 }
             }
+
+            if ($s_color_id && $s_src) {
+                $shopify_img_color_map[basename($s_src)] = $s_color_id;
+                $shopify_img_color_map[$s_src] = $s_color_id;
+            }
         }
-
-        $color_ids_array = array_keys($color_ids_set);
-        $color_ids_json = !empty($color_ids_array) ? json_encode($color_ids_array) : null;
-        $gallery_json = !empty($gallery_items) ? json_encode($gallery_items) : null;
-
-        // DB Upsert
-        $check_stmt = $db->prepare("SELECT COUNT(*) FROM `oxo_products` WHERE `id` = ?");
-        $check_stmt->execute([$product_id]);
-        $exists = $check_stmt->fetchColumn() > 0;
-
-        if ($exists) {
-            $stmt = $db->prepare("UPDATE `oxo_products` SET 
-                `title` = ?, `price` = ?, `category` = ?, `image` = ?, `description` = ?, `specs` = ?, `details` = ?, `gallery` = ?, `color_id` = ?, `color_ids` = ?, `brand_id` = ?, `material_slug` = ?
-                WHERE `id` = ?");
-            $stmt->execute([$title, $price, $category, $local_main_image, $clean_desc, $specs, $details_json, $gallery_json, $primary_color_id, $color_ids_json, $brand_id, $material, $product_id]);
-        } else {
-            $stmt = $db->prepare("INSERT INTO `oxo_products` 
-                (`id`, `title`, `price`, `category`, `image`, `description`, `specs`, `details`, `gallery`, `material_slug`, `height_cm`, `width_cm`, `length_cm`, `color_id`, `color_ids`, `brand_id`) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 85, 100, 240, ?, ?, ?)");
-            $stmt->execute([$product_id, $title, $price, $category, $local_main_image, $clean_desc, $specs, $details_json, $gallery_json, $material, $primary_color_id, $color_ids_json, $brand_id]);
-        }
-
-        $imported_in_batch++;
-        $imported_titles[] = $title;
     }
 
-    auto_sync_documentation();
+    foreach ($images as $idx => $img) {
+        $img_url = is_array($img) ? ($img['src'] ?? ($img['url'] ?? '')) : $img;
+        if (empty($img_url)) continue;
 
-    echo json_encode([
-        'status' => 'success',
-        'page' => $page,
-        'imported_count' => $imported_in_batch,
-        'titles' => $imported_titles
-    ]);
-    exit;
+        $clean_src = strtok($img_url, '?');
+        $base_name = basename($clean_src);
+        $assigned_color_id = null;
+
+        // 1. Direct Shopify Map Check
+        if (isset($shopify_img_color_map[$base_name])) {
+            $assigned_color_id = $shopify_img_color_map[$base_name];
+        } else if (isset($shopify_img_color_map[$clean_src])) {
+            $assigned_color_id = $shopify_img_color_map[$clean_src];
+        }
+
+        // 2. Color keyword in URL / filename matching
+        if (!$assigned_color_id && !empty($colors)) {
+            $url_clean = strtolower($img_url);
+            foreach ($colors as $c) {
+                $cname = strtolower($c['name']);
+                $cname_norm = preg_replace('/[^a-z0-9]/', '', $cname);
+                $url_norm = preg_replace('/[^a-z0-9]/', '', $url_clean);
+
+                if (!empty($cname_norm) && strpos($url_norm, $cname_norm) !== false) {
+                    $assigned_color_id = (int)$c['id'];
+                    break;
+                }
+                if (strpos($cname, 'multi') !== false && (strpos($url_clean, 'multi') !== false || strpos($url_clean, 'm.color') !== false || strpos($url_clean, 'm_color') !== false)) {
+                    $assigned_color_id = (int)$c['id'];
+                    break;
+                }
+                if (strpos($cname, 'aqua') !== false && (strpos($url_clean, 'aqua') !== false || strpos($url_clean, 'blue') !== false)) {
+                    $assigned_color_id = (int)$c['id'];
+                    break;
+                }
+            }
+        }
+
+        // 3. Sequential Group Continuity Fallback
+        if ($assigned_color_id) {
+            $current_group_color_id = $assigned_color_id;
+        } else {
+            $assigned_color_id = $current_group_color_id;
+        }
+
+        $images_meta[] = [
+            'url' => $img_url,
+            'color_id' => $assigned_color_id
+        ];
+    }
+
+    return $images_meta;
 }
+
+
 
 // BATCH CONFIRM & SAVE GALLERY PRODUCTS
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'batch_confirm_gallery_save') {
@@ -1129,221 +1361,113 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $brand_id = get_or_create_brand($db, $raw_url);
         $html = fetch_web_page($raw_url);
 
-        $is_homepage_or_catalog = empty($path_clean) || strtolower($path_clean) === 'index.php' || strtolower($path_clean) === 'index.html';
+        $path_parts = explode('/', $path_clean);
+        $handle = end($path_parts) ?: 'product';
+        $product_id = 'prod-' . preg_replace('/[^a-z0-9\-]/', '', strtolower($handle));
 
-        if ($is_homepage_or_catalog || strpos($raw_url, '/products') === false) {
-            if ($html) {
-                $gallery_res = extract_gallery_page_items($html, $raw_url);
-                if (!empty($gallery_res['images'])) {
-                    $gallery_extraction = [
-                        'url' => $raw_url,
-                        'brand_id' => $brand_id,
-                        'category' => $gallery_res['category'],
-                        'images' => $gallery_res['images']
-                    ];
-                }
-            }
+        $title = '';
+        $price = 0;
+        $description = '';
+        $images = [];
+        $raw_category = '';
+
+        // TIER 1: Shopify JSON API
+        $shopify_json_url = '';
+        if (strpos($raw_url, '/products/') !== false || strpos($raw_url, '/product/') !== false) {
+            $base_url = strtok($raw_url, '?');
+            $shopify_json_url = rtrim($base_url, '/') . '.json';
         }
+        
+        $shopify_data = $shopify_json_url ? fetch_web_page($shopify_json_url) : null;
+        $json_arr = $shopify_data ? json_decode($shopify_data, true) : null;
 
-        // AUTO-SAVE GALLERY PRODUCTS DIRECTLY TO DB (Instant 1-Click Catalog Import)
-        if (!empty($gallery_extraction) && !empty($gallery_extraction['images'])) {
-            $gallery_imported_count = 0;
-            $brand_slug_g = 'universal';
-            if ($brand_id && $db) {
-                $b_stmt = $db->prepare("SELECT `name` FROM `oxo_brands` WHERE `id` = ?");
-                $b_stmt->execute([$brand_id]);
-                $bn = $b_stmt->fetchColumn();
-                if ($bn) $brand_slug_g = preg_replace('/[^a-z0-9]/', '', strtolower($bn));
-            }
-
-            foreach ($gallery_extraction['images'] as $g_idx => $g_img) {
-                $path_name = pathinfo(parse_url($g_img, PHP_URL_PATH), PATHINFO_FILENAME);
-                $clean_title = ucwords(trim(str_replace(['-', '_', 'img', 'photo', 'product', '1', '2', '3', '4', '5'], ' ', strtolower($path_name))));
-                if (strlen($clean_title) < 3) {
-                    $clean_title = ucfirst($brand_slug_g) . " Furniture Item #" . ($g_idx + 1);
-                } else {
-                    $clean_title = ucfirst($brand_slug_g) . " " . $clean_title;
-                }
-
-                $g_p_id = generate_short_product_id($clean_title, $brand_slug_g, $db);
-                $g_price = 18500 + ($g_idx * 1200);
-                $cat_name = ensure_category_exists($db, $gallery_extraction['category']);
-                $mat_name = ensure_material_exists($db, 'wood');
-                $specs_str = "Brand Partner: " . ucfirst($brand_slug_g) . " | Model: " . $clean_title . " | SKU: " . strtoupper($g_p_id);
-                $dt_json = json_encode([
-                    "Material" => ucfirst($mat_name),
-                    "Construction" => "Engineered for luxury durability & silent ergonomic comfort.",
-                    "Care Instructions" => "Wipe clean with a soft dry cloth. Avoid abrasive cleaners.",
-                    "Shipping" => "White-glove doorstep delivery and inside setup included."
-                ]);
-
-                $local_img = download_universal_image($g_img, $brand_slug_g, $g_p_id, 0) ?: 'assets/images/chair_1.png';
-
-                try {
-                    $ins_stmt = $db->prepare("INSERT INTO `oxo_products` 
-                        (`id`, `title`, `price`, `category`, `image`, `description`, `specs`, `details`, `material_slug`, `brand_id`, `source_url`) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ON DUPLICATE KEY UPDATE `title` = VALUES(`title`), `price` = VALUES(`price`), `image` = VALUES(`image`)");
-                    $ins_stmt->execute([$g_p_id, $clean_title, $g_price, $cat_name, $local_img, "Luxury handcrafted creation from " . ucfirst($brand_slug_g) . " catalog.", $specs_str, $dt_json, $mat_name, $brand_id, $raw_url]);
-                    $gallery_imported_count++;
-                } catch (\Exception $ex) {
-                    error_log("Gallery item insert error: " . $ex->getMessage());
-                }
-            }
-
-            if ($gallery_imported_count > 0) {
-                auto_sync_documentation();
-                $message = "Successfully imported {$gallery_imported_count} products from " . htmlspecialchars($raw_url) . " directly into your OXO Furniture catalog!";
-                $message_type = 'success';
-            }
-        }
-
-        // TIER 4: Guaranteed Brand Fallback Generator if empty
-        if (empty($gallery_extraction) && empty($extracted_data)) {
-            $brand_display_name = ucwords(str_replace(['https://', 'http://', 'www.', '.com', '.co.in', '.in', '/'], '', $raw_url));
-            if (empty($brand_display_name)) $brand_display_name = 'Indroyal';
-
-            $catalog_templates = [
-                ['title' => "{$brand_display_name} Royal Velvet 3-Seater Sofa", 'price' => 38500, 'category' => 'sofas', 'material' => 'fabric', 'desc' => "Luxury handcrafted 3-seater sofa by {$brand_display_name}.", 'img' => 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&q=80'],
-                ['title' => "{$brand_display_name} Solid Teakwood 6-Seater Dining Table Set", 'price' => 54900, 'category' => 'tables', 'material' => 'wood', 'desc' => "Signature solid teakwood dining suite by {$brand_display_name}.", 'img' => 'https://images.unsplash.com/photo-1617806118233-18e1de247200?w=800&q=80'],
-                ['title' => "{$brand_display_name} Executive Ergonomic Recliner Chair", 'price' => 24500, 'category' => 'chairs', 'material' => 'leather', 'desc' => "Ergonomic leatherette recliner by {$brand_display_name}.", 'img' => 'https://images.unsplash.com/photo-1580481072645-022f9a6d8310?w=800&q=80'],
-                ['title' => "{$brand_display_name} King Size Upholstered Platform Bed", 'price' => 42900, 'category' => 'beds', 'material' => 'wood', 'desc' => "Modern king-size bed frame by {$brand_display_name}.", 'img' => 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800&q=80']
-            ];
-
-            $fallback_count = 0;
-            $b_slug = preg_replace('/[^a-z0-9]/', '', strtolower($brand_display_name));
-            foreach ($catalog_templates as $tmpl) {
-                $g_p_id = generate_short_product_id($tmpl['title'], $b_slug, $db);
-                $cat_name = ensure_category_exists($db, $tmpl['category']);
-                $mat_name = ensure_material_exists($db, $tmpl['material']);
-                $specs_str = "Brand Partner: " . ucfirst($brand_display_name) . " | Model: " . $tmpl['title'] . " | SKU: " . strtoupper($g_p_id);
-                $dt_json = json_encode([
-                    "Material" => ucfirst($mat_name),
-                    "Construction" => "Engineered for luxury durability & silent ergonomic comfort.",
-                    "Care Instructions" => "Wipe clean with a soft dry cloth. Avoid abrasive cleaners.",
-                    "Shipping" => "White-glove doorstep delivery and inside setup included."
-                ]);
-
-                $local_img = download_universal_image($tmpl['img'], $b_slug, $g_p_id, 0) ?: 'assets/images/chair_1.png';
-
-                try {
-                    $ins_stmt = $db->prepare("INSERT INTO `oxo_products` 
-                        (`id`, `title`, `price`, `category`, `image`, `description`, `specs`, `details`, `material_slug`, `brand_id`, `source_url`) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ON DUPLICATE KEY UPDATE `title` = VALUES(`title`), `price` = VALUES(`price`), `image` = VALUES(`image`)");
-                    $ins_stmt->execute([$g_p_id, $tmpl['title'], $tmpl['price'], $cat_name, $local_img, $tmpl['desc'], $specs_str, $dt_json, $mat_name, $brand_id, $raw_url]);
-                    $fallback_count++;
-                } catch (\Exception $ex) {
-                    error_log("Fallback template insert error: " . $ex->getMessage());
-                }
-            }
-
-            if ($fallback_count > 0) {
-                auto_sync_documentation();
-                $message = "Successfully imported {$fallback_count} products from " . htmlspecialchars($raw_url) . " directly into your OXO Furniture catalog!";
-                $message_type = 'success';
-            }
-        }
-
-        if (empty($gallery_extraction)) {
-            $path_parts = explode('/', $path_clean);
-            $handle = end($path_parts) ?: 'product';
-            $product_id = 'prod-' . preg_replace('/[^a-z0-9\-]/', '', strtolower($handle));
-
-            $title = '';
-            $price = 0;
-            $description = '';
-            $images = [];
-            $raw_category = '';
-
-            // TIER 1: Shopify JSON API
-            $shopify_json_url = '';
-            if (strpos($raw_url, '/products/') !== false) {
-                $base_url = strtok($raw_url, '?');
-                $shopify_json_url = $base_url . '.json';
-            }
+        if ($json_arr && isset($json_arr['product'])) {
+            $p = $json_arr['product'];
+            $title = $p['title'] ?? '';
+            $price = isset($p['variants'][0]['price']) ? (int)round((float)$p['variants'][0]['price']) : 0;
+            $raw_desc = $p['body_html'] ?? '';
+            $description = trim(preg_replace('/\s+/', ' ', strip_tags(html_entity_decode($raw_desc, ENT_QUOTES | ENT_HTML5, 'UTF-8'))));
+            $raw_category = $p['product_type'] ?? '';
             
-            $shopify_data = $shopify_json_url ? fetch_web_page($shopify_json_url) : null;
-            $json_arr = $shopify_data ? json_decode($shopify_data, true) : null;
-
-            if ($json_arr && isset($json_arr['product'])) {
-                $p = $json_arr['product'];
-                $title = $p['title'] ?? '';
-                $price = isset($p['variants'][0]['price']) ? (int)round((float)$p['variants'][0]['price']) : 0;
-                $raw_desc = $p['body_html'] ?? '';
-                $description = trim(preg_replace('/\s+/', ' ', strip_tags(html_entity_decode($raw_desc, ENT_QUOTES | ENT_HTML5, 'UTF-8'))));
-                $raw_category = $p['product_type'] ?? '';
-                
-                if (!empty($p['images'])) {
-                    foreach ($p['images'] as $img) {
-                        $images[] = is_array($img) ? ($img['src'] ?? '') : $img;
-                    }
+            if (!empty($p['images'])) {
+                foreach ($p['images'] as $img) {
+                    $images[] = is_array($img) ? ($img['src'] ?? '') : $img;
                 }
             }
+        }
 
-            // TIER 2: HTML JSON-LD MICRODATA
-            if ((empty($title) || empty($images)) && $html) {
-                if (preg_match_all('/<script[^>]+type=["\']application\/ld\+json["\'][^>]*>(.*?)<\/script>/is', $html, $matches)) {
-                    foreach ($matches[1] as $json_ld_str) {
-                        $ld_data = json_decode($json_ld_str, true);
-                        if (!$ld_data) continue;
-                        
-                        $nodes = isset($ld_data['@graph']) ? $ld_data['@graph'] : [$ld_data];
-                        foreach ($nodes as $node) {
-                            if (isset($node['@type']) && ($node['@type'] === 'Product' || $node['@type'] === 'IndividualProduct')) {
-                                if (empty($title) && isset($node['name'])) $title = $node['name'];
-                                if (empty($description) && isset($node['description'])) $description = strip_tags($node['description']);
-                                if (empty($price) && isset($node['offers'])) {
-                                    $offers = is_array($node['offers']) && isset($node['offers'][0]) ? $node['offers'][0] : $node['offers'];
-                                    if (isset($offers['price'])) $price = (int)round((float)$offers['price']);
-                                }
-                                if (isset($node['image'])) {
-                                    $ld_imgs = is_array($node['image']) ? $node['image'] : [$node['image']];
-                                    foreach ($ld_imgs as $limg) {
-                                        $img_src = is_array($limg) ? ($limg['url'] ?? '') : $limg;
-                                        if (!empty($img_src)) $images[] = $img_src;
-                                    }
+        // TIER 2: HTML JSON-LD MICRODATA & OPENGRAPH TAGS
+        if ((empty($title) || empty($images)) && $html) {
+            if (preg_match_all('/<script[^>]+type=["\']application\/ld\+json["\'][^>]*>(.*?)<\/script>/is', $html, $matches)) {
+                foreach ($matches[1] as $json_ld_str) {
+                    $ld_data = json_decode($json_ld_str, true);
+                    if (!$ld_data) continue;
+                    
+                    $nodes = isset($ld_data['@graph']) ? $ld_data['@graph'] : [$ld_data];
+                    foreach ($nodes as $node) {
+                        if (isset($node['@type']) && ($node['@type'] === 'Product' || $node['@type'] === 'IndividualProduct')) {
+                            if (empty($title) && isset($node['name'])) $title = $node['name'];
+                            if (empty($description) && isset($node['description'])) $description = strip_tags($node['description']);
+                            if (empty($price) && isset($node['offers'])) {
+                                $offers = is_array($node['offers']) && isset($node['offers'][0]) ? $node['offers'][0] : $node['offers'];
+                                if (isset($offers['price'])) $price = (int)round((float)$offers['price']);
+                            }
+                            if (isset($node['image'])) {
+                                $ld_imgs = is_array($node['image']) ? $node['image'] : [$node['image']];
+                                foreach ($ld_imgs as $limg) {
+                                    $img_src = is_array($limg) ? ($limg['url'] ?? '') : $limg;
+                                    if (!empty($img_src)) $images[] = $img_src;
                                 }
                             }
                         }
                     }
                 }
-
-                // TIER 3: OPENGRAPH META TAGS
-                if (empty($title) && preg_match('/<meta[^>]+property=["\']og:title["\'][^>]+content=["\'](.*?)["\']/i', $html, $m)) {
-                    $title = html_entity_decode($m[1], ENT_QUOTES, 'UTF-8');
-                }
-                if (empty($description) && preg_match('/<meta[^>]+property=["\']og:description["\'][^>]+content=["\'](.*?)["\']/i', $html, $m)) {
-                    $description = html_entity_decode($m[1], ENT_QUOTES, 'UTF-8');
-                }
-                if (empty($price) && preg_match('/<meta[^>]+property=["\']product:price:amount["\'][^>]+content=["\'](.*?)["\']/i', $html, $m)) {
-                    $price = (int)round((float)$m[1]);
-                }
-                if (empty($images) && preg_match_all('/<meta[^>]+property=["\']og:image["\'][^>]+content=["\'](.*?)["\']/i', $html, $m)) {
-                    $images = array_unique($m[1]);
-                }
-
-                // TIER 4: HTML DOM SCRAPER FALLBACK
-                if (empty($title) && preg_match('/<h1[^>]*>(.*?)<\/h1>/is', $html, $m)) {
-                    $title = trim(strip_tags($m[1]));
-                }
-                if (empty($title) && preg_match('/<title[^>]*>(.*?)<\/title>/is', $html, $m)) {
-                    $title = trim(explode('-', strip_tags($m[1]))[0]);
-                }
-                if (empty($price) && preg_match('/(?:₹|Rs\.?|INR)\s*([\d,]+)/i', $html, $m)) {
-                    $price = (int)str_replace(',', '', $m[1]);
-                }
             }
 
+            // TIER 3: OPENGRAPH META TAGS
+            if (empty($title) && preg_match('/<meta[^>]+property=["\']og:title["\'][^>]+content=["\'](.*?)["\']/i', $html, $m)) {
+                $title = html_entity_decode($m[1], ENT_QUOTES, 'UTF-8');
+            }
+            if (empty($description) && preg_match('/<meta[^>]+property=["\']og:description["\'][^>]+content=["\'](.*?)["\']/i', $html, $m)) {
+                $description = html_entity_decode($m[1], ENT_QUOTES, 'UTF-8');
+            }
+            if (empty($price) && preg_match('/<meta[^>]+property=["\']product:price:amount["\'][^>]+content=["\'](.*?)["\']/i', $html, $m)) {
+                $price = (int)round((float)$m[1]);
+            }
+            if (empty($images) && preg_match_all('/<meta[^>]+property=["\']og:image["\'][^>]+content=["\'](.*?)["\']/i', $html, $m)) {
+                $images = array_unique($m[1]);
+            }
+
+            // TIER 4: HTML DOM SCRAPER FALLBACK
+            if (empty($title) && preg_match('/<h1[^>]*>(.*?)<\/h1>/is', $html, $m)) {
+                $title = trim(strip_tags($m[1]));
+            }
+            if (empty($title) && preg_match('/<title[^>]*>(.*?)<\/title>/is', $html, $m)) {
+                $raw_t = trim(strip_tags($m[1]));
+                if (!empty($raw_t)) {
+                    $t_parts = explode('-', $raw_t);
+                    $title = trim($t_parts[0]);
+                }
+            }
+            if (empty($price) && preg_match('/(?:₹|Rs\.?|INR)\s*([\d,]+)/i', $html, $m)) {
+                $price = (int)str_replace(',', '', $m[1]);
+            }
+        }
+
+        // If Single Product Title was successfully found:
+        if (!empty($title)) {
             $category_slug = map_universal_category($raw_category, $title, $description);
             $material_slug = map_universal_material($title, $description);
             $product_id = generate_short_product_id(!empty($title) ? $title : $handle, $host, $db);
             $parsed_dims = parse_product_dimensions($description . ' ' . $html);
 
+            $clean_product_images = filter_and_prioritize_product_images($images, $html);
+            $detected_color_ids = detect_product_colors($title, $description, $html, $clean_product_images, $db, $json_arr);
+
             $extracted_data = [
                 'url' => $raw_url,
                 'id' => $product_id,
-                'title' => $title ?: 'Imported Product',
+                'title' => $title,
                 'price' => $price,
                 'category' => $category_slug,
                 'material' => $material_slug,
@@ -1352,73 +1476,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 'width_cm' => $parsed_dims['width'],
                 'length_cm' => $parsed_dims['length'],
                 'description' => $description ?: 'High quality furniture creation crafted for long-lasting comfort.',
-                'images' => array_values(array_unique(array_filter($images)))
+                'images' => $clean_product_images,
+                'color_ids' => $detected_color_ids
             ];
-        }
-
-        // AUTO-SAVE EXTRACTED PRODUCT DIRECTLY TO DB (Instant 1-Click Import)
-        if (!empty($extracted_data)) {
-            $p_title = trim($extracted_data['title']);
-            $p_price = (int)$extracted_data['price'];
-            if ($p_price <= 0) $p_price = 24500;
-            $cat_name = ensure_category_exists($db, $extracted_data['category']);
-            $mat_name = ensure_material_exists($db, $extracted_data['material']);
-            $b_id = $extracted_data['brand_id'];
-            $p_desc = $extracted_data['description'];
-            $p_id = $extracted_data['id'];
-
-            $b_slug = 'universal';
-            if ($b_id && $db) {
-                $b_stmt = $db->prepare("SELECT `name` FROM `oxo_brands` WHERE `id` = ?");
-                $b_stmt->execute([$b_id]);
-                $bn = $b_stmt->fetchColumn();
-                if ($bn) $b_slug = preg_replace('/[^a-z0-9]/', '', strtolower($bn));
-            }
-
-            $specs_str = "Brand Partner: " . ucfirst($b_slug) . " | Model: " . $p_title . " | SKU: " . strtoupper($p_id);
-            $dt_json = json_encode([
-                "Material" => ucfirst($mat_name),
-                "Construction" => "Engineered for luxury durability & silent ergonomic comfort.",
-                "Care Instructions" => "Wipe clean with a soft dry cloth. Avoid abrasive cleaners.",
-                "Shipping" => "White-glove doorstep delivery and inside setup included."
-            ]);
-
-            $main_img_path = 'assets/images/chair_1.png';
-            $gal_items = [];
-            if (!empty($extracted_data['images'])) {
-                foreach ($extracted_data['images'] as $i_idx => $i_url) {
-                    $dl_path = download_universal_image($i_url, $b_slug, $p_id, $i_idx);
-                    if ($dl_path) {
-                        if ($i_idx === 0) $main_img_path = $dl_path;
-                        $gal_items[] = ['path' => $dl_path, 'color_id' => null];
-                    }
+        } else {
+            // ONLY if single product title was NOT found, check if URL is a Category Showcase Page
+            if ($html) {
+                $gallery_res = extract_gallery_page_items($html, $raw_url);
+                if (!empty($gallery_res['images'])) {
+                    $gallery_extraction = [
+                        'url' => $raw_url,
+                        'brand_id' => $brand_id,
+                        'category' => $gallery_res['category'],
+                        'images' => filter_and_prioritize_product_images($gallery_res['images'], $html)
+                    ];
                 }
-            }
-            $gal_json = !empty($gal_items) ? json_encode($gal_items) : null;
-
-            try {
-                $ins_stmt = $db->prepare("INSERT INTO `oxo_products` 
-                    (`id`, `title`, `price`, `category`, `image`, `description`, `specs`, `details`, `gallery`, `material_slug`, `brand_id`, `source_url`) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON DUPLICATE KEY UPDATE `title` = VALUES(`title`), `price` = VALUES(`price`), `image` = VALUES(`image`), `description` = VALUES(`description`)");
-                $ins_stmt->execute([$p_id, $p_title, $p_price, $cat_name, $main_img_path, $p_desc, $specs_str, $dt_json, $gal_json, $mat_name, $b_id, $raw_url]);
-                
-                auto_sync_documentation();
-
-                $imported_product = [
-                    'id' => $p_id,
-                    'title' => $p_title,
-                    'price' => $p_price,
-                    'category' => $cat_name,
-                    'image' => $main_img_path,
-                    'description' => $p_desc,
-                    'gallery_arr' => $gal_items
-                ];
-
-                $message = "Successfully imported product '{$p_title}' into your catalog!";
-                $message_type = 'success';
-            } catch (\Exception $ex) {
-                error_log("Auto-save single error: " . $ex->getMessage());
             }
         }
     }
@@ -1465,25 +1537,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     ];
     $details_json = json_encode($details);
 
+    $form_color_ids = isset($_POST['selected_color_ids']) && is_array($_POST['selected_color_ids']) ? array_values(array_unique(array_filter(array_map('intval', $_POST['selected_color_ids'])))) : [];
+    $shopify_json_input = !empty($_POST['shopify_json_data']) ? json_decode($_POST['shopify_json_data'], true) : null;
+
     $gallery_items = [];
     $local_main_image = 'assets/images/chair_1.png';
-    $color_ids_set = [];
-    $primary_color_id = null;
+    $primary_color_id = !empty($form_color_ids) ? $form_color_ids[0] : null;
 
     if (!empty($raw_images)) {
-        foreach ($raw_images as $idx => $img_url) {
-            $assigned_color_id = null;
-            $img_name_lower = strtolower($img_url);
-            foreach (['red', 'pink', 'green', 'yellow', 'blue', 'black', 'white', 'grey', 'orange', 'purple', 'brown', 'walnut', 'oak', 'teak', 'beige'] as $known_c) {
-                if (strpos($img_name_lower, $known_c) !== false || stripos($title, $known_c) !== false) {
-                    $assigned_color_id = get_or_create_color_id($db, ucfirst($known_c));
-                    if ($assigned_color_id) {
-                        $color_ids_set[$assigned_color_id] = true;
-                        if ($primary_color_id === null) $primary_color_id = $assigned_color_id;
-                    }
-                    break;
-                }
-            }
+        $images_meta = build_extracted_images_meta($raw_images, $form_color_ids, '', $shopify_json_input, $db);
+        foreach ($images_meta as $idx => $meta) {
+            $img_url = $meta['url'];
+            $assigned_color_id = $meta['color_id'];
 
             $saved_path = download_universal_image($img_url, $brand_slug, $product_slug, $idx);
             if ($saved_path) {
@@ -1496,8 +1561,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
     }
 
-    $color_ids_array = array_keys($color_ids_set);
-    $color_ids_json = !empty($color_ids_array) ? json_encode($color_ids_array) : null;
+    $color_ids_json = !empty($form_color_ids) ? json_encode($form_color_ids) : null;
     $gallery_json = !empty($gallery_items) ? json_encode($gallery_items) : null;
 
     $check_stmt = $db->prepare("SELECT COUNT(*) FROM `oxo_products` WHERE `id` = ?");
@@ -1532,6 +1596,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 $db_categories = $db ? $db->query("SELECT * FROM `oxo_categories` ORDER BY `name` ASC")->fetchAll() : [];
 $db_materials = $db ? $db->query("SELECT * FROM `oxo_materials` ORDER BY `name` ASC")->fetchAll() : [];
 $db_brands = $db ? $db->query("SELECT * FROM `oxo_brands` ORDER BY `name` ASC")->fetchAll() : [];
+$db_colors = $db ? $db->query("SELECT * FROM `oxo_colors` ORDER BY `name` ASC")->fetchAll() : [];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -1579,24 +1644,9 @@ $db_brands = $db ? $db->query("SELECT * FROM `oxo_brands` ORDER BY `name` ASC")-
         </div>
     <?php endif; ?>
 
-    <!-- Navigation Tabs -->
-    <ul class="nav nav-pills mb-4" id="importer-tabs" role="tablist">
-        <li class="nav-item">
-            <button class="nav-link active" id="tab-single-btn" data-bs-toggle="pill" data-bs-target="#tab-single">
-                <i class="bi bi-link-45deg me-1"></i> Single / Gallery Page Importer
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link" id="tab-bulk-btn" data-bs-toggle="pill" data-bs-target="#tab-bulk">
-                <i class="bi bi-layers me-1"></i> Bulk Brand Catalog Sync
-            </button>
-        </li>
-    </ul>
-
-    <div class="tab-content" id="importer-tab-content">
-        
-        <!-- TAB 1: Single or Gallery Page Importer -->
-        <div class="tab-pane fade show active" id="tab-single">
+    <div id="importer-content">
+        <!-- Single or Gallery Page Importer -->
+        <div id="tab-single">
             <div class="card p-4 mb-4">
                 <h5 class="fw-bold mb-3"><i class="bi bi-link-45deg text-primary me-2"></i>Paste Product Page or Category Gallery Link</h5>
                 <form action="import-universal.php" method="POST">
@@ -1709,6 +1759,9 @@ $db_brands = $db ? $db->query("SELECT * FROM `oxo_brands` ORDER BY `name` ASC")-
                         <input type="hidden" name="action" value="confirm_save">
                         <input type="hidden" name="source_url" value="<?= htmlspecialchars($extracted_data['url']) ?>">
                         <input type="hidden" name="product_id" value="<?= htmlspecialchars($extracted_data['id']) ?>">
+                        <?php if (!empty($extracted_data['shopify_json'])): ?>
+                            <input type="hidden" name="shopify_json_data" value="<?= htmlspecialchars(json_encode($extracted_data['shopify_json']), ENT_QUOTES, 'UTF-8') ?>">
+                        <?php endif; ?>
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
@@ -1773,6 +1826,62 @@ $db_brands = $db ? $db->query("SELECT * FROM `oxo_brands` ORDER BY `name` ASC")-
                         <div class="mb-4">
                             <label class="form-label fw-bold">Product Description</label>
                             <textarea class="form-control" name="description" rows="3" required><?= htmlspecialchars($extracted_data['description']) ?></textarea>
+                        </div>
+
+                        <!-- COLOR FINISHES & SWATCHES SECTION -->
+                        <div class="card bg-light border-0 p-3 mb-3">
+                            <h6 class="fw-bold text-dark mb-2"><i class="bi bi-palette me-1"></i>Available Color Finishes & Swatches</h6>
+                            <p class="text-muted small mb-2">Color options detected from the original product page. Checked colors will display as clickable swatches on your live store.</p>
+                            <?php 
+                            $detected_colors = $extracted_data['color_ids'] ?? [];
+                            $primary_color_opts = [];
+                            $other_color_opts = [];
+
+                            foreach ($db_colors as $color_opt) {
+                                if (in_array((int)$color_opt['id'], $detected_colors)) {
+                                    $primary_color_opts[] = $color_opt;
+                                } else {
+                                    $other_color_opts[] = $color_opt;
+                                }
+                            }
+
+                            if (empty($primary_color_opts)) {
+                                $primary_color_opts = $db_colors;
+                                $other_color_opts = [];
+                            }
+                            ?>
+                            <div class="d-flex flex-wrap gap-2 align-items-center pt-1 mb-2">
+                                <?php foreach ($primary_color_opts as $color_opt): ?>
+                                    <div class="form-check d-flex align-items-center gap-1 bg-white px-3 py-2 rounded border shadow-sm">
+                                        <input class="form-check-input mt-0" type="checkbox" name="selected_color_ids[]" value="<?= $color_opt['id'] ?>" id="col_chk_<?= $color_opt['id'] ?>" checked>
+                                        <label class="form-check-label d-flex align-items-center gap-1 small fw-bold" for="col_chk_<?= $color_opt['id'] ?>" style="cursor: pointer;">
+                                            <span style="width: 14px; height: 14px; border-radius: 50%; background-color: <?= htmlspecialchars($color_opt['hex']) ?>; display: inline-block; border: 1px solid #ccc;"></span>
+                                            <?= htmlspecialchars($color_opt['name']) ?>
+                                        </label>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+
+                            <?php if (!empty($other_color_opts)): ?>
+                                <div>
+                                    <a class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold" data-bs-toggle="collapse" href="#more-colors-collapse" role="button" aria-expanded="false">
+                                        <i class="bi bi-plus-circle me-1"></i> Show Additional Color Options (<?= count($other_color_opts) ?> more)
+                                    </a>
+                                    <div class="collapse mt-2" id="more-colors-collapse">
+                                        <div class="d-flex flex-wrap gap-2 align-items-center pt-2 p-2 bg-white rounded border">
+                                            <?php foreach ($other_color_opts as $color_opt): ?>
+                                                <div class="form-check d-flex align-items-center gap-1">
+                                                    <input class="form-check-input mt-0" type="checkbox" name="selected_color_ids[]" value="<?= $color_opt['id'] ?>" id="col_chk_<?= $color_opt['id'] ?>">
+                                                    <label class="form-check-label d-flex align-items-center gap-1 small text-muted" for="col_chk_<?= $color_opt['id'] ?>" style="cursor: pointer;">
+                                                        <span style="width: 12px; height: 12px; border-radius: 50%; background-color: <?= htmlspecialchars($color_opt['hex']) ?>; display: inline-block; border: 1px solid #ccc;"></span>
+                                                        <?= htmlspecialchars($color_opt['name']) ?>
+                                                    </label>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
 
                         <!-- DIMENSIONS SECTION -->
@@ -1862,128 +1971,9 @@ $db_brands = $db ? $db->query("SELECT * FROM `oxo_brands` ORDER BY `name` ASC")-
                 </div>
             <?php endif; ?>
         </div>
-
-        <!-- TAB 2: Bulk Brand Catalog Sync -->
-        <div class="tab-pane fade" id="tab-bulk">
-            <div class="card p-4">
-                <h5 class="fw-bold mb-2"><i class="bi bi-layers text-primary me-2"></i>Automated Bulk Brand Catalog Sync</h5>
-                <p class="text-muted small mb-4">Sync an entire brand catalog page-by-page. Enter any brand domain (e.g., <code>nilkamalfurniture.com</code>, <code>applecart.co.in</code>, <code>supremefurniture.co.in</code>).</p>
-
-                <div class="row g-3 align-items-center mb-3">
-                    <div class="col-md-8">
-                        <label class="form-label fw-bold">Brand Store Domain</label>
-                        <input type="text" id="bulk-domain-input" class="form-control" value="nilkamalfurniture.com" placeholder="e.g. nilkamalfurniture.com or applecart.co.in">
-                    </div>
-                    <div class="col-md-4 d-flex gap-2 align-self-end">
-                        <button id="start-bulk-btn" class="btn btn-custom flex-fill" onclick="startBulkImport()">
-                            <i class="bi bi-play-fill me-1"></i> Start Bulk Sync
-                        </button>
-                        <button id="stop-bulk-btn" class="btn btn-danger" onclick="stopBulkImport()" disabled>
-                            <i class="bi bi-stop-fill me-1"></i> Stop
-                        </button>
-                    </div>
-                </div>
-
-                <div class="progress mb-3" style="height: 25px;">
-                    <div id="import-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%;">0 Products</div>
-                </div>
-
-                <h6 class="fw-bold mb-2">Live Progress Logs:</h6>
-                <div id="log-box" class="log-box">
-                    Ready. Enter domain and click "Start Bulk Sync" to begin...
-                </div>
-            </div>
-        </div>
-
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-let currentPage = 1;
-let totalImported = 0;
-let isRunning = false;
-
-function log(msg) {
-    const box = document.getElementById('log-box');
-    const time = new Date().toLocaleTimeString();
-    box.innerHTML += `[${time}] ${msg}\n`;
-    box.scrollTop = box.scrollHeight;
-}
-
-async function startBulkImport() {
-    const domain = document.getElementById('bulk-domain-input').value.trim() || 'indroyal.com';
-    currentPage = 1;
-    totalImported = 0;
-    isRunning = true;
-    document.getElementById('start-bulk-btn').disabled = true;
-    document.getElementById('stop-bulk-btn').disabled = false;
-    log(`Starting bulk import for brand domain: ${domain}...`);
-
-    while (isRunning) {
-        log(`Fetching Page ${currentPage} for ${domain}...`);
-        try {
-            let response = await fetch(`import-universal.php?api=bulk_batch&domain=${encodeURIComponent(domain)}&page=${currentPage}`);
-            let res = await response.json();
-
-            if (currentPage === 1 && (!res || !res.imported_count || res.imported_count === 0)) {
-                log(`Initializing guaranteed brand catalog generator for ${domain}...`);
-                response = await fetch(`import-universal.php?api=bulk_batch&domain=${encodeURIComponent(domain)}&page=1&force_tier4=1`);
-                res = await response.json();
-            }
-
-            if (!res || res.status === 'complete' || !res.imported_count || res.imported_count === 0) {
-                log(`Finished! All products, variant color swatches, and photos for ${domain} have been imported.`);
-                break;
-            }
-
-            totalImported += res.imported_count;
-            log(`✓ Successfully imported ${res.imported_count} products from page ${currentPage}:`);
-            if (res.titles && Array.isArray(res.titles)) {
-                res.titles.forEach(t => log(`   - ${t}`));
-            }
-
-            const pb = document.getElementById('import-progress-bar');
-            pb.style.width = '100%';
-            pb.innerText = `${totalImported} Products Imported`;
-
-            currentPage++;
-            if (currentPage > 4) break;
-        } catch (e) {
-            log(`Error fetching page ${currentPage}: ${e.message}`);
-            break;
-        }
-    }
-
-    if (totalImported > 0) {
-        log(`\n🎉 SUCCESS! ${totalImported} products from ${domain} are now LIVE in your catalog.`);
-        log(`Click "View Products Live on Website" below or open shop.php to see them.`);
-        
-        let liveBtn = document.getElementById('bulk-live-link');
-        if (!liveBtn) {
-            liveBtn = document.createElement('div');
-            liveBtn.id = 'bulk-live-link';
-            liveBtn.className = 'mt-3';
-            document.getElementById('log-box').after(liveBtn);
-        }
-        liveBtn.innerHTML = `
-            <a href="../shop.php" target="_blank" class="btn btn-success btn-lg w-100 fw-bold shadow-sm">
-                <i class="bi bi-shop me-2"></i> View ${totalImported} ${domain} Products Live on Website
-            </a>
-        `;
-    }
-
-    isRunning = false;
-    document.getElementById('start-bulk-btn').disabled = false;
-    document.getElementById('stop-bulk-btn').disabled = true;
-}
-
-function stopBulkImport() {
-    isRunning = false;
-    log("Bulk import stopped by user.");
-    document.getElementById('start-bulk-btn').disabled = false;
-    document.getElementById('stop-bulk-btn').disabled = true;
-}
-</script>
 </body>
 </html>

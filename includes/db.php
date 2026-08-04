@@ -293,6 +293,17 @@ function initialize_tables($pdo) {
         `address` TEXT DEFAULT NULL,
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB;");
+
+    // 8. Create announcements table for landing page poster pop-ups
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `oxo_announcements` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `title` VARCHAR(255) DEFAULT NULL,
+        `subtitle` TEXT DEFAULT NULL,
+        `image_path` VARCHAR(255) NOT NULL,
+        `link_url` VARCHAR(255) DEFAULT NULL,
+        `is_active` TINYINT(1) DEFAULT 1,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB;");
     
     // Check if table is empty, if so, seed from static products-db.php
     $stmt = $pdo->query("SELECT COUNT(*) FROM `oxo_products`");

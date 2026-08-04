@@ -231,16 +231,24 @@ function render_scale_graph($h, $w, $l) {
                             $associated_color_ids[] = (int)$gimg['color_id'];
                         }
                     }
-                    $associated_color_ids = array_unique($associated_color_ids);
                 }
                 
+                $associated_color_ids = array_values(array_unique(array_filter($associated_color_ids)));
                 $associated_colors = [];
+
                 if (!empty($associated_color_ids) && $db) {
                     $placeholders = implode(',', array_fill(0, count($associated_color_ids), '?'));
                     try {
                         $c_stmt = $db->prepare("SELECT * FROM `oxo_colors` WHERE `id` IN ($placeholders)");
                         $c_stmt->execute($associated_color_ids);
-                        $associated_colors = $c_stmt->fetchAll();
+                        $raw_colors = $c_stmt->fetchAll();
+                        $unique_colors_map = [];
+                        foreach ($raw_colors as $rc) {
+                            if (!isset($unique_colors_map[$rc['id']])) {
+                                $unique_colors_map[$rc['id']] = $rc;
+                            }
+                        }
+                        $associated_colors = array_values($unique_colors_map);
                     } catch (\Exception $e) {
                         error_log("Failed to load associated colors: " . $e->getMessage());
                     }
@@ -277,30 +285,28 @@ function render_scale_graph($h, $w, $l) {
                         </div>
                         
                         <div class="gallery-thumbnails">
-                            <!-- Main Studio image -->
-                            <button class="thumbnail-btn active" data-view="full" data-src="<?php echo htmlspecialchars($product['image']); ?>" data-color="<?php echo !empty($product['color_id']) ? $product['color_id'] : ''; ?>" aria-label="View Full Design">
-                                <img src="<?php echo htmlspecialchars($product['image']); ?>" alt="Full Design View">
-                                <span class="thumb-label">Studio</span>
-                            </button>
-
-                            <!-- Dynamic Gallery Images -->
-                            <?php 
-                            if (!empty($gallery_images)):
+                            <?php if (!empty($gallery_images)):
                                 $img_idx = 1;
                                 foreach ($gallery_images as $gimg): 
                                     $gpath = $gimg['path'];
                                     $gcolor = $gimg['color_id'];
+                                    $is_active = ($img_idx === 1);
                                     if (!empty($gpath)): ?>
-                                        <button class="thumbnail-btn" data-view="gallery" data-src="<?php echo htmlspecialchars($gpath); ?>" data-color="<?php echo htmlspecialchars((string)$gcolor); ?>" aria-label="View Gallery <?php echo $img_idx; ?>">
+                                        <button class="thumbnail-btn <?php echo $is_active ? 'active' : ''; ?>" data-view="gallery" data-src="<?php echo htmlspecialchars($gpath); ?>" data-color="<?php echo htmlspecialchars((string)$gcolor); ?>" aria-label="View Gallery <?php echo $img_idx; ?>">
                                             <img src="<?php echo htmlspecialchars($gpath); ?>" alt="Gallery View <?php echo $img_idx; ?>">
-                                            <span class="thumb-label">View <?php echo $img_idx; ?></span>
+                                            <span class="thumb-label"><?php echo $img_idx === 1 ? 'Studio' : 'View ' . $img_idx; ?></span>
                                         </button>
                                     <?php 
                                     $img_idx++;
                                     endif;
                                 endforeach;
-                            endif; 
-                            ?>
+                            else: ?>
+                                <!-- Main Studio image fallback -->
+                                <button class="thumbnail-btn active" data-view="full" data-src="<?php echo htmlspecialchars($product['image']); ?>" data-color="<?php echo !empty($product['color_id']) ? $product['color_id'] : ''; ?>" aria-label="View Full Design">
+                                    <img src="<?php echo htmlspecialchars($product['image']); ?>" alt="Full Design View">
+                                    <span class="thumb-label">Studio</span>
+                                </button>
+                            <?php endif; ?>
 
                             <?php if ($has_dimensions): ?>
                                 <!-- Dimensions blueprint -->
@@ -972,9 +978,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Keep scale graph thumbnail visible, filter others by color
                         if (btnView === 'scale') {
                             btn.style.display = 'flex';
-                        } else if (btnColor == colorId) {
+                        } else if (btnColor && btnColor == colorId) {
                             btn.style.display = 'flex';
-                            if (!firstVisibleThumb) firstVisibleThumb = btn;
+                            if (!firstVisibleThumb && btnView !== 'scale') firstVisibleThumb = btn;
                         } else {
                             btn.style.display = 'none';
                         }
@@ -1323,8 +1329,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let lightboxSources = [];
     let currentLightboxIdx = 0;
     
-    const validThumbnails = Array.from(document.querySelectorAll('.thumbnail-btn')).filter(btn => btn.getAttribute('data-view') !== 'scale');
-    
     if (zoomBox && lightbox && lightboxImg) {
         zoomBox.addEventListener('click', () => {
             const currentActiveBtn = document.querySelector('.thumbnail-btn.active');
@@ -1332,7 +1336,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return; // Do not open lightbox on scale graph SVG
             }
             
-            lightboxSources = validThumbnails.map(btn => ({
+            const visibleThumbnails = Array.from(document.querySelectorAll('.thumbnail-btn')).filter(btn => {
+                return btn.getAttribute('data-view') !== 'scale' && btn.style.display !== 'none';
+            });
+
+            lightboxSources = visibleThumbnails.map(btn => ({
                 src: btn.getAttribute('data-src') || (btn.querySelector('img') ? btn.querySelector('img').src : ''),
                 label: btn.querySelector('.thumb-label') ? btn.querySelector('.thumb-label').textContent : '',
                 view: btn.getAttribute('data-view')

@@ -283,49 +283,6 @@ include 'includes/header.php';
                 <?php renderGoogleDevWarning(); ?>
             <?php endif; ?>
 
-            <div class="pro-switch">
-                Don't have an account? <a onclick="toggleProAuth('signup')">Create yours now.</a>
-            </div>
-        </div>
-
-        <!-- SIGNUP FORM -->
-        <div id="signupFormContainer" style="display: none;">
-            <h2 class="pro-auth-title">Create ID</h2>
-            <p class="pro-auth-subtitle">One account for everything OXO.</p>
-
-            <div class="pro-error" id="signupError"></div>
-
-            <form id="signupForm" onsubmit="handleProAuth(event, 'signup')">
-                <div class="pro-input-group">
-                    <label>Full Name</label>
-                    <input type="text" name="name" placeholder="John Appleseed" required>
-                </div>
-                <div class="pro-input-group">
-                    <label>Email Address</label>
-                    <input type="email" name="email" placeholder="name@example.com" required>
-                </div>
-                <div class="pro-input-group">
-                    <label>Password</label>
-                    <input type="password" name="password" placeholder="••••••••" required>
-                </div>
-                <button type="submit" class="pro-auth-btn">Continue</button>
-            </form>
-
-            <div class="pro-divider"><span>or connection</span></div>
-
-            <?php if ($isGoogleConfigured): ?>
-                <div id="g_id_onload" data-client_id="<?= htmlspecialchars(GOOGLE_CLIENT_ID) ?>" data-context="use"
-                    data-ux_mode="popup" data-callback="handleGoogleCb" data-auto_prompt="false"></div>
-                <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline"
-                    data-text="signup_with" data-size="medium" data-logo_alignment="center"
-                    style="display: flex; justify-content: center;"></div>
-            <?php else: ?>
-                <?php renderGoogleDevWarning(); ?>
-            <?php endif; ?>
-
-            <div class="pro-switch">
-                Already have an ID? <a onclick="toggleProAuth('login')">Sign In.</a>
-            </div>
         </div>
 
     </div>
@@ -364,16 +321,11 @@ include 'includes/header.php';
 </div>
 
 <script>
-    function toggleProAuth(type) {
-        document.getElementById('loginFormContainer').style.display = type === 'login' ? 'block' : 'none';
-        document.getElementById('signupFormContainer').style.display = type === 'signup' ? 'block' : 'none';
-    }
-
     async function handleProAuth(e, type) {
         e.preventDefault();
         const form = e.target;
         const btn = form.querySelector('button');
-        const err = type === 'login' ? document.getElementById('loginError') : document.getElementById('signupError');
+        const err = document.getElementById('loginError');
 
         btn.innerHTML = 'Processing...'; btn.disabled = true; err.style.display = 'none';
 
@@ -391,13 +343,13 @@ include 'includes/header.php';
             else {
                 err.textContent = result.message || 'An error occurred.';
                 err.style.display = 'block';
-                btn.innerHTML = type === 'login' ? 'Sign In' : 'Continue';
+                btn.innerHTML = 'Sign In';
                 btn.disabled = false;
             }
         } catch (error) {
             err.textContent = 'Network error. Try again.';
             err.style.display = 'block';
-            btn.innerHTML = type === 'login' ? 'Sign In' : 'Continue';
+            btn.innerHTML = 'Sign In';
             btn.disabled = false;
         }
     }
