@@ -886,22 +886,28 @@ function build_extracted_images_meta($images, $detected_color_ids, $html = '', $
         // 2. Color keyword in URL / filename matching
         if (!$assigned_color_id && !empty($colors)) {
             $url_clean = strtolower($img_url);
-            foreach ($colors as $c) {
-                $cname = strtolower($c['name']);
-                $cname_norm = preg_replace('/[^a-z0-9]/', '', $cname);
-                $url_norm = preg_replace('/[^a-z0-9]/', '', $url_clean);
+            $url_norm = preg_replace('/[^a-z0-9]/', '', $url_clean);
 
+            foreach ($colors as $c) {
+                $cname = strtolower(trim($c['name']));
+                $cname_norm = preg_replace('/[^a-z0-9]/', '', $cname);
+
+                // Exact or normalized full match
                 if (!empty($cname_norm) && strpos($url_norm, $cname_norm) !== false) {
                     $assigned_color_id = (int)$c['id'];
                     break;
                 }
-                if (strpos($cname, 'multi') !== false && (strpos($url_clean, 'multi') !== false || strpos($url_clean, 'm.color') !== false || strpos($url_clean, 'm_color') !== false)) {
-                    $assigned_color_id = (int)$c['id'];
-                    break;
-                }
-                if (strpos($cname, 'aqua') !== false && (strpos($url_clean, 'aqua') !== false || strpos($url_clean, 'blue') !== false)) {
-                    $assigned_color_id = (int)$c['id'];
-                    break;
+                
+                // Match individual significant color words (e.g. green, brown, blue, pink, red, etc.)
+                $cwords = preg_split('/[\s\-_]+/', $cname);
+                foreach ($cwords as $cw) {
+                    $cw_clean = preg_replace('/[^a-z0-9]/', '', $cw);
+                    if (strlen($cw_clean) >= 3 && in_array($cw_clean, ['red', 'pink', 'green', 'yellow', 'blue', 'navy', 'black', 'white', 'grey', 'gray', 'orange', 'purple', 'violet', 'brown', 'walnut', 'oak', 'teak', 'beige', 'cream', 'gold', 'silver', 'aqua', 'multi', 'globus', 'mehandi'])) {
+                        if (strpos($url_norm, $cw_clean) !== false) {
+                            $assigned_color_id = (int)$c['id'];
+                            break 2;
+                        }
+                    }
                 }
             }
         }
@@ -1477,7 +1483,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 'length_cm' => $parsed_dims['length'],
                 'description' => $description ?: 'High quality furniture creation crafted for long-lasting comfort.',
                 'images' => $clean_product_images,
-                'color_ids' => $detected_color_ids
+                'color_ids' => $detected_color_ids,
+                'shopify_json' => $json_arr
             ];
         } else {
             // ONLY if single product title was NOT found, check if URL is a Category Showcase Page
@@ -1539,6 +1546,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     $form_color_ids = isset($_POST['selected_color_ids']) && is_array($_POST['selected_color_ids']) ? array_values(array_unique(array_filter(array_map('intval', $_POST['selected_color_ids'])))) : [];
     $shopify_json_input = !empty($_POST['shopify_json_data']) ? json_decode($_POST['shopify_json_data'], true) : null;
+    if (empty($shopify_json_input) && !empty($source_url)) {
+        if (strpos($source_url, '/products/') !== false || strpos($source_url, '/product/') !== false) {
+            $base_url = strtok($source_url, '?');
+            $shopify_json_url = rtrim($base_url, '/') . '.json';
+            $fetched_json = fetch_web_page($shopify_json_url);
+            if ($fetched_json) {
+                $shopify_json_input = json_decode($fetched_json, true);
+            }
+        }
+    }
 
     $gallery_items = [];
     $local_main_image = 'assets/images/chair_1.png';
