@@ -1,4 +1,16 @@
 <!-- Contact & Bespoke Concierge Section -->
+<?php
+require_once __DIR__ . '/../includes/db.php';
+$c_tag = get_site_content('contact_tag', 'Bespoke Concierge');
+$c_title = get_site_content('contact_title', 'Connect With OXO Private Service');
+$c_sub = get_site_content('contact_subtitle', 'Have questions regarding custom modular dimensions, bespoke leathers, or private showroom viewings?');
+$c_addr = get_site_content('contact_address', '84 Luxury Avenue, Suite 900, Mumbai, India');
+$c_email = get_site_content('contact_email', 'concierge@oxo.design');
+$c_phone = get_site_content('contact_phone', '+91 (22) 8800-4400');
+$c_insta = get_site_content('contact_instagram', '#');
+$c_fb = get_site_content('contact_facebook', '#');
+$c_map = get_site_content('contact_map', 'https://maps.google.com');
+?>
 <section id="contact" style="padding: 100px 0; background: #FFFFFF;">
     <div class="container">
         
@@ -9,13 +21,13 @@
                 <div style="display: flex; flex-direction: column; gap: 30px;">
                     <div>
                         <span class="oxo-badge oxo-badge-accent" style="margin-bottom: 14px;">
-                            <i class="fa-solid fa-headset" style="font-size: 0.65rem;"></i> Bespoke Concierge
+                            <i class="fa-solid fa-headset" style="font-size: 0.65rem;"></i> <?php echo htmlspecialchars($c_tag); ?>
                         </span>
                         <h2 style="font-family: var(--font-title); font-size: 2.8rem; font-weight: 700; line-height: 1.15; color: #FFFFFF; margin: 10px 0 0 0;">
-                            Connect With <br><span style="color: var(--color-accent);">OXO Private Service</span>
+                            <?php echo nl2br(htmlspecialchars($c_title)); ?>
                         </h2>
                         <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.95rem; line-height: 1.7; margin-top: 15px;">
-                            Have questions regarding custom modular dimensions, bespoke leathers, or private showroom viewings?
+                            <?php echo htmlspecialchars($c_sub); ?>
                         </p>
                     </div>
 
@@ -26,7 +38,7 @@
                             </div>
                             <div>
                                 <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-accent); font-weight: 700; display: block;">Flagship Showroom</span>
-                                <span style="font-size: 0.95rem; color: #FFFFFF; font-weight: 500;">84 Luxury Avenue, Suite 900, Mumbai, India</span>
+                                <a href="<?php echo htmlspecialchars($c_map); ?>" target="_blank" rel="noopener" style="font-size: 0.95rem; color: #FFFFFF; font-weight: 500; text-decoration: underline; text-underline-offset: 3px;" title="Open in Google Maps"><?php echo htmlspecialchars($c_addr); ?></a>
                             </div>
                         </div>
 
@@ -36,7 +48,7 @@
                             </div>
                             <div>
                                 <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-accent); font-weight: 700; display: block;">Private Inquiries</span>
-                                <span style="font-size: 0.95rem; color: #FFFFFF; font-weight: 500;">concierge@oxo.design</span>
+                                <span style="font-size: 0.95rem; color: #FFFFFF; font-weight: 500;"><?php echo htmlspecialchars($c_email); ?></span>
                             </div>
                         </div>
 
@@ -46,15 +58,15 @@
                             </div>
                             <div>
                                 <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-accent); font-weight: 700; display: block;">WhatsApp Concierge</span>
-                                <span style="font-size: 0.95rem; color: #FFFFFF; font-weight: 500;">+91 (22) 8800-4400</span>
+                                <span style="font-size: 0.95rem; color: #FFFFFF; font-weight: 500;"><?php echo htmlspecialchars($c_phone); ?></span>
                             </div>
                         </div>
                     </div>
 
                     <div style="display: flex; gap: 12px;">
-                        <a href="#" style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.08); color: #FFFFFF; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;"><i class="fa-brands fa-instagram"></i></a>
-                        <a href="#" style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.08); color: #FFFFFF; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;"><i class="fa-brands fa-facebook-f"></i></a>
-                        <a href="#" style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.08); color: #FFFFFF; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;"><i class="fa-brands fa-pinterest-p"></i></a>
+                        <a href="<?php echo htmlspecialchars($c_insta); ?>" aria-label="Instagram" style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.08); color: #FFFFFF; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;"><i class="fa-brands fa-instagram"></i></a>
+                        <a href="<?php echo htmlspecialchars($c_fb); ?>" aria-label="Facebook" style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.08); color: #FFFFFF; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;"><i class="fa-brands fa-facebook-f"></i></a>
+                        <a href="<?php echo htmlspecialchars($c_map); ?>" target="_blank" rel="noopener" aria-label="Google Maps Location" title="Open Google Maps Location" style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.08); color: #FFFFFF; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;"><i class="fa-solid fa-map-location-dot"></i></a>
                     </div>
                 </div>
 

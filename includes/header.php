@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/products-db.php';
+require_once __DIR__ . '/db.php';
 
 $current_script = basename($_SERVER['SCRIPT_NAME']);
 $is_product_page = ($current_script === 'product.php');
@@ -10,14 +11,14 @@ if ($is_product_page && isset($_GET['id']) && isset($PRODUCTS_DB[$_GET['id']])) 
     $current_product = $PRODUCTS_DB[$_GET['id']];
 }
 
-$page_title = "OXO — Premium Furniture Store";
-$page_desc = "Discover OXO, a premium high-end furniture store offering curated luxury sofas, accent chairs, marble dining tables, and designer lighting. Attract visual excellence.";
+$page_title = get_site_content('site_title', 'OXO — Premium Furniture Store');
+$page_desc = get_site_content('site_description', 'Discover OXO, a premium high-end furniture store offering curated luxury sofas, accent chairs, marble dining tables, and designer lighting. Attract visual excellence.');
 
 if ($is_product_page && $current_product) {
     $page_title = $current_product['title'] . " — OXO Premium";
     $page_desc = $current_product['description'];
 } elseif ($is_shop_page) {
-    $page_title = "The Catalog — OXO Premium Furniture";
+    $page_title = "The Catalog — " . get_site_content('site_title', 'OXO Premium Furniture');
     $page_desc = "Browse the complete collection of high-end modular sofas, accent chairs, marble dining tables, and designer lighting fixtures at OXO.";
 }
 ?>

@@ -1,4 +1,14 @@
     <!-- Footer Section -->
+    <?php
+    require_once __DIR__ . '/db.php';
+    $f_desc = get_site_content('footer_desc', 'Architecting spaces of silent luxury, cinematic elegance, and bespoke Italian craftsmanship. Designed to inspire elite sanctuaries.');
+    $f_copy = get_site_content('footer_copyright', 'OXO Furniture. All rights reserved.');
+    $f_dev_credit = get_site_content('footer_dev_credit', 'Designed and Developed by peru');
+    $f_dev_link = get_site_content('footer_dev_link', '#');
+    $f_fb = get_site_content('contact_facebook', '#');
+    $f_insta = get_site_content('contact_instagram', '#');
+    $f_map = get_site_content('contact_map', 'https://maps.google.com');
+    ?>
     <footer class="site-footer-luxury">
         <div class="container">
             <div style="display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.2fr; gap: 50px; margin-bottom: 60px;">
@@ -9,12 +19,12 @@
                         <img src="assets/images/logo.png" alt="OXO Luxury Furniture" style="height: 50px; width: auto; filter: brightness(0) invert(1);">
                     </a>
                     <p style="font-size: 0.9rem; line-height: 1.7; color: rgba(255, 255, 255, 0.65); margin: 0; max-width: 320px;">
-                        Architecting spaces of silent luxury, cinematic elegance, and bespoke Italian craftsmanship. Designed to inspire elite sanctuaries.
+                        <?php echo htmlspecialchars($f_desc); ?>
                     </p>
                     <div style="display: flex; gap: 12px; margin-top: 6px;">
-                        <a href="#" aria-label="Facebook" style="width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.06); color: #FFFFFF; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;"><i class="fa-brands fa-facebook-f" style="font-size: 0.85rem;"></i></a>
-                        <a href="#" aria-label="Instagram" style="width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.06); color: #FFFFFF; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;"><i class="fa-brands fa-instagram" style="font-size: 0.85rem;"></i></a>
-                        <a href="#" aria-label="Pinterest" style="width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.06); color: #FFFFFF; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;"><i class="fa-brands fa-pinterest-p" style="font-size: 0.85rem;"></i></a>
+                        <a href="<?php echo htmlspecialchars($f_fb); ?>" aria-label="Facebook" style="width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.06); color: #FFFFFF; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;"><i class="fa-brands fa-facebook-f" style="font-size: 0.85rem;"></i></a>
+                        <a href="<?php echo htmlspecialchars($f_insta); ?>" aria-label="Instagram" style="width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.06); color: #FFFFFF; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;"><i class="fa-brands fa-instagram" style="font-size: 0.85rem;"></i></a>
+                        <a href="<?php echo htmlspecialchars($f_map); ?>" target="_blank" rel="noopener" aria-label="Google Maps Location" title="Open Google Maps Location" style="width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.06); color: #FFFFFF; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;"><i class="fa-solid fa-map-location-dot" style="font-size: 0.85rem;"></i></a>
                     </div>
                 </div>
                 
@@ -58,7 +68,7 @@
             </div>
             
             <div style="padding-top: 30px; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 0.78rem; color: rgba(255, 255, 255, 0.45);">
-                <p>&copy; <?php echo date('Y'); ?> OXO Furniture. All rights reserved. Architected for high-end residential interiors.</p>
+                <p>&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($f_copy); ?><?php if (!empty($f_dev_credit)): ?> &nbsp;|&nbsp; <a href="<?php echo htmlspecialchars($f_dev_link); ?>" target="_blank" rel="noopener" style="color: var(--color-accent); text-decoration: none; font-weight: 600; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 4px;"><?php echo htmlspecialchars($f_dev_credit); ?> <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.65rem;"></i></a><?php endif; ?></p>
                 <div style="display: flex; gap: 18px; font-size: 1.2rem; color: rgba(255, 255, 255, 0.35);">
                     <i class="fa-brands fa-cc-visa"></i>
                     <i class="fa-brands fa-cc-mastercard"></i>

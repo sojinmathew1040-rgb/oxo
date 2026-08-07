@@ -304,6 +304,103 @@ function initialize_tables($pdo) {
         `is_active` TINYINT(1) DEFAULT 1,
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB;");
+
+    // 9. Create site_content table for dynamic static text, images, videos, contact details & footer text
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `oxo_site_content` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `content_key` VARCHAR(100) NOT NULL UNIQUE,
+        `content_value` LONGTEXT DEFAULT NULL,
+        `content_group` VARCHAR(50) DEFAULT 'general',
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB;");
+
+    // Seed site content defaults if not exists
+    $default_site_contents = [
+        // General & Header
+        'site_title' => 'OXO — Premium Furniture Store',
+        'site_description' => 'Discover OXO, a premium high-end furniture store offering curated luxury sofas, accent chairs, marble dining tables, and designer lighting. Attract visual excellence.',
+        
+        // Hero Section
+        'hero_tag' => 'Collection 2026',
+        'hero_title_1' => 'Silent Luxury',
+        'hero_title_2' => 'For Modern Spaces',
+        'hero_desc' => 'Explore a curated assembly of luxury furniture designed for high-end residential interiors. Sculpted shapes, premium textures, and cinematic aesthetics.',
+        'hero_media_path' => 'assets/images/HERO.mp4',
+        'hero_btn_primary_text' => 'Explore Catalog',
+        'hero_btn_primary_link' => 'shop.php',
+        'hero_btn_secondary_text' => 'Our Legacy',
+        'hero_btn_secondary_link' => '#about',
+
+        // Homepage About Section
+        'about_home_image' => 'assets/images/sofa_1.png',
+        'about_home_stat_val' => '15+ Years',
+        'about_home_stat_label' => 'Master Italian Joinery',
+        'about_home_tag' => 'Our Core Philosophy',
+        'about_home_title' => 'Architecting Silent Luxury',
+        'about_home_p1' => 'At OXO, furniture is not merely functional—it is spatial sculpture. Each creation is curated to define elite residential sanctuaries. We harmonise traditional Italian joinery with progressive architectural proportions.',
+        'about_home_p2' => 'Sourcing rare Calacatta marble pedestals, top-grain aniline leathers, and kiln-dried walnut timbers, our master artisans elevate raw earth elements into tactile works of art.',
+        'about_home_bento1_val' => '15+',
+        'about_home_bento1_label' => 'Years Legacy',
+        'about_home_bento2_val' => '100%',
+        'about_home_bento2_label' => 'Bespoke Design',
+        'about_home_bento3_val' => '8,000+',
+        'about_home_bento3_label' => 'Elite Residences',
+        'about_home_btn_text' => 'Read Our Full Story',
+        'about_home_btn_link' => 'about.php',
+
+        // Dedicated About Us Page
+        'about_page_hero_title' => 'Crafting Timeless Elegance',
+        'about_page_hero_subtitle' => 'Since 2008, OXO has redefined luxury living through Italian design, master craftsmanship, and sustainable luxury.',
+        'about_page_heritage_tag' => 'Heritage & Craftsmanship',
+        'about_page_heritage_title' => 'Born in Milan, Crafted for the World',
+        'about_page_heritage_p1' => 'Founded in the heart of Lombardy, OXO began as an artisanal workshop dedicated to bespoke joinery and leather sculpting. Over two decades, we have evolved into a global luxury house, blending traditional techniques with cutting-edge architectural design.',
+        'about_page_heritage_p2' => 'Every sofa frame, dining table, and lighting fixture undergoes over 120 hours of hand-finishing by master craftsmen, ensuring unparalleled quality and enduring beauty.',
+        'about_page_heritage_img' => 'assets/images/about-craftsman.png',
+        'about_page_showroom_tag' => 'Flagship Sanctuary',
+        'about_page_showroom_title' => 'Experience OXO in Person',
+        'about_page_showroom_p1' => 'Step into our sanctuary of spatial architecture. Our flagship gallery offers private viewings, tactile material swatches, and dedicated interior design consultation.',
+        'about_page_showroom_p2' => 'Discover how our architectural silhouettes transform luxury residential spaces into refined artistic sanctuaries.',
+        'about_page_showroom_img' => 'assets/images/flagship-facade.jpg',
+
+        'about_card1_icon' => 'fa-gem',
+        'about_card1_title' => 'Bespoke Artistry',
+        'about_card1_desc' => 'Every piece is crafted to individual client specifications with rare materials.',
+        'about_card2_icon' => 'fa-leaf',
+        'about_card2_title' => 'Sustainable Luxury',
+        'about_card2_desc' => 'Responsibly sourced timber, eco-certified leathers, and zero-waste production.',
+        'about_card3_icon' => 'fa-shield-halved',
+        'about_card3_title' => '10-Year Warranty',
+        'about_card3_desc' => 'Enduring structural integrity backed by our house guarantee of perfection.',
+
+        // Contact & Concierge Section
+        'contact_tag' => 'Bespoke Concierge',
+        'contact_title' => 'Connect With OXO Private Service',
+        'contact_subtitle' => 'Have questions regarding custom modular dimensions, bespoke leathers, or private showroom viewings?',
+        'contact_address' => '84 Luxury Avenue, Suite 900, Mumbai, India',
+        'contact_email' => 'concierge@oxo.design',
+        'contact_phone' => '+91 (22) 8800-4400',
+        'contact_instagram' => '#',
+        'contact_facebook' => '#',
+        'contact_map' => 'https://maps.google.com',
+
+        // Footer Section
+        'footer_desc' => 'Architecting spaces of silent luxury, cinematic elegance, and bespoke Italian craftsmanship. Designed to inspire elite sanctuaries.',
+        'footer_copyright' => 'OXO Furniture. All rights reserved.',
+        'footer_dev_credit' => 'Designed and Developed by peru',
+        'footer_dev_link' => '#'
+    ];
+
+    $seed_sc_stmt = $pdo->prepare("INSERT IGNORE INTO `oxo_site_content` (`content_key`, `content_value`, `content_group`) VALUES (?, ?, ?)");
+    foreach ($default_site_contents as $key => $val) {
+        $group = 'general';
+        if (strpos($key, 'hero_') === 0) $group = 'hero';
+        elseif (strpos($key, 'about_home_') === 0) $group = 'about_home';
+        elseif (strpos($key, 'about_page_') === 0 || strpos($key, 'about_card') === 0) $group = 'about_page';
+        elseif (strpos($key, 'contact_') === 0) $group = 'contact';
+        elseif (strpos($key, 'footer_') === 0) $group = 'footer';
+        $seed_sc_stmt->execute([$key, $val, $group]);
+    }
     
     // Check if table is empty, if so, seed from static products-db.php
     $stmt = $pdo->query("SELECT COUNT(*) FROM `oxo_products`");
@@ -366,3 +463,75 @@ function get_admin_whatsapp() {
     }
     return null;
 }
+
+function get_site_content($key = null, $default = '') {
+    static $content_cache = null;
+    $db = get_db_connection();
+    if ($content_cache === null && $db) {
+        try {
+            $stmt = $db->query("SELECT `content_key`, `content_value` FROM `oxo_site_content`");
+            $content_cache = $stmt->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
+        } catch (\Exception $e) {
+            $content_cache = [];
+        }
+    }
+    if ($key === null) {
+        return $content_cache ?: [];
+    }
+    return (isset($content_cache[$key]) && $content_cache[$key] !== '') ? $content_cache[$key] : $default;
+}
+
+function set_site_content($key, $value, $group = 'general') {
+    $db = get_db_connection();
+    if (!$db) return false;
+    try {
+        $stmt = $db->prepare("INSERT INTO `oxo_site_content` (`content_key`, `content_value`, `content_group`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE `content_value` = VALUES(`content_value`), `content_group` = VALUES(`content_group`)");
+        return $stmt->execute([$key, $value, $group]);
+    } catch (\Exception $e) {
+        return false;
+    }
+}
+
+function get_shop_images($only_active = true) {
+    $db = get_db_connection();
+    if (!$db) return [];
+    try {
+        $db->exec("CREATE TABLE IF NOT EXISTS `oxo_shop_images` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `title` varchar(255) NOT NULL,
+            `caption` text DEFAULT NULL,
+            `image_path` varchar(255) NOT NULL,
+            `sort_order` int(11) NOT NULL DEFAULT 0,
+            `is_active` tinyint(1) NOT NULL DEFAULT 1,
+            `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $count_stmt = $db->query("SELECT COUNT(*) FROM `oxo_shop_images`");
+        if ($count_stmt->fetchColumn() == 0) {
+            $seed_items = [
+                ['Shop Storefront & Facade', 'Corrugated Dark Cladding & Signature Orange Framing', 'assets/images/flagship-facade.jpg', 1],
+                ['Living Room Atelier', 'Bespoke Modular Lounge Display', 'assets/images/sofa_1.png', 2],
+                ['Master Joinery Studio', 'Artisan Hand-Finishing Station', 'assets/images/about-craftsman.png', 3],
+                ['Architectural Dining Gallery', 'Honed Italian Travertine & Marble Displays', 'assets/images/table_2.png', 4],
+                ['Lighting & Material Sanctuary', 'Curated Lighting & Aniline Leather Samples', 'assets/images/light_2.png', 5],
+                ['Private Client Lounge', 'Consultation Suite for Custom Interior Joinery', 'assets/images/chair_2.png', 6],
+            ];
+            $ins = $db->prepare("INSERT INTO `oxo_shop_images` (`title`, `caption`, `image_path`, `sort_order`, `is_active`) VALUES (?, ?, ?, ?, 1)");
+            foreach ($seed_items as $item) {
+                $ins->execute($item);
+            }
+        }
+
+        $sql = "SELECT * FROM `oxo_shop_images` ";
+        if ($only_active) {
+            $sql .= "WHERE `is_active` = 1 ";
+        }
+        $sql .= "ORDER BY `sort_order` ASC, `id` DESC";
+        $stmt = $db->query($sql);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (\Exception $e) {
+        return [];
+    }
+}
+

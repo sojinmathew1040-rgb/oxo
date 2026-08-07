@@ -394,6 +394,193 @@ if (file_exists($user_facade)) {
         }
 
         /* --- FLAGSHIP RESPONSIVENESS --- */
+        /* --- SHOP SHOWCASE GALLERY STYLES --- */
+        .shop-gallery-section {
+            padding: 110px 0;
+            background: #0B110E;
+            color: #FFFFFF;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            position: relative;
+        }
+        .shop-gallery-intro {
+            max-width: 800px;
+            margin: 0 auto 55px;
+            text-align: center;
+        }
+        .shop-gallery-intro h2 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            line-height: 1.2;
+            color: #FFFFFF;
+            margin-top: 8px;
+            margin-bottom: 15px;
+        }
+        .shop-gallery-intro p {
+            color: #A5B6AC;
+            font-size: 0.98rem;
+            line-height: 1.7;
+            margin: 0;
+        }
+        .shop-gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+        }
+        .shop-gallery-card {
+            position: relative;
+            border-radius: 18px;
+            overflow: hidden;
+            background: #141E18;
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            cursor: pointer;
+            aspect-ratio: 4 / 3;
+            transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .shop-gallery-card.featured-card {
+            grid-column: span 2;
+            grid-row: span 2;
+            aspect-ratio: auto;
+            min-height: 480px;
+        }
+        .shop-gallery-card:hover {
+            transform: translateY(-6px);
+            border-color: #E25822;
+            box-shadow: 0 20px 45px rgba(0,0,0,0.5), 0 0 25px rgba(226, 88, 34, 0.25);
+        }
+        .shop-gallery-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .shop-gallery-card:hover img {
+            transform: scale(1.08);
+        }
+        .shop-gallery-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%);
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            transition: opacity 0.3s ease;
+        }
+        .shop-gallery-slot-tag {
+            font-family: var(--font-numeric);
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #E25822;
+            font-weight: 700;
+            margin-bottom: 6px;
+            display: inline-block;
+        }
+        .shop-gallery-caption {
+            font-family: var(--font-title);
+            font-size: 1.15rem;
+            color: #FFFFFF;
+            font-weight: 600;
+            margin: 0;
+            line-height: 1.3;
+        }
+        .shop-gallery-subcaption {
+            font-size: 0.82rem;
+            color: #A5B6AC;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+        .shop-gallery-zoom-btn {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: rgba(12, 21, 17, 0.65);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .shop-gallery-card:hover .shop-gallery-zoom-btn {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Lightbox Modal */
+        .shop-lightbox {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: rgba(8, 14, 11, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .shop-lightbox.active {
+            display: flex;
+            opacity: 1;
+        }
+        .shop-lightbox-content {
+            max-width: 90vw;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        .shop-lightbox-img {
+            max-width: 100%;
+            max-height: 75vh;
+            object-fit: contain;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+        }
+        .shop-lightbox-info {
+            margin-top: 15px;
+            text-align: center;
+            color: #FFFFFF;
+        }
+        .shop-lightbox-title {
+            font-family: var(--font-title);
+            font-size: 1.25rem;
+            color: #E25822;
+            margin-bottom: 4px;
+        }
+        .shop-lightbox-cap {
+            font-size: 0.9rem;
+            color: #A5B6AC;
+        }
+        .shop-lightbox-close {
+            position: absolute;
+            top: -45px;
+            right: 0;
+            background: none;
+            border: none;
+            color: #FFFFFF;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .shop-lightbox-close:hover {
+            color: #E25822;
+        }
+
         @media (max-width: 1200px) {
             .departments-grid {
                 grid-template-columns: repeat(3, 1fr);
@@ -404,6 +591,14 @@ if (file_exists($user_facade)) {
                 grid-template-columns: 1fr;
                 gap: 40px;
             }
+            .shop-gallery-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .shop-gallery-card.featured-card {
+                grid-column: span 2;
+                grid-row: span 1;
+                min-height: 340px;
+            }
         }
         @media (max-width: 768px) {
             .departments-grid {
@@ -413,31 +608,55 @@ if (file_exists($user_facade)) {
                 grid-template-columns: 1fr;
             }
         }
-        @media (max-width: 480px) {
+        @media (max-width: 576px) {
             .departments-grid {
                 grid-template-columns: 1fr;
+            }
+            .shop-gallery-grid {
+                grid-template-columns: 1fr;
+            }
+            .shop-gallery-card.featured-card {
+                grid-column: span 1;
+                min-height: 260px;
+            }
+            .shop-gallery-intro h2 {
+                font-size: 1.8rem;
             }
         }
     </style>
 
     <!-- 1. Hero Welcome Header -->
+    <?php
+    $ap_hero_title = get_site_content('about_page_hero_title', 'Crafting Timeless Elegance');
+    $ap_hero_sub = get_site_content('about_page_hero_subtitle', 'Since 2008, OXO has redefined luxury living through Italian design, master craftsmanship, and sustainable luxury.');
+    $ap_herit_tag = get_site_content('about_page_heritage_tag', 'Heritage & Craftsmanship');
+    $ap_herit_title = get_site_content('about_page_heritage_title', 'Born in Milan, Crafted for the World');
+    $ap_herit_p1 = get_site_content('about_page_heritage_p1', 'Founded in the heart of Lombardy, OXO began as an artisanal workshop dedicated to bespoke joinery and leather sculpting.');
+    $ap_herit_p2 = get_site_content('about_page_heritage_p2', 'Every sofa frame, dining table, and lighting fixture undergoes over 120 hours of hand-finishing by master craftsmen.');
+    $ap_herit_img = get_site_content('about_page_heritage_img', 'assets/images/about-craftsman.png');
+    $ap_show_tag = get_site_content('about_page_showroom_tag', 'Flagship Sanctuary');
+    $ap_show_title = get_site_content('about_page_showroom_title', 'Experience OXO in Person');
+    $ap_show_p1 = get_site_content('about_page_showroom_p1', 'Step into our sanctuary of spatial architecture.');
+    $ap_show_p2 = get_site_content('about_page_showroom_p2', 'Discover how our architectural silhouettes transform luxury residential spaces.');
+    $ap_show_img = get_site_content('about_page_showroom_img', 'assets/images/flagship-facade.jpg');
+    ?>
     <section class="about-hero-section">
         <div class="about-hero-container">
             <span class="section-tag">Our Heritage</span>
-            <h1 class="about-title">Crafting Silent <span class="title-serif">Elegance</span></h1>
-            <p class="about-subtitle">OXO is a bespoke design atelier born from a commitment to uncompromised luxury. We carve furniture masterpieces designed to attract visual excellence in elite spaces.</p>
+            <h1 class="about-title"><?php echo htmlspecialchars($ap_hero_title); ?></h1>
+            <p class="about-subtitle"><?php echo htmlspecialchars($ap_hero_sub); ?></p>
             <div style="display: flex; gap: 20px; justify-content: center; align-items: center; flex-wrap: wrap;">
                 <div style="border-right: 1px solid var(--color-panel-border); padding-right: 25px; margin-right: 5px;">
-                    <span style="font-family: var(--font-numeric); font-size: 2.2rem; font-weight: 300; color: var(--color-primary); display: block;">15+</span>
-                    <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-gray); font-weight: 700;">Years Legacy</span>
+                    <span style="font-family: var(--font-numeric); font-size: 2.2rem; font-weight: 300; color: var(--color-primary); display: block;"><?php echo htmlspecialchars(get_site_content('about_home_bento1_val', '15+')); ?></span>
+                    <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-gray); font-weight: 700;"><?php echo htmlspecialchars(get_site_content('about_home_bento1_label', 'Years Legacy')); ?></span>
                 </div>
                 <div style="border-right: 1px solid var(--color-panel-border); padding-right: 25px; margin-right: 5px;">
-                    <span style="font-family: var(--font-numeric); font-size: 2.2rem; font-weight: 300; color: var(--color-primary); display: block;">100%</span>
-                    <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-gray); font-weight: 700;">Bespoke Design</span>
+                    <span style="font-family: var(--font-numeric); font-size: 2.2rem; font-weight: 300; color: var(--color-primary); display: block;"><?php echo htmlspecialchars(get_site_content('about_home_bento2_val', '100%')); ?></span>
+                    <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-gray); font-weight: 700;"><?php echo htmlspecialchars(get_site_content('about_home_bento2_label', 'Bespoke Design')); ?></span>
                 </div>
                 <div>
-                    <span style="font-family: var(--font-numeric); font-size: 2.2rem; font-weight: 300; color: var(--color-primary); display: block;">8,000+</span>
-                    <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-gray); font-weight: 700;">Elite Homes</span>
+                    <span style="font-family: var(--font-numeric); font-size: 2.2rem; font-weight: 300; color: var(--color-primary); display: block;"><?php echo htmlspecialchars(get_site_content('about_home_bento3_val', '8,000+')); ?></span>
+                    <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-gray); font-weight: 700;"><?php echo htmlspecialchars(get_site_content('about_home_bento3_label', 'Elite Homes')); ?></span>
                 </div>
             </div>
         </div>
@@ -449,15 +668,14 @@ if (file_exists($user_facade)) {
             <div class="about-grid">
                 
                 <div class="about-content-card">
-                    <span class="section-tag">Founding Story</span>
-                    <h2>The Pursuit of <span class="title-serif">Perfection</span></h2>
-                    <p>Founded with a desire to replace mass-production aesthetics with crafted distinction, OXO bridges modern architectural design with centuries-old artisanal craft.</p>
-                    <p>Every sofa frame we carve, every marble slab we inspect, and every brass contour we shape is chosen to create furniture that doesn't just fill a space, but commands a quiet presence. Our designs emphasize clean silhouettes, premium natural materials, and uncompromised structural longevity.</p>
-                    <p>We work exclusively with certified premium foresters, Italian marble quarries, and master metalworkers to bring custom bespoke layouts directly to elite homeowners, builders, and architects.</p>
+                    <span class="section-tag"><?php echo htmlspecialchars($ap_herit_tag); ?></span>
+                    <h2><?php echo htmlspecialchars($ap_herit_title); ?></h2>
+                    <p><?php echo nl2br(htmlspecialchars($ap_herit_p1)); ?></p>
+                    <p><?php echo nl2br(htmlspecialchars($ap_herit_p2)); ?></p>
                 </div>
 
                 <div class="about-image-wrapper">
-                    <img src="assets/images/flagship-facade.jpg" alt="OXO Flagship Showroom Facade">
+                    <img src="<?php echo htmlspecialchars($ap_herit_img); ?>" alt="OXO Heritage Craftsmanship">
                 </div>
 
             </div>
@@ -469,12 +687,11 @@ if (file_exists($user_facade)) {
         <div class="container">
             <div class="flagship-grid">
                 <div class="flagship-content">
-                    <span class="section-tag">Showroom Experience</span>
-                    <h2>OXO The Gallery: <br><span class="title-serif" style="color: var(--color-accent);">An Architectural Vision</span></h2>
+                    <span class="section-tag"><?php echo htmlspecialchars($ap_show_tag); ?></span>
+                    <h2><?php echo htmlspecialchars($ap_show_title); ?></h2>
                     <div class="flagship-desc">
-                        <p>Our flagship showroom is more than just a store—it is a physical expression of our brand's bold design philosophy. Designed to represent the intersection of industrial strength and warm luxurious space, the landmark building commands a striking presence.</p>
-                        <p>Featuring an iconic, vertically ribbed matte charcoal facade encased in a signature vivid orange-red border trim, the structure stands out as a piece of architectural art. Large, double-height panoramic glass displays allow natural light to cascade onto our curated furniture arrangements across multiple expansive floors.</p>
-                        <p>With its welcoming entrance and proud regional identity (locally represented by the Malayalam script <strong>ഓക്സോ ഫർണിച്ചർ</strong>), OXO The Gallery offers a sensory walkthrough of elite luxury interiors.</p>
+                        <p><?php echo nl2br(htmlspecialchars($ap_show_p1)); ?></p>
+                        <p><?php echo nl2br(htmlspecialchars($ap_show_p2)); ?></p>
                     </div>
                 </div>
 
@@ -507,6 +724,78 @@ if (file_exists($user_facade)) {
             </div>
         </div>
     </section>
+
+    <!-- 2.1.1 Shop Showcase Gallery Section -->
+    <?php
+    $ap_shop_tag   = get_site_content('about_page_shop_gallery_tag', 'Atmosphere & Space');
+    $ap_shop_title = get_site_content('about_page_shop_gallery_title', 'Inside Our Flagship Store');
+    $ap_shop_sub   = get_site_content('about_page_shop_gallery_sub', 'Experience our physical sanctuary, bespoke displays, and spatial architecture.');
+
+    // Fetch dynamic active shop photos from oxo_shop_images database table
+    $dynamic_shop_photos = get_shop_images(true);
+    ?>
+    <?php if (!empty($dynamic_shop_photos)): ?>
+    <section class="shop-gallery-section" id="shop-gallery">
+        <div class="container">
+            <div class="shop-gallery-intro">
+                <span class="section-tag"><?php echo htmlspecialchars($ap_shop_tag); ?></span>
+                <h2><?php echo htmlspecialchars($ap_shop_title); ?></h2>
+                <p><?php echo htmlspecialchars($ap_shop_sub); ?></p>
+            </div>
+
+            <div class="shop-gallery-grid">
+                <?php foreach ($dynamic_shop_photos as $index => $item): ?>
+                    <div class="shop-gallery-card <?php echo $index === 0 ? 'featured-card' : ''; ?>" 
+                         onclick="openShopLightbox('<?php echo htmlspecialchars($item['image_path']); ?>', '<?php echo addslashes(htmlspecialchars($item['title'])); ?>', '<?php echo addslashes(htmlspecialchars($item['caption'] ?? '')); ?>')">
+                        <img src="<?php echo htmlspecialchars($item['image_path']); ?>" alt="<?php echo htmlspecialchars($item['title']); ?>" loading="lazy">
+                        <div class="shop-gallery-overlay">
+                            <span class="shop-gallery-slot-tag"><?php echo htmlspecialchars($item['title']); ?></span>
+                            <h3 class="shop-gallery-caption"><?php echo htmlspecialchars($item['caption'] ?? $item['title']); ?></h3>
+                        </div>
+                        <div class="shop-gallery-zoom-btn" title="View Fullscreen">
+                            <i class="fa-solid fa-expand"></i>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+    <?php endif; ?>
+
+    <!-- Lightbox Modal Container -->
+    <div id="shop-lightbox-modal" class="shop-lightbox" onclick="closeShopLightbox(event)">
+        <div class="shop-lightbox-content" onclick="event.stopPropagation()">
+            <button type="button" class="shop-lightbox-close" onclick="closeShopLightbox()">&times;</button>
+            <img id="shop-lightbox-img" src="" alt="Shop Preview" class="shop-lightbox-img">
+            <div class="shop-lightbox-info">
+                <div id="shop-lightbox-title" class="shop-lightbox-title"></div>
+                <div id="shop-lightbox-cap" class="shop-lightbox-cap"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function openShopLightbox(imgUrl, title, caption) {
+        const modal = document.getElementById('shop-lightbox-modal');
+        const img = document.getElementById('shop-lightbox-img');
+        const titleEl = document.getElementById('shop-lightbox-title');
+        const capEl = document.getElementById('shop-lightbox-cap');
+        
+        img.src = imgUrl;
+        titleEl.textContent = title;
+        capEl.textContent = caption;
+        
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeShopLightbox(e) {
+        if (e && e.target !== e.currentTarget && !e.target.classList.contains('shop-lightbox-close')) return;
+        const modal = document.getElementById('shop-lightbox-modal');
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    </script>
 
     <!-- 2.2 Curated Departments Section -->
     <section class="departments-section">

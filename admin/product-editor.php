@@ -424,14 +424,17 @@ function compress_editor_image($source_filepath, $quality = 78) {
 </head>
 <body>
 
+    <!-- Sidebar Backdrop for Mobile -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
     <div class="admin-container">
         <!-- Sidebar Navigation -->
         <aside class="admin-sidebar">
             <div class="sidebar-header">
-                <a href="index.php">
+                <a href="index.php" style="display: flex; align-items: center; gap: 10px; text-decoration: none;">
                     <img src="../assets/images/logo.png" alt="OXO Premium Furniture" class="admin-logo-img">
+                    <h1 class="admin-logo-text">OXO <span>Studio</span></h1>
                 </a>
-                <h1 class="admin-logo-text">OXO <span>Studio</span></h1>
             </div>
             
             <nav class="sidebar-nav">
@@ -446,9 +449,6 @@ function compress_editor_image($source_filepath, $quality = 78) {
                     <?php if ($pending_inquiries > 0): ?>
                         <span class="sidebar-badge"><?php echo $pending_inquiries; ?></span>
                     <?php endif; ?>
-                </a>
-                <a href="index.php?tab=collections" class="sidebar-link">
-                    <i class="fa-solid fa-shapes"></i> Collections
                 </a>
                 <a href="index.php?tab=settings" class="sidebar-link">
                     <i class="fa-solid fa-gears"></i> Settings
@@ -469,6 +469,17 @@ function compress_editor_image($source_filepath, $quality = 78) {
 
         <!-- Main Content Area -->
         <main class="admin-content">
+        
+        <!-- Mobile Navigation Header Bar -->
+        <div class="admin-mobile-header">
+            <div class="mobile-logo-brand">
+                <img src="../assets/images/logo.png" alt="OXO Logo" class="admin-logo-img">
+                <span class="admin-logo-text">OXO <span>Studio</span></span>
+            </div>
+            <button type="button" class="mobile-hamburger-btn" id="mobileNavToggle" aria-label="Open Navigation Menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
         
         <!-- Navigation Breadcrumbs / Title -->
         <div class="page-header">
@@ -1216,6 +1227,44 @@ function compress_editor_image($source_filepath, $quality = 78) {
 
             // Initial draw
             updateGrid();
+        });
+
+        // Mobile Sidebar Off-Canvas Navigation Toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleBtn = document.getElementById('mobileNavToggle');
+            const sidebar = document.querySelector('.admin-sidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+
+            function toggleSidebar() {
+                if (!sidebar) return;
+                const isOpen = sidebar.classList.contains('mobile-open');
+                if (isOpen) {
+                    closeSidebar();
+                } else {
+                    openSidebar();
+                }
+            }
+
+            function openSidebar() {
+                if (sidebar) sidebar.classList.add('mobile-open');
+                if (backdrop) backdrop.classList.add('active');
+                if (toggleBtn) toggleBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeSidebar() {
+                if (sidebar) sidebar.classList.remove('mobile-open');
+                if (backdrop) backdrop.classList.remove('active');
+                if (toggleBtn) toggleBtn.innerHTML = '<i class="fa-solid fa-bars"></i>';
+                document.body.style.overflow = '';
+            }
+
+            if (toggleBtn) toggleBtn.addEventListener('click', toggleSidebar);
+            if (backdrop) backdrop.addEventListener('click', closeSidebar);
+
+            document.querySelectorAll('.sidebar-link').forEach(link => {
+                link.addEventListener('click', closeSidebar);
+            });
         });
     </script>
 

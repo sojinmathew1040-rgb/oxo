@@ -15,12 +15,19 @@ $db = get_db_connection();
 $message = '';
 $message_type = 'success';
 
-// Determine active tab (default: 'products')
+// Determine active tab & section (default: 'products')
 $current_tab = isset($_GET['tab']) ? trim($_GET['tab']) : 'products';
-if ($current_tab === 'brands') {
-    $current_tab = 'collections';
+$current_section = isset($_GET['section']) ? trim($_GET['section']) : 'overview';
+
+if ($current_tab === 'brands' || $current_tab === 'collections') {
+    $current_tab = 'settings';
+    $current_section = 'collections';
+} elseif ($current_tab === 'announcement') {
+    $current_tab = 'settings';
+    $current_section = 'announcement';
 }
-$valid_tabs = ['products', 'add_product', 'analytics', 'settings', 'collections', 'announcement'];
+
+$valid_tabs = ['products', 'add_product', 'analytics', 'settings'];
 if (!in_array($current_tab, $valid_tabs)) {
     $current_tab = 'products';
 }
@@ -274,8 +281,171 @@ if ($current_tab === 'settings' && $_SERVER['REQUEST_METHOD'] === 'POST' && isse
     }
 }
 
+// 3.6 ACTION: Handle Site Static Content (CMS) Update
+if ($current_tab === 'settings' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'update_site_content') {
+    if ($db) {
+        try {
+            $updated_count = 0;
+            // Process posted text fields
+            if (isset($_POST['content']) && is_array($_POST['content'])) {
+                foreach ($_POST['content'] as $key => $value) {
+                    $group = 'general';
+                    if (strpos($key, 'hero_') === 0) $group = 'hero';
+                    elseif (strpos($key, 'about_home_') === 0) $group = 'about_home';
+                    elseif (strpos($key, 'about_page_') === 0 || strpos($key, 'about_card') === 0) $group = 'about_page';
+                    elseif (strpos($key, 'contact_') === 0) $group = 'contact';
+                    elseif (strpos($key, 'footer_') === 0) $group = 'footer';
+                    
+                    set_site_content($key, trim($value), $group);
+                    $updated_count++;
+                }
+            }
+
+            // Handle file uploads
+            $cms_upload_dir = __DIR__ . '/../uploads/cms/';
+            if (!file_exists($cms_upload_dir)) {
+                @mkdir($cms_upload_dir, 0777, true);
+            }
+
+            // File mapping
+            $file_fields = [
+                'hero_media_file' => ['key' => 'hero_media_path', 'group' => 'hero'],
+                'about_home_image_file' => ['key' => 'about_home_image', 'group' => 'about_home'],
+                'about_page_heritage_img_file' => ['key' => 'about_page_heritage_img', 'group' => 'about_page'],
+                'about_page_showroom_img_file' => ['key' => 'about_page_showroom_img', 'group' => 'about_page'],
+                'about_page_shop_img_1_file' => ['key' => 'about_page_shop_img_1', 'group' => 'about_page'],
+                'about_page_shop_img_2_file' => ['key' => 'about_page_shop_img_2', 'group' => 'about_page'],
+                'about_page_shop_img_3_file' => ['key' => 'about_page_shop_img_3', 'group' => 'about_page'],
+                'about_page_shop_img_4_file' => ['key' => 'about_page_shop_img_4', 'group' => 'about_page'],
+                'about_page_shop_img_5_file' => ['key' => 'about_page_shop_img_5', 'group' => 'about_page'],
+                'about_page_shop_img_6_file' => ['key' => 'about_page_shop_img_6', 'group' => 'about_page'],
+            ];
+
+            foreach ($file_fields as $field => $info) {
+                if (isset($_FILES[$field]) && $_FILES[$field]['error'] === UPLOAD_ERR_OK) {
+                    $ext = strtolower(pathinfo($_FILES[$field]['name'], PATHINFO_EXTENSION));
+                    $filename = $info['key'] . '_' . time() . '.' . $ext;
+                    $target = $cms_upload_dir . $filename;
+                    if (move_uploaded_file($_FILES[$field]['tmp_name'], $target)) {
+                        if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+                            compress_admin_uploaded_image($target);
+                        }
+                        $rel_path = 'uploads/cms/' . $filename;
+                        set_site_content($info['key'], $rel_path, $info['group']);
+                        $updated_count++;
+                    }
+                }
+            }
+
+            $message = "Site static content & CMS settings successfully saved!";
+            $message_type = 'success';
+        } catch (\Exception $e) {
+            $message = "Failed to update site content: " . $e->getMessage();
+            $message_type = 'danger';
+        }
+    } else {
+        $message = "Database offline. Content update disabled.";
+        $message_type = 'danger';
+    }
+}
+
+// 3.7 ACTION: Handle Dynamic Shop Gallery Images CRUD
+if ($current_tab === 'settings' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action'])) {
+    $fa = $_POST['form_action'];
+
+    if (in_array($fa, ['add_shop_image', 'toggle_shop_image', 'delete_shop_image', 'edit_shop_image']) && $db) {
+        try {
+            // Ensure table exists & seeded
+            get_shop_images(false);
+
+            if ($fa === 'add_shop_image') {
+                $title = trim($_POST['title'] ?? '');
+                $caption = trim($_POST['caption'] ?? '');
+                $sort_order = (int)($_POST['sort_order'] ?? 0);
+                $is_active = isset($_POST['is_active']) ? 1 : 0;
+                $image_path = trim($_POST['image_url'] ?? '');
+
+                $cms_upload_dir = __DIR__ . '/../uploads/cms/';
+                if (!file_exists($cms_upload_dir)) {
+                    @mkdir($cms_upload_dir, 0777, true);
+                }
+
+                if (isset($_FILES['image_file']) && $_FILES['image_file']['error'] === UPLOAD_ERR_OK) {
+                    $ext = strtolower(pathinfo($_FILES['image_file']['name'], PATHINFO_EXTENSION));
+                    $filename = 'shop_img_' . time() . '_' . rand(100, 999) . '.' . $ext;
+                    $target = $cms_upload_dir . $filename;
+                    if (move_uploaded_file($_FILES['image_file']['tmp_name'], $target)) {
+                        if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+                            compress_admin_uploaded_image($target);
+                        }
+                        $image_path = 'uploads/cms/' . $filename;
+                    }
+                }
+
+                if (!empty($image_path)) {
+                    $stmt = $db->prepare("INSERT INTO `oxo_shop_images` (`title`, `caption`, `image_path`, `sort_order`, `is_active`) VALUES (?, ?, ?, ?, ?)");
+                    $stmt->execute([$title ?: 'Showroom Image', $caption, $image_path, $sort_order, $is_active]);
+                    $message = "Shop photo successfully added to gallery!";
+                    $message_type = 'success';
+                } else {
+                    $message = "Please upload an image file or enter an image URL path.";
+                    $message_type = 'danger';
+                }
+            } elseif ($fa === 'toggle_shop_image') {
+                $img_id = (int)($_POST['shop_image_id'] ?? 0);
+                $new_status = (int)($_POST['new_status'] ?? 0);
+                $stmt = $db->prepare("UPDATE `oxo_shop_images` SET `is_active` = ? WHERE `id` = ?");
+                $stmt->execute([$new_status, $img_id]);
+                $message = "Shop photo visibility updated.";
+                $message_type = 'success';
+            } elseif ($fa === 'delete_shop_image') {
+                $img_id = (int)($_POST['shop_image_id'] ?? 0);
+                $stmt = $db->prepare("DELETE FROM `oxo_shop_images` WHERE `id` = ?");
+                $stmt->execute([$img_id]);
+                $message = "Shop photo deleted from gallery.";
+                $message_type = 'success';
+            } elseif ($fa === 'edit_shop_image') {
+                $img_id = (int)($_POST['shop_image_id'] ?? 0);
+                $title = trim($_POST['title'] ?? '');
+                $caption = trim($_POST['caption'] ?? '');
+                $sort_order = (int)($_POST['sort_order'] ?? 0);
+                $image_path = trim($_POST['image_url'] ?? '');
+
+                if (isset($_FILES['image_file']) && $_FILES['image_file']['error'] === UPLOAD_ERR_OK) {
+                    $cms_upload_dir = __DIR__ . '/../uploads/cms/';
+                    if (!file_exists($cms_upload_dir)) {
+                        @mkdir($cms_upload_dir, 0777, true);
+                    }
+                    $ext = strtolower(pathinfo($_FILES['image_file']['name'], PATHINFO_EXTENSION));
+                    $filename = 'shop_img_' . time() . '_' . rand(100, 999) . '.' . $ext;
+                    $target = $cms_upload_dir . $filename;
+                    if (move_uploaded_file($_FILES['image_file']['tmp_name'], $target)) {
+                        if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+                            compress_admin_uploaded_image($target);
+                        }
+                        $image_path = 'uploads/cms/' . $filename;
+                    }
+                }
+
+                if (!empty($image_path)) {
+                    $stmt = $db->prepare("UPDATE `oxo_shop_images` SET `title` = ?, `caption` = ?, `image_path` = ?, `sort_order` = ? WHERE `id` = ?");
+                    $stmt->execute([$title, $caption, $image_path, $sort_order, $img_id]);
+                } else {
+                    $stmt = $db->prepare("UPDATE `oxo_shop_images` SET `title` = ?, `caption` = ?, `sort_order` = ? WHERE `id` = ?");
+                    $stmt->execute([$title, $caption, $sort_order, $img_id]);
+                }
+                $message = "Shop photo updated successfully!";
+                $message_type = 'success';
+            }
+        } catch (\Exception $e) {
+            $message = "Shop image action failed: " . $e->getMessage();
+            $message_type = 'danger';
+        }
+    }
+}
+
 // 4. ACTION: Handle Brand Deletion
-if ($current_tab === 'collections' && isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
+if (($current_tab === 'collections' || $current_section === 'collections') && isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $delete_brand_id = (int)$_GET['id'];
     if ($db) {
         try {
@@ -302,7 +472,7 @@ if ($current_tab === 'collections' && isset($_GET['action']) && $_GET['action'] 
 }
 
 // 5. ACTION: Handle Brand Insertion
-if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'add_brand') {
+if (($current_tab === 'collections' || $current_section === 'collections') && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'add_brand') {
     $brand_name = isset($_POST['brand_name']) ? trim($_POST['brand_name']) : '';
     $logo_url = isset($_POST['logo_url']) ? trim($_POST['logo_url']) : '';
     $logo_path = '';
@@ -362,7 +532,7 @@ if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && i
 }
 
 // 5.5. ACTION: Handle Announcement Poster (Save, Toggle, Delete)
-if ($current_tab === 'announcement' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $db) {
+if (($current_tab === 'announcement' || $current_section === 'announcement') && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $db) {
     $action = $_POST['form_action'];
     if ($action === 'save_announcement') {
         $title = isset($_POST['title']) ? trim($_POST['title']) : '';
@@ -439,7 +609,7 @@ if ($current_tab === 'announcement' && $_SERVER['REQUEST_METHOD'] === 'POST' && 
 }
 
 // 6. ACTION: Handle Category Deletion
-if ($current_tab === 'collections' && isset($_GET['action']) && $_GET['action'] === 'delete_category' && isset($_GET['id'])) {
+if (($current_tab === 'collections' || $current_section === 'collections') && isset($_GET['action']) && $_GET['action'] === 'delete_category' && isset($_GET['id'])) {
     $delete_cat_id = (int)$_GET['id'];
     if ($db) {
         try {
@@ -464,7 +634,7 @@ if ($current_tab === 'collections' && isset($_GET['action']) && $_GET['action'] 
 }
 
 // 7. ACTION: Handle Category Addition
-if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'add_category') {
+if (($current_tab === 'collections' || $current_section === 'collections') && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'add_category') {
     $cat_name = isset($_POST['cat_name']) ? trim($_POST['cat_name']) : '';
     $cat_slug = isset($_POST['cat_slug']) ? trim($_POST['cat_slug']) : '';
     $cat_bg_color = isset($_POST['cat_bg_color']) ? trim($_POST['cat_bg_color']) : '';
@@ -492,7 +662,7 @@ if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && i
 }
 
 // 7.5 ACTION: Handle Category Edit
-if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'edit_category') {
+if (($current_tab === 'collections' || $current_section === 'collections') && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'edit_category') {
     $cat_id = (int)$_POST['cat_id'];
     $cat_name = isset($_POST['cat_name']) ? trim($_POST['cat_name']) : '';
     $cat_slug = isset($_POST['cat_slug']) ? trim($_POST['cat_slug']) : '';
@@ -518,7 +688,7 @@ if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && i
 }
 
 // 7.6 ACTION: Handle Material Edit
-if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'edit_material') {
+if (($current_tab === 'collections' || $current_section === 'collections') && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'edit_material') {
     $mat_id = (int)$_POST['mat_id'];
     $mat_name = isset($_POST['mat_name']) ? trim($_POST['mat_name']) : '';
     $mat_slug = isset($_POST['mat_slug']) ? trim($_POST['mat_slug']) : '';
@@ -543,7 +713,7 @@ if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && i
 }
 
 // 7.7 ACTION: Handle Color Edit
-if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'edit_color') {
+if (($current_tab === 'collections' || $current_section === 'collections') && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'edit_color') {
     $color_id = (int)$_POST['color_id'];
     $color_name = isset($_POST['color_name']) ? trim($_POST['color_name']) : '';
     $color_hex = isset($_POST['color_hex']) ? trim($_POST['color_hex']) : '';
@@ -567,7 +737,7 @@ if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && i
 }
 
 // 7.8 ACTION: Handle Brand Edit
-if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'edit_brand') {
+if (($current_tab === 'collections' || $current_section === 'collections') && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'edit_brand') {
     $brand_id = (int)$_POST['brand_id'];
     $brand_name = isset($_POST['brand_name']) ? trim($_POST['brand_name']) : '';
     $logo_url = isset($_POST['logo_url']) ? trim($_POST['logo_url']) : '';
@@ -617,7 +787,7 @@ if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && i
 }
 
 // 8. ACTION: Handle Material Deletion
-if ($current_tab === 'collections' && isset($_GET['action']) && $_GET['action'] === 'delete_material' && isset($_GET['id'])) {
+if (($current_tab === 'collections' || $current_section === 'collections') && isset($_GET['action']) && $_GET['action'] === 'delete_material' && isset($_GET['id'])) {
     $delete_mat_id = (int)$_GET['id'];
     if ($db) {
         try {
@@ -642,7 +812,7 @@ if ($current_tab === 'collections' && isset($_GET['action']) && $_GET['action'] 
 }
 
 // 9. ACTION: Handle Material Addition
-if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'add_material') {
+if (($current_tab === 'collections' || $current_section === 'collections') && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'add_material') {
     $mat_name = isset($_POST['mat_name']) ? trim($_POST['mat_name']) : '';
     $mat_slug = isset($_POST['mat_slug']) ? trim($_POST['mat_slug']) : '';
     
@@ -669,7 +839,7 @@ if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && i
 }
 
 // 9b. ACTION: Handle Color Deletion
-if ($current_tab === 'collections' && isset($_GET['action']) && $_GET['action'] === 'delete_color' && isset($_GET['id'])) {
+if (($current_tab === 'collections' || $current_section === 'collections') && isset($_GET['action']) && $_GET['action'] === 'delete_color' && isset($_GET['id'])) {
     $delete_color_id = (int)$_GET['id'];
     if ($db) {
         try {
@@ -694,7 +864,7 @@ if ($current_tab === 'collections' && isset($_GET['action']) && $_GET['action'] 
 }
 
 // 9c. ACTION: Handle Color Addition
-if ($current_tab === 'collections' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'add_color') {
+if (($current_tab === 'collections' || $current_section === 'collections') && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_action']) && $_POST['form_action'] === 'add_color') {
     $color_name = isset($_POST['color_name']) ? trim($_POST['color_name']) : '';
     $color_hex = isset($_POST['color_hex']) ? trim($_POST['color_hex']) : '#ffffff';
     
@@ -924,22 +1094,29 @@ if ($db) {
         $total_products = count($products);
         
         // Calculate product metrics
+        $total_catalog_value = 0;
+        $used_categories = [];
         if ($total_products > 0) {
             $prices = array_column($products, 'price');
-            $average_price = array_sum($prices) / $total_products;
-            $categories = array_unique(array_column($products, 'category'));
-            $categories_count = count($categories);
+            $total_catalog_value = array_sum($prices);
+            $average_price = $total_catalog_value / $total_products;
+            $used_categories = array_unique(array_column($products, 'category'));
         }
         
         // Fetch inquiries
         $stmt = $db->query("SELECT * FROM `oxo_consultations` ORDER BY `created_at` DESC");
         $inquiries = $stmt->fetchAll();
         $total_inquiries = count($inquiries);
+        $pending_inquiries = 0;
+        $addressed_inquiries = 0;
         foreach ($inquiries as $inq) {
             if ($inq['status'] === 'Pending') {
                 $pending_inquiries++;
+            } else {
+                $addressed_inquiries++;
             }
         }
+        $inquiry_response_rate = $total_inquiries > 0 ? round(($addressed_inquiries / $total_inquiries) * 100, 1) : 0;
         
         // Fetch brands
         $stmt = $db->query("SELECT * FROM `oxo_brands` ORDER BY `created_at` DESC");
@@ -947,6 +1124,8 @@ if ($db) {
         
         // Fetch categories list
         $categories_list = $db->query("SELECT * FROM `oxo_categories` ORDER BY `name` ASC")->fetchAll();
+        $categories_count = !empty($categories_list) ? count($categories_list) : count($used_categories);
+
         // Fetch materials list
         $materials_list = $db->query("SELECT * FROM `oxo_materials` ORDER BY `name` ASC")->fetchAll();
         // Fetch colors list
@@ -969,6 +1148,132 @@ if ($db) {
             $categories_count = count($categories);
         }
     }
+}
+
+// Catalog Filtering & View Slicing (Default: Show Last 5 Recently Added)
+$filter_category = isset($_GET['filter_category']) ? trim($_GET['filter_category']) : '';
+$filter_material = isset($_GET['filter_material']) ? trim($_GET['filter_material']) : '';
+$filter_brand = isset($_GET['filter_brand']) ? trim($_GET['filter_brand']) : '';
+$filter_search = isset($_GET['filter_search']) ? trim($_GET['filter_search']) : '';
+$show_all = isset($_GET['show_all']) && $_GET['show_all'] === '1';
+
+$has_active_filter = !empty($filter_category) || !empty($filter_material) || !empty($filter_brand) || !empty($filter_search) || $show_all;
+
+$filtered_products = $products;
+
+if (!empty($filter_category)) {
+    $filtered_products = array_filter($filtered_products, function($p) use ($filter_category) {
+        return strtolower($p['category']) === strtolower($filter_category);
+    });
+}
+
+if (!empty($filter_material)) {
+    $filtered_products = array_filter($filtered_products, function($p) use ($filter_material) {
+        return isset($p['material_slug']) && strtolower($p['material_slug']) === strtolower($filter_material);
+    });
+}
+
+if (!empty($filter_brand)) {
+    $filtered_products = array_filter($filtered_products, function($p) use ($filter_brand) {
+        return isset($p['brand_id']) && (string)$p['brand_id'] === (string)$filter_brand;
+    });
+}
+
+if (!empty($filter_search)) {
+    $filtered_products = array_filter($filtered_products, function($p) use ($filter_search) {
+        $q = strtolower($filter_search);
+        return strpos(strtolower($p['title']), $q) !== false || strpos(strtolower($p['id']), $q) !== false;
+    });
+}
+
+$filtered_products = array_values($filtered_products);
+
+// Default view mode: If no filter is active, only show the last 5 recently added products!
+if (!$has_active_filter) {
+    $displayed_products = array_slice($filtered_products, 0, 5);
+} else {
+    $displayed_products = $filtered_products;
+}
+
+// --- DYNAMIC ANALYTICS & INSIGHTS COMPUTATIONS ---
+// 1. Category Distribution
+$cat_distribution = [];
+foreach ($products as $p) {
+    $c_slug = strtolower($p['category']);
+    $c_name = ucfirst($p['category']);
+    foreach ($categories_list as $c) {
+        if (strtolower($c['slug']) === $c_slug) {
+            $c_name = $c['name'];
+            break;
+        }
+    }
+    if (!isset($cat_distribution[$c_name])) {
+        $cat_distribution[$c_name] = 0;
+    }
+    $cat_distribution[$c_name]++;
+}
+$analytics_cat_labels = array_keys($cat_distribution);
+$analytics_cat_values = array_values($cat_distribution);
+
+// 2. Material Breakdown
+$mat_distribution = [];
+foreach ($products as $p) {
+    $m_slug = !empty($p['material_slug']) ? ucfirst($p['material_slug']) : 'Wood';
+    if (!isset($mat_distribution[$m_slug])) {
+        $mat_distribution[$m_slug] = 0;
+    }
+    $mat_distribution[$m_slug]++;
+}
+$analytics_mat_labels = array_keys($mat_distribution);
+$analytics_mat_values = array_values($mat_distribution);
+
+// 3. Price Tiers (Entry < 5k, Mid 5k-20k, Luxury > 20k)
+$tier_entry = 0;
+$tier_mid = 0;
+$tier_luxury = 0;
+$highest_price_item = null;
+$lowest_price_item = null;
+
+foreach ($products as $p) {
+    $pr = (float)$p['price'];
+    if ($pr < 5000) $tier_entry++;
+    elseif ($pr <= 20000) $tier_mid++;
+    else $tier_luxury++;
+
+    if ($highest_price_item === null || $pr > (float)$highest_price_item['price']) {
+        $highest_price_item = $p;
+    }
+    if ($lowest_price_item === null || $pr < (float)$lowest_price_item['price']) {
+        $lowest_price_item = $p;
+    }
+}
+
+// 4. Top Inquired Products Leaderboard
+$top_inquiries_map = [];
+foreach ($inquiries as $inq) {
+    $p_name = trim($inq['product_title']);
+    if (empty($p_name) || strtolower($p_name) === 'general contact') continue;
+    if (!isset($top_inquiries_map[$p_name])) {
+        $top_inquiries_map[$p_name] = 0;
+    }
+    $top_inquiries_map[$p_name]++;
+}
+arsort($top_inquiries_map);
+$top_inquiries_list = array_slice($top_inquiries_map, 0, 5, true);
+
+// 5. Catalog Health Score (% of products with gallery photos, dimensions, and brand)
+$complete_count = 0;
+foreach ($products as $p) {
+    $has_gallery = !empty($p['gallery']) && $p['gallery'] !== '[]';
+    $has_brand = !empty($p['brand_id']);
+    $has_dims = !empty($p['height_cm']) || !empty($p['width_cm']);
+    if ($has_gallery && $has_brand && $has_dims) {
+        $complete_count++;
+    }
+}
+$catalog_health_score = $total_products > 0 ? round(($complete_count / $total_products) * 100) : 100;
+
+if (!$db) {
     $message = "Warning: Database connection is offline. Showing read-only static files.";
     $message_type = 'danger';
 }
@@ -1011,14 +1316,17 @@ if (!function_exists('format_inr_admin')) {
 </head>
 <body>
 
+    <!-- Sidebar Backdrop for Mobile -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
     <div class="admin-container">
         <!-- Sidebar Navigation -->
         <aside class="admin-sidebar">
             <div class="sidebar-header">
-                <a href="index.php">
+                <a href="index.php" style="display: flex; align-items: center; gap: 10px; text-decoration: none;">
                     <img src="../assets/images/logo.png" alt="OXO Premium Furniture" class="admin-logo-img">
+                    <h1 class="admin-logo-text">OXO <span>Studio</span></h1>
                 </a>
-                <h1 class="admin-logo-text">OXO <span>Studio</span></h1>
             </div>
             
             <nav class="sidebar-nav">
@@ -1028,26 +1336,14 @@ if (!function_exists('format_inr_admin')) {
                 <a href="index.php?tab=add_product" class="sidebar-link <?php echo $current_tab === 'add_product' ? 'active' : ''; ?>">
                     <i class="fa-solid fa-circle-plus"></i> Add Product
                 </a>
-                <a href="import-universal.php" class="sidebar-link">
-                    <i class="fa-solid fa-cloud-arrow-down"></i> Universal Importer
-                </a>
                 <a href="index.php?tab=analytics" class="sidebar-link <?php echo $current_tab === 'analytics' ? 'active' : ''; ?>">
                     <i class="fa-solid fa-chart-line"></i> Analytics & Inquiries
                     <?php if ($pending_inquiries > 0): ?>
                         <span class="sidebar-badge"><?php echo $pending_inquiries; ?></span>
                     <?php endif; ?>
                 </a>
-                <a href="index.php?tab=collections" class="sidebar-link <?php echo $current_tab === 'collections' ? 'active' : ''; ?>">
-                    <i class="fa-solid fa-shapes"></i> Collections
-                </a>
-                <a href="index.php?tab=announcement" class="sidebar-link <?php echo $current_tab === 'announcement' ? 'active' : ''; ?>">
-                    <i class="fa-solid fa-bullhorn"></i> Announcement Poster
-                </a>
                 <a href="index.php?tab=settings" class="sidebar-link <?php echo $current_tab === 'settings' ? 'active' : ''; ?>">
                     <i class="fa-solid fa-gears"></i> Settings
-                </a>
-                <a href="generate-docs.php" onclick="document.getElementById('docsModal').style.display='flex'; return false;" class="sidebar-link" title="Generate & Download Developer Specs or Admin User Guide">
-                    <i class="fa-solid fa-file-pdf" style="color: #F3E5AB;"></i> System Documentation
                 </a>
                 <a href="../index.php" target="_blank" class="sidebar-link">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i> View Store
@@ -1066,6 +1362,17 @@ if (!function_exists('format_inr_admin')) {
         <!-- Main Content Area -->
         <main class="admin-content">
         
+        <!-- Mobile Navigation Header Bar -->
+        <div class="admin-mobile-header">
+            <div class="mobile-logo-brand">
+                <img src="../assets/images/logo.png" alt="OXO Logo" class="admin-logo-img">
+                <span class="admin-logo-text">OXO <span>Studio</span></span>
+            </div>
+            <button type="button" class="mobile-hamburger-btn" id="mobileNavToggle" aria-label="Open Navigation Menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+        
         <!-- Tab Content Header -->
         <div class="page-header">
             <div>
@@ -1075,29 +1382,31 @@ if (!function_exists('format_inr_admin')) {
                 <?php elseif ($current_tab === 'analytics'): ?>
                     <h2 class="page-title">Analytics & <span>Inquiries</span></h2>
                     <p style="color: var(--color-gray); font-size: 0.95rem; margin-top: 5px;">Analyze sales metrics, view trends, and answer client consultation inquiries.</p>
-                <?php elseif ($current_tab === 'announcement'): ?>
-                    <h2 class="page-title">Announcement <span>Poster</span></h2>
-                    <p style="color: var(--color-gray); font-size: 0.95rem; margin-top: 5px;">Post pop-up announcement banners that display automatically when the store loads.</p>
-                <?php elseif ($current_tab === 'brands'): ?>
-                    <h2 class="page-title">Brand <span>Logos</span></h2>
-                    <p style="color: var(--color-gray); font-size: 0.95rem; margin-top: 5px;">Manage partner brand logos displaying in the homepage sliding marquee.</p>
+                <?php elseif ($current_tab === 'add_product'): ?>
+                    <h2 class="page-title">Add New <span>Creation</span></h2>
+                    <p style="color: var(--color-gray); font-size: 0.95rem; margin-top: 5px;">Register a new luxury furniture design to be displayed in the catalog.</p>
                 <?php else: ?>
-                    <h2 class="page-title">Studio <span>Settings</span></h2>
-                    <p style="color: var(--color-gray); font-size: 0.95rem; margin-top: 5px;">Update credentials, modify database configurations, and control access keys.</p>
+                    <?php if ($current_section === 'collections'): ?>
+                        <h2 class="page-title">Collections & <span>Brands</span></h2>
+                        <p style="color: var(--color-gray); font-size: 0.95rem; margin-top: 5px;">Manage furniture categories, material types, color palettes and partner logos.</p>
+                    <?php elseif ($current_section === 'announcement'): ?>
+                        <h2 class="page-title">Announcement <span>Poster</span></h2>
+                        <p style="color: var(--color-gray); font-size: 0.95rem; margin-top: 5px;">Post pop-up announcement banners that display automatically when the store loads.</p>
+                    <?php elseif ($current_section === 'security'): ?>
+                        <h2 class="page-title">Security & <span>Credentials</span></h2>
+                        <p style="color: var(--color-gray); font-size: 0.95rem; margin-top: 5px;">Update administrator account credentials and master login password.</p>
+                    <?php elseif ($current_section === 'whatsapp'): ?>
+                        <h2 class="page-title">WhatsApp <span>Configuration</span></h2>
+                        <p style="color: var(--color-gray); font-size: 0.95rem; margin-top: 5px;">Configure administrator contact phone number for automated client response chats.</p>
+                    <?php else: ?>
+                        <h2 class="page-title">Studio <span>Settings</span></h2>
+                        <p style="color: var(--color-gray); font-size: 0.95rem; margin-top: 5px;">Configure application identity, database backup tools, importers, and store controls.</p>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
             
             <?php if ($current_tab === 'products' && $db): ?>
                 <div style="display: flex; gap: 10px;">
-                    <a href="sync-prices.php?action=sync_all" class="action-btn" style="background: rgba(155, 89, 182, 0.15); color: #a855f7; border: 1px solid #a855f7; text-decoration: none;" title="Re-scrape source URLs and update product prices automatically">
-                        <i class="fa-solid fa-rotate"></i> Sync Live Prices
-                    </a>
-                    <a href="export-db.php" class="action-btn" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid #2ecc71; text-decoration: none;" title="Download current database backup SQL file">
-                        <i class="fa-solid fa-download"></i> Backup Database
-                    </a>
-                    <button type="button" onclick="document.getElementById('importDbModal').style.display='flex'" class="action-btn" style="background: rgba(52, 152, 219, 0.15); color: #3498db; border: 1px solid #3498db; cursor: pointer;" title="Upload and restore SQL database backup">
-                        <i class="fa-solid fa-file-import"></i> Import Database
-                    </button>
                     <a href="product-editor.php" class="action-btn">
                         <i class="fa-solid fa-plus"></i> Add New Creation
                     </a>
@@ -1142,7 +1451,7 @@ if (!function_exists('format_inr_admin')) {
                     <div class="stat-icon"><i class="fa-solid fa-couch"></i></div>
                     <div class="stat-info">
                         <h3>Catalog Size</h3>
-                        <div class="stat-value"><?php echo $total_products; ?></div>
+                        <div class="stat-value"><?php echo $total_products; ?> <span style="font-size: 0.72rem; color: var(--color-gray); font-weight: 600;">Items</span></div>
                     </div>
                 </div>
                 
@@ -1150,28 +1459,99 @@ if (!function_exists('format_inr_admin')) {
                     <div class="stat-icon"><i class="fa-solid fa-tags"></i></div>
                     <div class="stat-info">
                         <h3>Active Categories</h3>
-                        <div class="stat-value"><?php echo $categories_count; ?></div>
+                        <div class="stat-value"><?php echo $categories_count; ?> <span style="font-size: 0.72rem; color: var(--color-gray); font-weight: 600;">Registered</span></div>
                     </div>
                 </div>
                 
                 <div class="stat-card">
-                    <div class="stat-icon"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+                    <div class="stat-icon"><i class="fa-solid fa-vault"></i></div>
                     <div class="stat-info">
-                        <h3>Average Value</h3>
-                        <div class="stat-value"><?php echo format_inr_admin($average_price); ?></div>
+                        <h3>Total Catalog Value</h3>
+                        <div class="stat-value"><?php echo format_inr_admin($total_catalog_value ?? 0); ?></div>
                     </div>
                 </div>
                 
                 <div class="stat-card">
-                    <div class="stat-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                    <div class="stat-icon"><i class="fa-solid fa-scale-balanced"></i></div>
                     <div class="stat-info">
-                        <h3>System Status</h3>
-                        <div class="stat-value" style="font-size: 1.15rem; color: <?php echo $db ? 'var(--color-success)' : 'var(--color-danger)'; ?>">
-                            <?php echo $db ? '<i class="fa-solid fa-database"></i> MySQL Connected' : '<i class="fa-solid fa-file-code"></i> File Fallback'; ?>
-                        </div>
+                        <h3>Average Item Price</h3>
+                        <div class="stat-value"><?php echo format_inr_admin($average_price ?? 0); ?></div>
                     </div>
                 </div>
             </section>
+
+            <!-- Catalog Search & Filter Controls -->
+            <div class="catalog-filter-bar" style="background: var(--color-panel-dark); padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--color-panel-border); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 15px;">
+                <form action="index.php" method="GET" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; flex: 1;">
+                    <input type="hidden" name="tab" value="products">
+                    
+                    <!-- Search Input -->
+                    <div style="position: relative; flex: 1; min-width: 220px;">
+                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--color-gray); font-size: 0.85rem;"></i>
+                        <input type="text" name="filter_search" placeholder="Search creations by title or ID..." value="<?php echo htmlspecialchars($filter_search); ?>" class="input-control" style="padding-left: 35px; padding-top: 8px; padding-bottom: 8px; font-size: 0.85rem;">
+                    </div>
+
+                    <!-- Filter Category -->
+                    <select name="filter_category" class="input-control" style="width: auto; min-width: 150px; padding-top: 8px; padding-bottom: 8px; font-size: 0.85rem;" onchange="this.form.submit()">
+                        <option value="">All Categories</option>
+                        <?php foreach ($categories_list as $cat): ?>
+                            <option value="<?php echo htmlspecialchars($cat['slug']); ?>" <?php echo strtolower($filter_category) === strtolower($cat['slug']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($cat['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+
+                    <!-- Filter Material -->
+                    <select name="filter_material" class="input-control" style="width: auto; min-width: 140px; padding-top: 8px; padding-bottom: 8px; font-size: 0.85rem;" onchange="this.form.submit()">
+                        <option value="">All Materials</option>
+                        <?php foreach ($materials_list as $mat): ?>
+                            <option value="<?php echo htmlspecialchars($mat['slug']); ?>" <?php echo strtolower($filter_material) === strtolower($mat['slug']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($mat['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+
+                    <!-- Filter Brand -->
+                    <select name="filter_brand" class="input-control" style="width: auto; min-width: 140px; padding-top: 8px; padding-bottom: 8px; font-size: 0.85rem;" onchange="this.form.submit()">
+                        <option value="">All Brands</option>
+                        <?php foreach ($brands as $brd): ?>
+                            <option value="<?php echo htmlspecialchars($brd['id']); ?>" <?php echo (string)$filter_brand === (string)$brd['id'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($brd['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+
+                    <button type="submit" class="action-btn" style="padding: 8px 16px; font-size: 0.8rem;">
+                        <i class="fa-solid fa-filter"></i> Apply
+                    </button>
+
+                    <?php if ($has_active_filter): ?>
+                        <a href="index.php?tab=products" class="action-btn secondary" style="padding: 8px 14px; font-size: 0.8rem;" title="Clear all filters">
+                            <i class="fa-solid fa-xmark"></i> Clear Filters
+                        </a>
+                    <?php endif; ?>
+                </form>
+
+                <!-- View All toggle button -->
+                <div>
+                    <?php if (!$has_active_filter): ?>
+                        <a href="index.php?tab=products&show_all=1" class="action-btn secondary" style="padding: 8px 16px; font-size: 0.8rem; border-color: var(--color-accent); color: var(--color-accent);">
+                            <i class="fa-solid fa-eye"></i> View All (<?php echo $total_products; ?>)
+                        </a>
+                    <?php else: ?>
+                        <span style="font-size: 0.85rem; font-weight: 700; color: var(--color-accent);">
+                            Showing <?php echo count($displayed_products); ?> result(s)
+                        </span>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <?php if (!$has_active_filter): ?>
+                <div style="background: rgba(217, 119, 6, 0.08); border: 1px solid rgba(217, 119, 6, 0.25); color: var(--color-accent); padding: 10px 16px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span><i class="fa-solid fa-clock-rotate-left" style="margin-right: 6px;"></i> Showing <strong>Last 5 Recently Added Creations</strong> out of <?php echo $total_products; ?> catalog items. Select a category or material above to view more.</span>
+                    <a href="index.php?tab=products&show_all=1" style="font-weight: 700; text-decoration: underline; color: var(--color-accent);">View All Creations &rarr;</a>
+                </div>
+            <?php endif; ?>
 
             <!-- Bulk Delete Action Form Wrapper -->
             <form id="bulkDeleteForm" action="index.php?tab=products" method="POST">
@@ -1180,7 +1560,7 @@ if (!function_exists('format_inr_admin')) {
                 <div style="display: flex; align-items: center; justify-content: space-between; background: var(--color-gray-dark); padding: 12px 20px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--color-panel-border);">
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <input type="checkbox" id="selectAllProducts" onclick="toggleSelectAllProducts(this)" style="width: 18px; height: 18px; cursor: pointer; accent-color: #e74c3c;">
-                        <label for="selectAllProducts" style="font-weight: 600; cursor: pointer; color: var(--color-primary); font-size: 0.9rem;">Select All Creations</label>
+                        <label for="selectAllProducts" style="font-weight: 600; cursor: pointer; color: var(--color-primary); font-size: 0.9rem;">Select All Displayed</label>
                         <span id="selectedCountBadge" style="background: rgba(231, 76, 60, 0.15); color: #e74c3c; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 700;">0 selected</span>
                     </div>
                     <div>
@@ -1208,14 +1588,14 @@ if (!function_exists('format_inr_admin')) {
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php if (empty($products)): ?>
+                                <?php if (empty($displayed_products)): ?>
                                     <tr>
                                         <td colspan="7" style="text-align: center; padding: 40px; color: var(--color-gray);">
-                                            No creations found in the catalog.
+                                            No creations found matching the selected filter criteria. <a href="index.php?tab=products" style="color: var(--color-accent); font-weight: 700;">Clear Filters</a>
                                         </td>
                                     </tr>
                                 <?php else: ?>
-                                    <?php foreach ($products as $p): ?>
+                                    <?php foreach ($displayed_products as $p): ?>
                                         <tr>
                                             <td style="text-align: center;">
                                                 <input type="checkbox" name="selected_product_ids[]" value="<?php echo htmlspecialchars($p['id']); ?>" class="product-select-chk" onchange="updateBulkDeleteState()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #e74c3c;">
@@ -1286,10 +1666,10 @@ if (!function_exists('format_inr_admin')) {
             <!-- Analytics Cards -->
             <section class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-icon"><i class="fa-solid fa-dollar-sign"></i></div>
+                    <div class="stat-icon"><i class="fa-solid fa-vault"></i></div>
                     <div class="stat-info">
-                        <h3>Mock Gross Revenue</h3>
-                        <div class="stat-value">₹14,85,000</div>
+                        <h3>Total Catalog Value</h3>
+                        <div class="stat-value"><?php echo format_inr_admin($total_catalog_value ?? 0); ?></div>
                     </div>
                 </div>
                 
@@ -1297,41 +1677,102 @@ if (!function_exists('format_inr_admin')) {
                     <div class="stat-icon"><i class="fa-solid fa-inbox"></i></div>
                     <div class="stat-info">
                         <h3>Consultations</h3>
-                        <div class="stat-value"><?php echo $total_inquiries; ?> <span style="font-size: 0.9rem; font-weight: 500; color: var(--color-gray);">Total</span></div>
+                        <div class="stat-value"><?php echo $total_inquiries; ?> <span style="font-size: 0.72rem; font-weight: 600; color: var(--color-gray);">Total</span></div>
                     </div>
                 </div>
                 
                 <div class="stat-card">
-                    <div class="stat-icon"><i class="fa-solid fa-clock"></i></div>
+                    <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
                     <div class="stat-info">
-                        <h3>Pending Inquiries</h3>
-                        <div class="stat-value" style="color: <?php echo $pending_inquiries > 0 ? 'var(--color-danger)' : 'var(--color-success)'; ?>">
-                            <?php echo $pending_inquiries; ?>
-                        </div>
+                        <h3>Response Rate</h3>
+                        <div class="stat-value" style="color: var(--color-success);"><?php echo $inquiry_response_rate; ?>%</div>
                     </div>
                 </div>
-                
+
                 <div class="stat-card">
-                    <div class="stat-icon"><i class="fa-solid fa-percent"></i></div>
+                    <div class="stat-icon"><i class="fa-solid fa-heart-pulse"></i></div>
                     <div class="stat-info">
-                        <h3>Conversion Rate</h3>
-                        <div class="stat-value">3.65%</div>
+                        <h3>Catalog Health Score</h3>
+                        <div class="stat-value" style="color: <?php echo $catalog_health_score >= 80 ? 'var(--color-success)' : 'var(--color-accent)'; ?>;"><?php echo $catalog_health_score; ?>% <span style="font-size: 0.72rem; font-weight: 600; color: var(--color-gray);">Complete</span></div>
                     </div>
                 </div>
             </section>
 
-            <!-- Chart.js Graphics Grid -->
+            <!-- Real Chart.js Graphics Grid -->
             <div class="charts-grid">
-                <!-- Line Chart Card -->
+                <!-- Category Doughnut Chart Card -->
                 <div class="chart-box">
-                    <h3 class="chart-title">Month-over-Month Revenue Trend (Mocked) <span style="font-size: 0.75rem; text-transform: none; color: var(--color-gray);">Gross value</span></h3>
-                    <canvas id="revenueChart" style="max-height: 320px;"></canvas>
+                    <h3 class="chart-title">Collection Distribution <span style="font-size: 0.75rem; text-transform: none; color: var(--color-gray);">(Active Categories)</span></h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
                 </div>
                 
-                <!-- Category Doughnut Chart -->
+                <!-- Material Bar Chart Card -->
                 <div class="chart-box">
-                    <h3 class="chart-title">Collection Distribution <span style="font-size: 0.75rem; text-transform: none; color: var(--color-gray);">Categories</span></h3>
-                    <canvas id="categoryChart" style="max-height: 320px;"></canvas>
+                    <h3 class="chart-title">Material Portfolio Breakdown <span style="font-size: 0.75rem; text-transform: none; color: var(--color-gray);">(Items per Material)</span></h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="materialChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insights & Leaderboard Grid -->
+            <div class="charts-grid" style="margin-bottom: 40px;">
+                <!-- Top Inquired Products Leaderboard -->
+                <div class="chart-box">
+                    <h3 class="chart-title"><i class="fa-solid fa-fire" style="color: #e74c3c; margin-right: 8px;"></i> Most Inquired Products <span style="font-size: 0.75rem; text-transform: none; color: var(--color-gray);">(Client Demand)</span></h3>
+                    <?php if (empty($top_inquiries_list)): ?>
+                        <p style="color: var(--color-gray); font-size: 0.9rem; font-style: italic; padding: 20px 0;">No client product inquiries recorded yet.</p>
+                    <?php else: ?>
+                        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px;">
+                            <?php 
+                            $rank = 1;
+                            foreach ($top_inquiries_list as $prod_title => $inq_count): 
+                            ?>
+                                <div style="display: flex; align-items: center; justify-content: space-between; background: var(--color-gray-dark); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--color-panel-border);">
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <span style="width: 26px; height: 26px; border-radius: 50%; background: var(--color-accent); color: var(--color-white); font-weight: 800; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; font-family: var(--font-numeric);">
+                                            #<?php echo $rank++; ?>
+                                        </span>
+                                        <strong style="color: var(--color-primary); font-size: 0.9rem;"><?php echo htmlspecialchars($prod_title); ?></strong>
+                                    </div>
+                                    <span class="badge pending" style="background: rgba(82, 122, 99, 0.15); color: var(--color-primary); border-color: var(--color-panel-border);">
+                                        <?php echo $inq_count; ?> <?php echo $inq_count === 1 ? 'inquiry' : 'inquiries'; ?>
+                                    </span>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Price Tiers & Valuation Card -->
+                <div class="chart-box">
+                    <h3 class="chart-title"><i class="fa-solid fa-coins" style="color: var(--color-accent); margin-right: 8px;"></i> Inventory Price Tiers</h3>
+                    <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--color-gray-dark); border-radius: 8px;">
+                            <span style="font-size: 0.85rem; color: var(--color-gray); font-weight: 600;">Entry Level (&lt; ₹5,000)</span>
+                            <strong style="font-size: 1.1rem; color: var(--color-primary); font-family: var(--font-numeric);"><?php echo $tier_entry; ?> items</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--color-gray-dark); border-radius: 8px;">
+                            <span style="font-size: 0.85rem; color: var(--color-gray); font-weight: 600;">Mid Range (₹5,000 – ₹20,000)</span>
+                            <strong style="font-size: 1.1rem; color: var(--color-accent); font-family: var(--font-numeric);"><?php echo $tier_mid; ?> items</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--color-gray-dark); border-radius: 8px;">
+                            <span style="font-size: 0.85rem; color: var(--color-gray); font-weight: 600;">Luxury &amp; Bespoke (&gt; ₹20,000)</span>
+                            <strong style="font-size: 1.1rem; color: var(--color-success); font-family: var(--font-numeric);"><?php echo $tier_luxury; ?> items</strong>
+                        </div>
+
+                        <?php if ($highest_price_item): ?>
+                            <div style="margin-top: 5px; padding: 10px 14px; background: rgba(82, 122, 99, 0.06); border-radius: 8px; border: 1px solid var(--color-panel-border);">
+                                <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--color-gray); letter-spacing: 0.05em; font-weight: 700; display: block; margin-bottom: 2px;">Highest Valued Creation</span>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <strong style="font-size: 0.85rem; color: var(--color-primary);"><?php echo htmlspecialchars($highest_price_item['title']); ?></strong>
+                                    <span style="font-weight: 800; color: var(--color-accent); font-family: var(--font-numeric); font-size: 0.95rem;"><?php echo format_inr_admin($highest_price_item['price']); ?></span>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
 
@@ -1583,15 +2024,544 @@ if (!function_exists('format_inr_admin')) {
             </div>
         </div>
 
-        <!-- TAB C: SETTINGS TAB (Password Reset & WhatsApp configuration) -->
+        <!-- TAB C: SETTINGS TAB -->
         <div class="tab-container <?php echo $current_tab === 'settings' ? 'active' : ''; ?>">
-            <div class="settings-container" style="display: flex; flex-direction: column; gap: 30px;">
-                <!-- WhatsApp settings card -->
-                <div class="settings-card">
-                    <h3 class="editor-card-title"><i class="fa-brands fa-whatsapp" style="margin-right: 8px; color: #25D366;"></i> WhatsApp Configuration</h3>
-                    
+            
+            <?php if ($current_section !== 'overview'): ?>
+                <div style="margin-bottom: 25px;">
+                    <a href="index.php?tab=settings" class="action-btn" style="display: inline-flex; align-items: center; gap: 8px; background: #ffffff; color: var(--color-primary); border: 1px solid var(--color-panel-border); text-decoration: none; padding: 10px 18px; border-radius: 10px; font-weight: 600; font-size: 0.88rem; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+                        <i class="fa-solid fa-arrow-left"></i> Back to Settings Overview
+                    </a>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($current_section === 'overview'): ?>
+                <!-- Settings Overview Grid Cards (Matching Photo 2 Enteangadi Style) -->
+                <div class="settings-overview-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 20px; width: 100%; margin-bottom: 35px; box-sizing: border-box;">
+                    <!-- 1. Sync Live Prices -->
+                    <a href="sync-prices.php?action=sync_all" class="settings-card-item" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #ffffff; border: 1px solid rgba(10, 46, 36, 0.09); border-radius: 20px; padding: 24px 16px; text-decoration: none; color: inherit; box-shadow: 0 4px 15px rgba(0,0,0,0.02); min-height: 165px; box-sizing: border-box;" title="Re-scrape source URLs and update product prices automatically">
+                        <div class="settings-icon-wrapper" style="width: 54px; height: 54px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin: 0 auto 16px auto; flex-shrink: 0; background: rgba(155, 89, 182, 0.12); color: #9b59b6;">
+                            <i class="fa-solid fa-rotate"></i>
+                        </div>
+                        <div class="settings-card-title" style="font-size: 0.98rem; font-weight: 700; color: #0a2e24; margin: 0 0 6px 0; line-height: 1.3;">Sync Live Prices</div>
+                        <p class="settings-card-desc" style="font-size: 0.78rem; color: #64748b; line-height: 1.4; margin: 0; font-weight: 400;">Re-scrape source URLs and update product prices automatically.</p>
+                    </a>
+
+                    <!-- 2. Backup Database -->
+                    <a href="export-db.php" class="settings-card-item" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #ffffff; border: 1px solid rgba(10, 46, 36, 0.09); border-radius: 20px; padding: 24px 16px; text-decoration: none; color: inherit; box-shadow: 0 4px 15px rgba(0,0,0,0.02); min-height: 165px; box-sizing: border-box;" title="Download current database backup SQL file">
+                        <div class="settings-icon-wrapper" style="width: 54px; height: 54px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin: 0 auto 16px auto; flex-shrink: 0; background: rgba(46, 204, 113, 0.12); color: #2ecc71;">
+                            <i class="fa-solid fa-download"></i>
+                        </div>
+                        <div class="settings-card-title" style="font-size: 0.98rem; font-weight: 700; color: #0a2e24; margin: 0 0 6px 0; line-height: 1.3;">Backup Database</div>
+                        <p class="settings-card-desc" style="font-size: 0.78rem; color: #64748b; line-height: 1.4; margin: 0; font-weight: 400;">Download full SQL database backup file for catalog & system state.</p>
+                    </a>
+
+                    <!-- 3. Import Database -->
+                    <div onclick="document.getElementById('importDbModal').style.display='flex'" class="settings-card-item" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #ffffff; border: 1px solid rgba(10, 46, 36, 0.09); border-radius: 20px; padding: 24px 16px; text-decoration: none; color: inherit; box-shadow: 0 4px 15px rgba(0,0,0,0.02); min-height: 165px; box-sizing: border-box; cursor: pointer;" title="Upload and restore SQL database backup">
+                        <div class="settings-icon-wrapper" style="width: 54px; height: 54px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin: 0 auto 16px auto; flex-shrink: 0; background: rgba(52, 152, 219, 0.12); color: #3498db;">
+                            <i class="fa-solid fa-file-import"></i>
+                        </div>
+                        <div class="settings-card-title" style="font-size: 0.98rem; font-weight: 700; color: #0a2e24; margin: 0 0 6px 0; line-height: 1.3;">Import Database</div>
+                        <p class="settings-card-desc" style="font-size: 0.78rem; color: #64748b; line-height: 1.4; margin: 0; font-weight: 400;">Upload and restore database tables from a saved .SQL backup file.</p>
+                    </div>
+
+                    <!-- 4. Universal Importer -->
+                    <a href="import-universal.php" class="settings-card-item" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #ffffff; border: 1px solid rgba(10, 46, 36, 0.09); border-radius: 20px; padding: 24px 16px; text-decoration: none; color: inherit; box-shadow: 0 4px 15px rgba(0,0,0,0.02); min-height: 165px; box-sizing: border-box;" title="Universal Product Importer from web links">
+                        <div class="settings-icon-wrapper" style="width: 54px; height: 54px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin: 0 auto 16px auto; flex-shrink: 0; background: rgba(99, 102, 241, 0.12); color: #6366f1;">
+                            <i class="fa-solid fa-cloud-arrow-down"></i>
+                        </div>
+                        <div class="settings-card-title" style="font-size: 0.98rem; font-weight: 700; color: #0a2e24; margin: 0 0 6px 0; line-height: 1.3;">Universal Importer</div>
+                        <p class="settings-card-desc" style="font-size: 0.78rem; color: #64748b; line-height: 1.4; margin: 0; font-weight: 400;">Scrape, parse and import luxury furniture directly from external web links.</p>
+                    </a>
+
+                    <!-- 5. Collections & Brands -->
+                    <a href="index.php?tab=settings&section=collections" class="settings-card-item" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #ffffff; border: 1px solid rgba(10, 46, 36, 0.09); border-radius: 20px; padding: 24px 16px; text-decoration: none; color: inherit; box-shadow: 0 4px 15px rgba(0,0,0,0.02); min-height: 165px; box-sizing: border-box;" title="Manage Categories, Materials, Colors and Brand Logos">
+                        <div class="settings-icon-wrapper" style="width: 54px; height: 54px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin: 0 auto 16px auto; flex-shrink: 0; background: rgba(245, 158, 11, 0.12); color: #f59e0b;">
+                            <i class="fa-solid fa-shapes"></i>
+                        </div>
+                        <div class="settings-card-title" style="font-size: 0.98rem; font-weight: 700; color: #0a2e24; margin: 0 0 6px 0; line-height: 1.3;">Collections & Brands</div>
+                        <p class="settings-card-desc" style="font-size: 0.78rem; color: #64748b; line-height: 1.4; margin: 0; font-weight: 400;">Manage furniture categories, material types, color palettes and partner logos.</p>
+                    </a>
+
+                    <!-- 6. Announcement Poster -->
+                    <a href="index.php?tab=settings&section=announcement" class="settings-card-item" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #ffffff; border: 1px solid rgba(10, 46, 36, 0.09); border-radius: 20px; padding: 24px 16px; text-decoration: none; color: inherit; box-shadow: 0 4px 15px rgba(0,0,0,0.02); min-height: 165px; box-sizing: border-box;" title="Manage homepage popup announcements">
+                        <div class="settings-icon-wrapper" style="width: 54px; height: 54px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin: 0 auto 16px auto; flex-shrink: 0; background: rgba(234, 88, 12, 0.12); color: #ea580c;">
+                            <i class="fa-solid fa-bullhorn"></i>
+                        </div>
+                        <div class="settings-card-title" style="font-size: 0.98rem; font-weight: 700; color: #0a2e24; margin: 0 0 6px 0; line-height: 1.3;">Announcement Poster</div>
+                        <p class="settings-card-desc" style="font-size: 0.78rem; color: #64748b; line-height: 1.4; margin: 0; font-weight: 400;">Post pop-up announcement banners displaying automatically on store load.</p>
+                    </a>
+
+                    <!-- 7. System Documentation -->
+                    <div onclick="document.getElementById('docsModal').style.display='flex'" class="settings-card-item" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #ffffff; border: 1px solid rgba(10, 46, 36, 0.09); border-radius: 20px; padding: 24px 16px; text-decoration: none; color: inherit; box-shadow: 0 4px 15px rgba(0,0,0,0.02); min-height: 165px; box-sizing: border-box; cursor: pointer;" title="Generate PDF developer specs or user guide">
+                        <div class="settings-icon-wrapper" style="width: 54px; height: 54px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin: 0 auto 16px auto; flex-shrink: 0; background: rgba(236, 72, 153, 0.12); color: #ec4899;">
+                            <i class="fa-solid fa-file-pdf"></i>
+                        </div>
+                        <div class="settings-card-title" style="font-size: 0.98rem; font-weight: 700; color: #0a2e24; margin: 0 0 6px 0; line-height: 1.3;">System Documentation</div>
+                        <p class="settings-card-desc" style="font-size: 0.78rem; color: #64748b; line-height: 1.4; margin: 0; font-weight: 400;">Generate PDF developer specs, data flow diagrams & admin user guide.</p>
+                    </div>
+
+                    <!-- 8. Admin Security & Password -->
+                    <a href="index.php?tab=settings&section=security" class="settings-card-item" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #ffffff; border: 1px solid rgba(10, 46, 36, 0.09); border-radius: 20px; padding: 24px 16px; text-decoration: none; color: inherit; box-shadow: 0 4px 15px rgba(0,0,0,0.02); min-height: 165px; box-sizing: border-box;" title="Change Admin Password and login credentials">
+                        <div class="settings-icon-wrapper" style="width: 54px; height: 54px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin: 0 auto 16px auto; flex-shrink: 0; background: rgba(20, 184, 166, 0.12); color: #14b8a6;">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <div class="settings-card-title" style="font-size: 0.98rem; font-weight: 700; color: #0a2e24; margin: 0 0 6px 0; line-height: 1.3;">Security & Password</div>
+                        <p class="settings-card-desc" style="font-size: 0.78rem; color: #64748b; line-height: 1.4; margin: 0; font-weight: 400;">Update administrator account credentials, security tokens & password.</p>
+                    </a>
+
+                    <!-- 9. WhatsApp Configuration -->
+                    <a href="index.php?tab=settings&section=whatsapp" class="settings-card-item" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #ffffff; border: 1px solid rgba(10, 46, 36, 0.09); border-radius: 20px; padding: 24px 16px; text-decoration: none; color: inherit; box-shadow: 0 4px 15px rgba(0,0,0,0.02); min-height: 165px; box-sizing: border-box;" title="Configure admin WhatsApp contact number">
+                        <div class="settings-icon-wrapper" style="width: 54px; height: 54px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin: 0 auto 16px auto; flex-shrink: 0; background: rgba(37, 211, 102, 0.12); color: #25D366;">
+                            <i class="fa-brands fa-whatsapp"></i>
+                        </div>
+                        <div class="settings-card-title" style="font-size: 0.98rem; font-weight: 700; color: #0a2e24; margin: 0 0 6px 0; line-height: 1.3;">WhatsApp Config</div>
+                        <p class="settings-card-desc" style="font-size: 0.78rem; color: #64748b; line-height: 1.4; margin: 0; font-weight: 400;">Set up admin phone number for direct client consultation WhatsApp responses.</p>
+                    </a>
+
+                    <!-- 10. Static Content & CMS -->
+                    <a href="index.php?tab=settings&section=site_content" class="settings-card-item" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #ffffff; border: 1px solid rgba(10, 46, 36, 0.09); border-radius: 20px; padding: 24px 16px; text-decoration: none; color: inherit; box-shadow: 0 4px 15px rgba(0,0,0,0.02); min-height: 165px; box-sizing: border-box;" title="Manage and edit static site copy, hero video/images, about story, contact info & footer text">
+                        <div class="settings-icon-wrapper" style="width: 54px; height: 54px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin: 0 auto 16px auto; flex-shrink: 0; background: rgba(217, 119, 6, 0.12); color: #d97706;">
+                            <i class="fa-solid fa-pen-ruler"></i>
+                        </div>
+                        <div class="settings-card-title" style="font-size: 0.98rem; font-weight: 700; color: #0a2e24; margin: 0 0 6px 0; line-height: 1.3;">Static Content & CMS</div>
+                        <p class="settings-card-desc" style="font-size: 0.78rem; color: #64748b; line-height: 1.4; margin: 0; font-weight: 400;">Manage and edit all static site copy, hero media, about story, contact details & footer text.</p>
+                    </a>
+                </div>
+
+            <?php elseif ($current_section === 'site_content'): ?>
+                <?php $sc = get_site_content(); ?>
+                <div class="editor-card" style="max-width: 1000px; margin: 0 auto; background: #ffffff; padding: 35px; border-radius: 20px; border: 1px solid rgba(10, 46, 36, 0.09); box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--color-panel-border); padding-bottom: 15px;">
+                        <h3 class="editor-card-title" style="font-family: var(--font-title); font-size: 1.4rem; color: var(--color-primary); margin: 0; display: flex; align-items: center; gap: 10px;">
+                            <i class="fa-solid fa-pen-ruler" style="color: #d97706;"></i> Dynamic Site Content & CMS Manager
+                        </h3>
+                        <span style="font-size: 0.78rem; background: rgba(217, 119, 6, 0.1); color: #d97706; padding: 4px 12px; border-radius: 20px; font-weight: 700;">Live Customizer</span>
+                    </div>
+
+                    <form action="index.php?tab=settings&section=site_content" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="form_action" value="update_site_content">
+
+                        <!-- Sub-nav tabs for CMS sections -->
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 30px; border-bottom: 1px solid var(--color-panel-border); padding-bottom: 12px;" id="cms-tab-nav">
+                            <button type="button" class="cms-tab-btn active" data-tab="tab-hero" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #d97706; background: #d97706; color: #ffffff; font-weight: 700; font-size: 0.82rem; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-play"></i> Hero Banner</button>
+                            <button type="button" class="cms-tab-btn" data-tab="tab-about-home" style="padding: 10px 18px; border-radius: 8px; border: 1px solid var(--color-panel-border); background: #ffffff; color: var(--color-primary); font-weight: 600; font-size: 0.82rem; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-house"></i> Home About</button>
+                            <button type="button" class="cms-tab-btn" data-tab="tab-about-page" style="padding: 10px 18px; border-radius: 8px; border: 1px solid var(--color-panel-border); background: #ffffff; color: var(--color-primary); font-weight: 600; font-size: 0.82rem; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-book-open"></i> About Us Page</button>
+                            <button type="button" class="cms-tab-btn" data-tab="tab-contact" style="padding: 10px 18px; border-radius: 8px; border: 1px solid var(--color-panel-border); background: #ffffff; color: var(--color-primary); font-weight: 600; font-size: 0.82rem; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-headset"></i> Contact & Info</button>
+                            <button type="button" class="cms-tab-btn" data-tab="tab-footer" style="padding: 10px 18px; border-radius: 8px; border: 1px solid var(--color-panel-border); background: #ffffff; color: var(--color-primary); font-weight: 600; font-size: 0.82rem; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-square-parking"></i> Footer & Meta</button>
+                        </div>
+
+                        <!-- Tab 1: Hero Banner -->
+                        <div class="cms-tab-pane" id="tab-hero" style="display: block;">
+                            <h4 style="font-size: 1.1rem; color: var(--color-primary); margin-bottom: 20px; font-weight: 700;"><i class="fa-solid fa-film" style="color: #d97706; margin-right: 8px;"></i> Homepage Hero Banner Settings</h4>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">Hero Collection Tag</label>
+                                    <input type="text" name="content[hero_tag]" class="input-control" value="<?php echo htmlspecialchars($sc['hero_tag'] ?? 'Collection 2026'); ?>" required>
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">Hero Title Line 1</label>
+                                    <input type="text" name="content[hero_title_1]" class="input-control" value="<?php echo htmlspecialchars($sc['hero_title_1'] ?? 'Silent Luxury'); ?>" required>
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">Hero Title Line 2</label>
+                                    <input type="text" name="content[hero_title_2]" class="input-control" value="<?php echo htmlspecialchars($sc['hero_title_2'] ?? 'For Modern Spaces'); ?>" required>
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">Hero Primary Button Text & Link</label>
+                                    <div style="display: flex; gap: 10px;">
+                                        <input type="text" name="content[hero_btn_primary_text]" class="input-control" placeholder="Button Label" value="<?php echo htmlspecialchars($sc['hero_btn_primary_text'] ?? 'Explore Catalog'); ?>">
+                                        <input type="text" name="content[hero_btn_primary_link]" class="input-control" placeholder="shop.php" value="<?php echo htmlspecialchars($sc['hero_btn_primary_link'] ?? 'shop.php'); ?>">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label style="font-weight: 700;">Hero Main Description</label>
+                                <textarea name="content[hero_desc]" class="input-control" rows="3" required><?php echo htmlspecialchars($sc['hero_desc'] ?? ''); ?></textarea>
+                            </div>
+
+                            <div style="margin-top: 20px; padding: 20px; background: #fafafa; border-radius: 12px; border: 1px solid var(--color-panel-border);">
+                                <label style="font-weight: 700; display: block; margin-bottom: 8px;">Hero Background Media (Video MP4 or Image JPG/PNG)</label>
+                                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                                    <input type="text" name="content[hero_media_path]" class="input-control" style="flex: 1; min-width: 250px;" value="<?php echo htmlspecialchars($sc['hero_media_path'] ?? 'assets/images/HERO.mp4'); ?>" placeholder="assets/images/HERO.mp4">
+                                    <input type="file" name="hero_media_file" accept="video/mp4,image/*" class="input-control" style="width: auto;">
+                                </div>
+                                <p style="font-size: 0.75rem; color: var(--color-gray); margin-top: 6px;">Upload a new background video/photo or specify a relative file path.</p>
+                            </div>
+                        </div>
+
+                        <!-- Tab 2: Homepage About -->
+                        <div class="cms-tab-pane" id="tab-about-home" style="display: none;">
+                            <h4 style="font-size: 1.1rem; color: var(--color-primary); margin-bottom: 20px; font-weight: 700;"><i class="fa-solid fa-compass" style="color: #d97706; margin-right: 8px;"></i> Homepage About / Story Section</h4>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">Section Badge Tag</label>
+                                    <input type="text" name="content[about_home_tag]" class="input-control" value="<?php echo htmlspecialchars($sc['about_home_tag'] ?? 'Our Core Philosophy'); ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">Section Main Heading</label>
+                                    <input type="text" name="content[about_home_title]" class="input-control" value="<?php echo htmlspecialchars($sc['about_home_title'] ?? 'Architecting Silent Luxury'); ?>">
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label style="font-weight: 700;">Paragraph 1 (Primary Highlight)</label>
+                                <textarea name="content[about_home_p1]" class="input-control" rows="3"><?php echo htmlspecialchars($sc['about_home_p1'] ?? ''); ?></textarea>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label style="font-weight: 700;">Paragraph 2 (Secondary Craftsmanship Story)</label>
+                                <textarea name="content[about_home_p2]" class="input-control" rows="3"><?php echo htmlspecialchars($sc['about_home_p2'] ?? ''); ?></textarea>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; background: #fafafa; padding: 20px; border-radius: 12px; border: 1px solid var(--color-panel-border);">
+                                <div>
+                                    <label style="font-weight: 700; font-size: 0.8rem;">Bento Stat 1 Value & Label</label>
+                                    <input type="text" name="content[about_home_bento1_val]" class="input-control" style="margin-bottom: 6px;" value="<?php echo htmlspecialchars($sc['about_home_bento1_val'] ?? '15+'); ?>">
+                                    <input type="text" name="content[about_home_bento1_label]" class="input-control" value="<?php echo htmlspecialchars($sc['about_home_bento1_label'] ?? 'Years Legacy'); ?>">
+                                </div>
+                                <div>
+                                    <label style="font-weight: 700; font-size: 0.8rem;">Bento Stat 2 Value & Label</label>
+                                    <input type="text" name="content[about_home_bento2_val]" class="input-control" style="margin-bottom: 6px;" value="<?php echo htmlspecialchars($sc['about_home_bento2_val'] ?? '100%'); ?>">
+                                    <input type="text" name="content[about_home_bento2_label]" class="input-control" value="<?php echo htmlspecialchars($sc['about_home_bento2_label'] ?? 'Bespoke Design'); ?>">
+                                </div>
+                                <div>
+                                    <label style="font-weight: 700; font-size: 0.8rem;">Bento Stat 3 Value & Label</label>
+                                    <input type="text" name="content[about_home_bento3_val]" class="input-control" style="margin-bottom: 6px;" value="<?php echo htmlspecialchars($sc['about_home_bento3_val'] ?? '8,000+'); ?>">
+                                    <input type="text" name="content[about_home_bento3_label]" class="input-control" value="<?php echo htmlspecialchars($sc['about_home_bento3_label'] ?? 'Elite Residences'); ?>">
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 20px; padding: 20px; background: #fafafa; border-radius: 12px; border: 1px solid var(--color-panel-border);">
+                                <label style="font-weight: 700; display: block; margin-bottom: 8px;">About Section Visual Card Image & Badge</label>
+                                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 12px;">
+                                    <input type="text" name="content[about_home_image]" class="input-control" style="flex: 1; min-width: 250px;" value="<?php echo htmlspecialchars($sc['about_home_image'] ?? 'assets/images/sofa_1.png'); ?>">
+                                    <input type="file" name="about_home_image_file" accept="image/*" class="input-control" style="width: auto;">
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 12px;">
+                                    <input type="text" name="content[about_home_stat_val]" class="input-control" placeholder="Overlay Stat Val (e.g. 15+ Years)" value="<?php echo htmlspecialchars($sc['about_home_stat_val'] ?? '15+ Years'); ?>">
+                                    <input type="text" name="content[about_home_stat_label]" class="input-control" placeholder="Overlay Stat Label" value="<?php echo htmlspecialchars($sc['about_home_stat_label'] ?? 'Master Italian Joinery'); ?>">
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div>
+                                        <label style="font-weight: 700; font-size: 0.8rem;">Story Button Text</label>
+                                        <input type="text" name="content[about_home_btn_text]" class="input-control" value="<?php echo htmlspecialchars($sc['about_home_btn_text'] ?? 'Read Our Full Story'); ?>">
+                                    </div>
+                                    <div>
+                                        <label style="font-weight: 700; font-size: 0.8rem;">Story Button Link</label>
+                                        <input type="text" name="content[about_home_btn_link]" class="input-control" value="<?php echo htmlspecialchars($sc['about_home_btn_link'] ?? 'about.php'); ?>">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 3: Dedicated About Page -->
+                        <div class="cms-tab-pane" id="tab-about-page" style="display: none;">
+                            <h4 style="font-size: 1.1rem; color: var(--color-primary); margin-bottom: 20px; font-weight: 700;"><i class="fa-solid fa-award" style="color: #d97706; margin-right: 8px;"></i> Dedicated About Us Page Content</h4>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">About Page Hero Title</label>
+                                    <input type="text" name="content[about_page_hero_title]" class="input-control" value="<?php echo htmlspecialchars($sc['about_page_hero_title'] ?? 'Crafting Timeless Elegance'); ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">About Page Hero Subtitle</label>
+                                    <input type="text" name="content[about_page_hero_subtitle]" class="input-control" value="<?php echo htmlspecialchars($sc['about_page_hero_subtitle'] ?? ''); ?>">
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 20px; padding: 20px; background: #fafafa; border-radius: 12px; border: 1px solid var(--color-panel-border);">
+                                <h5 style="font-weight: 700; margin-bottom: 12px; color: var(--color-primary);">Heritage & Craftsmanship Block</h5>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 12px;">
+                                    <input type="text" name="content[about_page_heritage_tag]" class="input-control" placeholder="Tag" value="<?php echo htmlspecialchars($sc['about_page_heritage_tag'] ?? 'Heritage & Craftsmanship'); ?>">
+                                    <input type="text" name="content[about_page_heritage_title]" class="input-control" placeholder="Heading" value="<?php echo htmlspecialchars($sc['about_page_heritage_title'] ?? 'Born in Milan, Crafted for the World'); ?>">
+                                </div>
+                                <textarea name="content[about_page_heritage_p1]" class="input-control" rows="2" style="margin-bottom: 10px;" placeholder="Paragraph 1"><?php echo htmlspecialchars($sc['about_page_heritage_p1'] ?? ''); ?></textarea>
+                                <textarea name="content[about_page_heritage_p2]" class="input-control" rows="2" style="margin-bottom: 12px;" placeholder="Paragraph 2"><?php echo htmlspecialchars($sc['about_page_heritage_p2'] ?? ''); ?></textarea>
+                                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                                    <input type="text" name="content[about_page_heritage_img]" class="input-control" style="flex: 1; min-width: 250px;" value="<?php echo htmlspecialchars($sc['about_page_heritage_img'] ?? 'assets/images/about-craftsman.png'); ?>">
+                                    <input type="file" name="about_page_heritage_img_file" accept="image/*" class="input-control" style="width: auto;">
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 20px; padding: 20px; background: #fafafa; border-radius: 12px; border: 1px solid var(--color-panel-border);">
+                                <h5 style="font-weight: 700; margin-bottom: 12px; color: var(--color-primary);">Showroom Sanctuary Block</h5>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 12px;">
+                                    <input type="text" name="content[about_page_showroom_tag]" class="input-control" placeholder="Tag" value="<?php echo htmlspecialchars($sc['about_page_showroom_tag'] ?? 'Flagship Sanctuary'); ?>">
+                                    <input type="text" name="content[about_page_showroom_title]" class="input-control" placeholder="Heading" value="<?php echo htmlspecialchars($sc['about_page_showroom_title'] ?? 'Experience OXO in Person'); ?>">
+                                </div>
+                                <textarea name="content[about_page_showroom_p1]" class="input-control" rows="2" style="margin-bottom: 10px;" placeholder="Paragraph 1"><?php echo htmlspecialchars($sc['about_page_showroom_p1'] ?? ''); ?></textarea>
+                                <textarea name="content[about_page_showroom_p2]" class="input-control" rows="2" style="margin-bottom: 12px;" placeholder="Paragraph 2"><?php echo htmlspecialchars($sc['about_page_showroom_p2'] ?? ''); ?></textarea>
+                                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                                    <input type="text" name="content[about_page_showroom_img]" class="input-control" style="flex: 1; min-width: 250px;" value="<?php echo htmlspecialchars($sc['about_page_showroom_img'] ?? 'assets/images/flagship-facade.jpg'); ?>">
+                                    <input type="file" name="about_page_showroom_img_file" accept="image/*" class="input-control" style="width: auto;">
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 25px; padding: 20px; background: #fafafa; border-radius: 12px; border: 1px solid var(--color-panel-border);">
+                                <h5 style="font-weight: 700; margin-bottom: 6px; color: var(--color-primary); display: flex; align-items: center; gap: 8px;">
+                                    <i class="fa-solid fa-store" style="color: #d97706;"></i> Shop Gallery Headers
+                                </h5>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                                    <div>
+                                        <label style="font-weight: 700; font-size: 0.8rem;">Gallery Section Tag</label>
+                                        <input type="text" name="content[about_page_shop_gallery_tag]" class="input-control" value="<?php echo htmlspecialchars($sc['about_page_shop_gallery_tag'] ?? 'Atmosphere & Space'); ?>">
+                                    </div>
+                                    <div>
+                                        <label style="font-weight: 700; font-size: 0.8rem;">Gallery Section Title</label>
+                                        <input type="text" name="content[about_page_shop_gallery_title]" class="input-control" value="<?php echo htmlspecialchars($sc['about_page_shop_gallery_title'] ?? 'Inside Our Flagship Store'); ?>">
+                                    </div>
+                                    <div>
+                                        <label style="font-weight: 700; font-size: 0.8rem;">Gallery Subtitle</label>
+                                        <input type="text" name="content[about_page_shop_gallery_sub]" class="input-control" value="<?php echo htmlspecialchars($sc['about_page_shop_gallery_sub'] ?? 'Experience our physical sanctuary, bespoke displays, and spatial architecture.'); ?>">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Dynamic Shop Images List & Upload Panel -->
+                            <div style="margin-top: 25px; border-top: 1px solid var(--color-panel-border); padding-top: 20px;">
+                                <h5 style="font-weight: 700; margin-bottom: 15px; color: var(--color-primary); display: flex; align-items: center; gap: 8px;">
+                                    <i class="fa-solid fa-images" style="color: #d97706;"></i> Dynamic Shop Showcase Photos
+                                </h5>
+
+                                <?php
+                                $all_shop_photos = get_shop_images(false);
+                                ?>
+
+                                <!-- Grid layout: Upload New Photo (Left) + List of Photos (Right) -->
+                                <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 25px;">
+                                    
+                                    <!-- Add Shop Image Form -->
+                                    <div style="background: #ffffff; border: 1px solid var(--color-panel-border); border-radius: 12px; padding: 20px;">
+                                        <h6 style="font-weight: 700; color: var(--color-primary); margin-bottom: 12px; font-size: 0.95rem;">
+                                            <i class="fa-solid fa-plus-circle" style="color: var(--color-accent);"></i> Add New Shop Photo
+                                        </h6>
+
+                                        <div class="form-group" style="margin-bottom: 12px;">
+                                            <label style="font-size: 0.78rem; font-weight: 700;">Photo Title / Slot Tag</label>
+                                            <input type="text" id="add_shop_title" name="title" class="input-control" placeholder="e.g. Flagship Storefront Facade" form="add_shop_photo_form" required>
+                                        </div>
+
+                                        <div class="form-group" style="margin-bottom: 12px;">
+                                            <label style="font-size: 0.78rem; font-weight: 700;">Caption / Subtitle</label>
+                                            <textarea id="add_shop_caption" name="caption" class="input-control" rows="2" placeholder="e.g. Corrugated dark cladding with signature orange framing." form="add_shop_photo_form"></textarea>
+                                        </div>
+
+                                        <div class="form-group" style="margin-bottom: 12px;">
+                                            <label style="font-size: 0.78rem; font-weight: 700;">Upload Image File</label>
+                                            <input type="file" id="add_shop_file" name="image_file" accept="image/*" class="input-control" style="font-size: 0.78rem;" form="add_shop_photo_form">
+                                        </div>
+
+                                        <div class="form-group" style="margin-bottom: 12px;">
+                                            <label style="font-size: 0.78rem; font-weight: 700;">Or Relative Image Path</label>
+                                            <input type="text" id="add_shop_url" name="image_url" class="input-control" placeholder="assets/images/flagship-facade.jpg" form="add_shop_photo_form">
+                                        </div>
+
+                                        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                                            <div class="form-group" style="flex: 1;">
+                                                <label style="font-size: 0.78rem; font-weight: 700;">Sort Order</label>
+                                                <input type="number" name="sort_order" class="input-control" value="0" form="add_shop_photo_form">
+                                            </div>
+                                            <div class="form-group" style="flex: 1; display: flex; align-items: center; gap: 8px; margin-top: 20px;">
+                                                <input type="checkbox" id="add_shop_active" name="is_active" value="1" checked form="add_shop_photo_form" style="width: 18px; height: 18px; accent-color: var(--color-primary);">
+                                                <label for="add_shop_active" style="font-size: 0.78rem; font-weight: 700; cursor: pointer;">Set Active</label>
+                                            </div>
+                                        </div>
+
+                                        <button type="submit" form="add_shop_photo_form" class="action-btn" style="width: 100%; justify-content: center; padding: 10px; font-size: 0.88rem;">
+                                            <i class="fa-solid fa-cloud-arrow-up"></i> Upload & Add Shop Photo
+                                        </button>
+                                    </div>
+
+                                    <!-- Existing Shop Photos List -->
+                                    <div style="display: flex; flex-direction: column; gap: 15px; max-height: 520px; overflow-y: auto; padding-right: 5px;">
+                                        <?php if (empty($all_shop_photos)): ?>
+                                            <div style="text-align: center; padding: 40px 20px; background: #ffffff; border-radius: 12px; border: 1px dashed var(--color-panel-border);">
+                                                <i class="fa-solid fa-store" style="font-size: 2rem; color: var(--color-gray); margin-bottom: 10px; display: block;"></i>
+                                                <p style="color: var(--color-gray); font-size: 0.88rem; margin: 0;">No shop photos added yet.</p>
+                                            </div>
+                                        <?php else: ?>
+                                            <?php foreach ($all_shop_photos as $sp): ?>
+                                                <div style="background: #ffffff; border: 1px solid <?php echo $sp['is_active'] ? 'var(--color-panel-border)' : 'rgba(231, 76, 60, 0.3)'; ?>; border-radius: 10px; padding: 12px; display: flex; gap: 15px; align-items: center;">
+                                                    <div style="width: 85px; height: 75px; border-radius: 8px; overflow: hidden; background: #000; flex-shrink: 0;">
+                                                        <img src="../<?php echo htmlspecialchars($sp['image_path']); ?>" alt="Photo" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.style.display='none';">
+                                                    </div>
+                                                    <div style="flex: 1; min-width: 0;">
+                                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                                            <h6 style="font-family: var(--font-title); font-size: 0.9rem; color: var(--color-primary); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo htmlspecialchars($sp['title']); ?></h6>
+                                                            <span style="padding: 2px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; <?php echo $sp['is_active'] ? 'background: rgba(46, 204, 113, 0.15); color: #27ae60;' : 'background: rgba(231, 76, 60, 0.15); color: #e74c3c;'; ?>">
+                                                                <?php echo $sp['is_active'] ? 'Active' : 'Inactive'; ?>
+                                                            </span>
+                                                        </div>
+                                                        <p style="font-size: 0.78rem; color: var(--color-gray); margin: 0 0 6px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo htmlspecialchars($sp['caption']); ?></p>
+
+                                                        <div style="display: flex; gap: 8px; align-items: center;">
+                                                            <!-- Toggle Visibility Form -->
+                                                            <form action="index.php?tab=settings&section=cms" method="POST" style="display: inline;">
+                                                                <input type="hidden" name="form_action" value="toggle_shop_image">
+                                                                <input type="hidden" name="shop_image_id" value="<?php echo $sp['id']; ?>">
+                                                                <input type="hidden" name="new_status" value="<?php echo $sp['is_active'] ? 0 : 1; ?>">
+                                                                <button type="submit" class="action-btn" style="padding: 4px 10px; font-size: 0.72rem; <?php echo $sp['is_active'] ? 'background: rgba(230, 126, 34, 0.12); color: #d35400; border: 1px solid #e67e22;' : 'background: rgba(46, 204, 113, 0.12); color: #27ae60; border: 1px solid #2ecc71;'; ?>">
+                                                                    <i class="fa-solid <?php echo $sp['is_active'] ? 'fa-eye-slash' : 'fa-eye'; ?>"></i> <?php echo $sp['is_active'] ? 'Hide' : 'Show'; ?>
+                                                                </button>
+                                                            </form>
+
+                                                            <!-- Delete Form -->
+                                                            <form action="index.php?tab=settings&section=cms" method="POST" style="display: inline;" onsubmit="return confirm('Delete this shop photo from gallery?');">
+                                                                <input type="hidden" name="form_action" value="delete_shop_image">
+                                                                <input type="hidden" name="shop_image_id" value="<?php echo $sp['id']; ?>">
+                                                                <button type="submit" class="action-btn" style="padding: 4px 10px; font-size: 0.72rem; background: rgba(231, 76, 60, 0.12); color: #e74c3c; border: 1px solid #e74c3c;">
+                                                                    <i class="fa-solid fa-trash-can"></i> Delete
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form element for Add Shop Photo -->
+                        <form id="add_shop_photo_form" action="index.php?tab=settings&section=cms" method="POST" enctype="multipart/form-data" style="display: none;">
+                            <input type="hidden" name="form_action" value="add_shop_image">
+                        </form>
+
+                        <!-- Tab 4: Contact & Concierge -->
+                        <div class="cms-tab-pane" id="tab-contact" style="display: none;">
+                            <h4 style="font-size: 1.1rem; color: var(--color-primary); margin-bottom: 20px; font-weight: 700;"><i class="fa-solid fa-headset" style="color: #d97706; margin-right: 8px;"></i> Bespoke Concierge & Contact Details</h4>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">Contact Badge Tag</label>
+                                    <input type="text" name="content[contact_tag]" class="input-control" value="<?php echo htmlspecialchars($sc['contact_tag'] ?? 'Bespoke Concierge'); ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">Contact Heading Title</label>
+                                    <input type="text" name="content[contact_title]" class="input-control" value="<?php echo htmlspecialchars($sc['contact_title'] ?? 'Connect With OXO Private Service'); ?>">
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label style="font-weight: 700;">Contact Subtitle / Description</label>
+                                <textarea name="content[contact_subtitle]" class="input-control" rows="2"><?php echo htmlspecialchars($sc['contact_subtitle'] ?? ''); ?></textarea>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px;">
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">Showroom Address</label>
+                                    <input type="text" name="content[contact_address]" class="input-control" value="<?php echo htmlspecialchars($sc['contact_address'] ?? ''); ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">Private Inquiry Email</label>
+                                    <input type="email" name="content[contact_email]" class="input-control" value="<?php echo htmlspecialchars($sc['contact_email'] ?? ''); ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">Phone / WhatsApp Concierge</label>
+                                    <input type="text" name="content[contact_phone]" class="input-control" value="<?php echo htmlspecialchars($sc['contact_phone'] ?? ''); ?>">
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px;">
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">Instagram URL</label>
+                                    <input type="text" name="content[contact_instagram]" class="input-control" value="<?php echo htmlspecialchars($sc['contact_instagram'] ?? '#'); ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">Facebook URL</label>
+                                    <input type="text" name="content[contact_facebook]" class="input-control" value="<?php echo htmlspecialchars($sc['contact_facebook'] ?? '#'); ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">Google Maps URL Link</label>
+                                    <input type="text" name="content[contact_map]" class="input-control" value="<?php echo htmlspecialchars($sc['contact_map'] ?? 'https://maps.google.com'); ?>" placeholder="https://maps.google.com/...">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 5: Footer & Meta -->
+                        <div class="cms-tab-pane" id="tab-footer" style="display: none;">
+                            <h4 style="font-size: 1.1rem; color: var(--color-primary); margin-bottom: 20px; font-weight: 700;"><i class="fa-solid fa-square-parking" style="color: #d97706; margin-right: 8px;"></i> Footer & Site Metadata</h4>
+
+                            <div class="form-group">
+                                <label style="font-weight: 700;">Global Site Title (SEO)</label>
+                                <input type="text" name="content[site_title]" class="input-control" value="<?php echo htmlspecialchars($sc['site_title'] ?? 'OXO — Premium Furniture Store'); ?>">
+                            </div>
+
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label style="font-weight: 700;">Global Site Description (SEO)</label>
+                                <textarea name="content[site_description]" class="input-control" rows="2"><?php echo htmlspecialchars($sc['site_description'] ?? ''); ?></textarea>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label style="font-weight: 700;">Footer Brand Manifesto Description</label>
+                                <textarea name="content[footer_desc]" class="input-control" rows="3"><?php echo htmlspecialchars($sc['footer_desc'] ?? ''); ?></textarea>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label style="font-weight: 700;">Footer Copyright Notice Text</label>
+                                <input type="text" name="content[footer_copyright]" class="input-control" value="<?php echo htmlspecialchars($sc['footer_copyright'] ?? 'OXO Furniture. All rights reserved.'); ?>">
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">Developer Credit Label</label>
+                                    <input type="text" name="content[footer_dev_credit]" class="input-control" value="<?php echo htmlspecialchars($sc['footer_dev_credit'] ?? 'Designed and Developed by peru'); ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-weight: 700;">Developer Link URL</label>
+                                    <input type="text" name="content[footer_dev_link]" class="input-control" value="<?php echo htmlspecialchars($sc['footer_dev_link'] ?? '#'); ?>" placeholder="https://peru.com">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 35px; border-top: 1px solid var(--color-panel-border); padding-top: 20px; display: flex; justify-content: flex-end;">
+                            <button type="submit" class="action-btn" style="background: #d97706; border-color: #b45309; color: #ffffff; padding: 14px 28px; font-size: 0.95rem;">
+                                <i class="fa-solid fa-circle-check"></i> Save All Site Content Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const tabBtns = document.querySelectorAll('.cms-tab-btn');
+                    const tabPanes = document.querySelectorAll('.cms-tab-pane');
+
+                    tabBtns.forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const targetTab = btn.getAttribute('data-tab');
+
+                            tabBtns.forEach(b => {
+                                b.style.background = '#ffffff';
+                                b.style.color = 'var(--color-primary)';
+                                b.style.borderColor = 'var(--color-panel-border)';
+                                b.classList.remove('active');
+                            });
+                            btn.style.background = '#d97706';
+                            btn.style.color = '#ffffff';
+                            btn.style.borderColor = '#d97706';
+                            btn.classList.add('active');
+
+                            tabPanes.forEach(pane => {
+                                pane.style.display = (pane.id === targetTab) ? 'block' : 'none';
+                            });
+                        });
+                    });
+                });
+                </script>
+
+            <?php elseif ($current_section === 'whatsapp'): ?>
+                <div class="settings-card" style="max-width: 600px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 20px; border: 1px solid rgba(10, 46, 36, 0.09); box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+                    <h3 class="editor-card-title" style="font-family: var(--font-title); font-size: 1.2rem; color: var(--color-primary); margin-bottom: 20px;"><i class="fa-brands fa-whatsapp" style="margin-right: 8px; color: #25D366;"></i> WhatsApp Configuration</h3>
                     <?php
-                    // Fetch current WhatsApp number
                     $current_whatsapp = '';
                     if ($db) {
                         try {
@@ -1601,66 +2571,543 @@ if (!function_exists('format_inr_admin')) {
                         } catch (\Exception $e) {}
                     }
                     ?>
-                    <form action="index.php?tab=settings" method="POST">
+                    <form action="index.php?tab=settings&section=whatsapp" method="POST">
                         <input type="hidden" name="form_action" value="update_whatsapp">
-                        
-                        <div class="form-group">
-                            <label for="whatsapp">Admin WhatsApp Contact Number</label>
-                            <input type="text" id="whatsapp" name="whatsapp" class="input-control" value="<?php echo htmlspecialchars($current_whatsapp ?? ''); ?>" placeholder="e.g. 919876543210 (include country code without + or spaces)" required>
-                            <p style="font-size: 0.75rem; color: var(--color-gray); margin-top: 5px;">
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label for="whatsapp_sec" style="font-weight: 700;">Admin WhatsApp Contact Number</label>
+                            <input type="text" id="whatsapp_sec" name="whatsapp" class="input-control" value="<?php echo htmlspecialchars($current_whatsapp ?? ''); ?>" placeholder="e.g. 919876543210 (include country code without + or spaces)" required>
+                            <p style="font-size: 0.78rem; color: var(--color-gray); margin-top: 6px;">
                                 Specify the WhatsApp contact number (with country code, e.g. 919876543210 for India) where client inquiries will be redirected.
                             </p>
                         </div>
-                        
-                        <button type="submit" class="action-btn" style="width: 100%; justify-content: center; margin-top: 10px; background: #25D366; border-color: #20BA5A; color: #ffffff;">
+                        <button type="submit" class="action-btn" style="width: 100%; justify-content: center; margin-top: 10px; background: #25D366; border-color: #20BA5A; color: #ffffff; padding: 12px 20px;">
                             <i class="fa-brands fa-whatsapp"></i> Update WhatsApp Contact
                         </button>
                     </form>
                 </div>
 
-                <div class="settings-card">
-                    <h3 class="editor-card-title"><i class="fa-solid fa-lock" style="margin-right: 8px;"></i> Change Admin Password</h3>
-                    
-                    <form action="index.php?tab=settings" method="POST">
+            <?php elseif ($current_section === 'security'): ?>
+                <div class="settings-card" style="max-width: 600px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 20px; border: 1px solid rgba(10, 46, 36, 0.09); box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+                    <h3 class="editor-card-title" style="font-family: var(--font-title); font-size: 1.2rem; color: var(--color-primary); margin-bottom: 20px;"><i class="fa-solid fa-lock" style="margin-right: 8px; color: var(--color-accent);"></i> Change Admin Password</h3>
+                    <form action="index.php?tab=settings&section=security" method="POST">
                         <input type="hidden" name="form_action" value="reset_password">
-                        
-                        <div class="form-group">
-                            <label for="current_password">Current Password</label>
-                            <input type="password" id="current_password" name="current_password" class="input-control" required placeholder="Type current password" autocomplete="current-password">
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label for="current_password_sec" style="font-weight: 700;">Current Password</label>
+                            <input type="password" id="current_password_sec" name="current_password" class="input-control" required placeholder="Type current password" autocomplete="current-password">
                         </div>
-                        
-                        <div class="form-group">
-                            <label for="new_password">New Password</label>
-                            <input type="password" id="new_password" name="new_password" class="input-control" required placeholder="Choose a secure password (min. 6 chars)" autocomplete="new-password">
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label for="new_password_sec" style="font-weight: 700;">New Password</label>
+                            <input type="password" id="new_password_sec" name="new_password" class="input-control" required placeholder="Choose a secure password (min. 6 chars)" autocomplete="new-password">
                         </div>
-                        
-                        <div class="form-group">
-                            <label for="confirm_password">Confirm New Password</label>
-                            <input type="password" id="confirm_password" name="confirm_password" class="input-control" required placeholder="Retype new password" autocomplete="new-password">
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label for="confirm_password_sec" style="font-weight: 700;">Confirm New Password</label>
+                            <input type="password" id="confirm_password_sec" name="confirm_password" class="input-control" required placeholder="Retype new password" autocomplete="new-password">
                         </div>
-                        
-                        <button type="submit" class="action-btn" style="width: 100%; justify-content: center; margin-top: 10px;">
+                        <button type="submit" class="action-btn" style="width: 100%; justify-content: center; margin-top: 10px; padding: 12px 20px;">
                             <i class="fa-solid fa-key"></i> Update Credentials
                         </button>
                     </form>
                 </div>
 
-                <!-- Database Backup & Restore Card -->
-                <div class="settings-card">
-                    <h3 class="editor-card-title"><i class="fa-solid fa-database" style="margin-right: 8px; color: #3498db;"></i> Database Backup & Restore</h3>
-                    <p style="font-size: 0.85rem; color: var(--color-gray); margin-bottom: 20px;">
-                        Export full SQL database backups or upload an SQL backup file to restore database tables and catalog state.
-                    </p>
-                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                        <a href="export-db.php" class="action-btn" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid #2ecc71; text-decoration: none;">
-                            <i class="fa-solid fa-download"></i> Backup SQL Database
-                        </a>
-                        <button type="button" onclick="document.getElementById('importDbModal').style.display='flex'" class="action-btn" style="background: rgba(52, 152, 219, 0.15); color: #3498db; border: 1px solid #3498db; cursor: pointer;">
-                            <i class="fa-solid fa-file-import"></i> Restore from SQL File
-                        </button>
+            <?php elseif ($current_section === 'collections'): ?>
+                <!-- Section 1: Partner Brands (First) -->
+                <div class="page-header" style="margin-bottom: 20px; border-bottom: 1px solid var(--color-panel-border); padding-bottom: 10px; margin-top: 10px;">
+                    <h3 style="font-family: var(--font-title); font-size: 1.3rem; color: var(--color-primary); display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-certificate" style="color: var(--color-accent);"></i> Partner Brands & Logos
+                    </h3>
+                </div>
+                
+                <div class="brands-grid" style="margin-bottom: 50px;">
+                    <!-- Left: List of brands -->
+                    <div class="brands-list-panel">
+                        <div class="table-card">
+                            <div class="table-responsive">
+                                <table class="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 150px;">Visual Logo</th>
+                                            <th>Brand Name</th>
+                                            <th style="width: 100px; text-align: right;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (empty($brands)): ?>
+                                            <tr>
+                                                <td colspan="3" style="text-align: center; padding: 40px; color: var(--color-gray);">No brands registered.</td>
+                                            </tr>
+                                        <?php else: ?>
+                                            <?php foreach ($brands as $b): ?>
+                                                <tr>
+                                                    <td>
+                                                        <?php if (!empty($b['logo_path'])): ?>
+                                                            <img src="../<?php echo htmlspecialchars($b['logo_path']); ?>" alt="<?php echo htmlspecialchars($b['name']); ?>" class="brand-logo-preview" onerror="this.style.display='none';">
+                                                        <?php else: ?>
+                                                            <span class="brand-text-fallback"><?php echo htmlspecialchars($b['name']); ?></span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td style="font-weight: 700; color: var(--color-primary);"><?php echo htmlspecialchars($b['name']); ?></td>
+                                                    <td style="text-align: right;">
+                                                        <button type="button" 
+                                                                onclick="openEditBrandModal(<?php echo $b['id']; ?>, '<?php echo addslashes($b['name']); ?>', '<?php echo addslashes($b['logo_path']); ?>')" 
+                                                                class="btn-icon edit" 
+                                                                style="background: none; border: none; cursor: pointer; color: var(--color-accent); margin-right: 8px; font-size: 0.9rem;"
+                                                                title="Edit Brand">
+                                                            <i class="fa-solid fa-pen-to-square"></i>
+                                                        </button>
+                                                        <a href="index.php?tab=settings&section=collections&action=delete&id=<?php echo urlencode($b['id']); ?>" 
+                                                           class="btn-icon delete" 
+                                                           title="Delete Brand"
+                                                           onclick="return confirm('Are you sure you want to delete this brand: <?php echo htmlspecialchars($b['name']); ?>? This action cannot be undone.');">
+                                                            <i class="fa-solid fa-trash-can"></i>
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right: Add Brand form -->
+                    <div class="brands-form-panel">
+                        <div class="editor-card" style="padding: 30px;">
+                            <h4 style="font-family: var(--font-title); font-size: 1.1rem; color: var(--color-primary); margin-bottom: 20px;">Add New Brand</h4>
+                            <form action="index.php?tab=settings&section=collections" method="POST" enctype="multipart/form-data">
+                                <input type="hidden" name="form_action" value="add_brand">
+                                
+                                <div class="form-group" style="margin-bottom: 15px;">
+                                    <label for="brand_name">Brand Name</label>
+                                    <input type="text" id="brand_name" name="brand_name" class="input-control" required placeholder="e.g. Aethera Studio">
+                                </div>
+                                
+                                <div class="form-group" style="margin-bottom: 15px;">
+                                    <label>Brand Logo Image (PNG / JPG / WEBP)</label>
+                                    <div class="upload-container" onclick="document.getElementById('logo_file').click();">
+                                        <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                                        <div class="upload-text"><strong>Click to Upload Logo File</strong></div>
+                                        <div style="font-size: 0.7rem; color: var(--color-gray); margin-top: 5px;">Supports transparent PNG, JPG</div>
+                                    </div>
+                                    <input type="file" id="logo_file" name="logo_file" class="upload-file-input" accept="image/*">
+                                </div>
+                                
+                                <div class="form-group" style="margin-bottom: 15px;">
+                                    <label for="logo_url">Or Logo Image URL Path</label>
+                                    <input type="text" id="logo_url" name="logo_url" class="input-control" placeholder="assets/images/logo_client.png">
+                                    <span style="font-size: 0.7rem; color: var(--color-gray); margin-top: 5px; display: inline-block;">If no image/URL is specified, the brand name will be displayed as a fallback.</span>
+                                </div>
+                                
+                                <!-- Image Preview Box -->
+                                <div class="preview-box" id="logo-preview-wrapper" style="display: none;">
+                                    <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--color-accent); display: block; margin-bottom: 5px;">Logo Preview</span>
+                                    <img src="" alt="Preview" class="preview-img" id="logo-preview-img" style="max-height: 80px; object-fit: contain;">
+                                </div>
+                                
+                                <button type="submit" class="action-btn" style="width: 100%; justify-content: center; margin-top: 20px;">
+                                    <i class="fa-solid fa-circle-check"></i> Register Brand
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
-            </div>
+
+                <!-- Section 2: Furniture Categories -->
+                <div class="page-header" style="margin-bottom: 20px; border-bottom: 1px solid var(--color-panel-border); padding-bottom: 10px;">
+                    <h3 style="font-family: var(--font-title); font-size: 1.3rem; color: var(--color-primary); display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-layer-group" style="color: var(--color-accent);"></i> Furniture Categories
+                    </h3>
+                </div>
+                
+                <div class="brands-grid" style="margin-bottom: 50px;">
+                    <!-- Left: List of categories -->
+                    <div class="brands-list-panel">
+                        <div class="table-card">
+                            <div class="table-responsive">
+                                <table class="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Category Name</th>
+                                            <th>Slug</th>
+                                            <th>Section Background</th>
+                                            <th style="width: 100px; text-align: right;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (empty($categories_list)): ?>
+                                            <tr>
+                                                <td colspan="4" style="text-align: center; padding: 20px; color: var(--color-gray);">No categories registered.</td>
+                                            </tr>
+                                        <?php else: ?>
+                                            <?php foreach ($categories_list as $cat): ?>
+                                                <tr>
+                                                    <td style="font-weight: 700; color: var(--color-primary);"><?php echo htmlspecialchars($cat['name']); ?></td>
+                                                    <td><code style="color: var(--color-accent); font-family: var(--font-numeric); font-size: 0.85rem; background: var(--color-gray-dark); padding: 4px 8px; border-radius: 4px;"><?php echo htmlspecialchars($cat['slug']); ?></code></td>
+                                                    <td>
+                                                        <?php if (!empty($cat['bg_color'])): ?>
+                                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                                <span style="display: inline-block; width: 14px; height: 14px; border-radius: 4px; background: <?php echo htmlspecialchars($cat['bg_color']); ?>; border: 1px solid var(--color-panel-border);"></span>
+                                                                <span style="font-size: 0.8rem; font-family: var(--font-numeric); color: var(--color-primary);"><?php echo htmlspecialchars($cat['bg_color']); ?></span>
+                                                            </div>
+                                                        <?php else: ?>
+                                                            <span style="font-size: 0.75rem; color: var(--color-gray); font-style: italic;">Auto Pastel HSL</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td style="text-align: right;">
+                                                        <button type="button" 
+                                                                onclick="openEditCategoryModal(<?php echo $cat['id']; ?>, '<?php echo addslashes($cat['name']); ?>', '<?php echo addslashes($cat['slug']); ?>', '<?php echo addslashes($cat['bg_color'] ?? ''); ?>')" 
+                                                                class="btn-icon edit" 
+                                                                style="background: none; border: none; cursor: pointer; color: var(--color-accent); margin-right: 8px; font-size: 0.9rem;"
+                                                                title="Edit Category">
+                                                            <i class="fa-solid fa-pen-to-square"></i>
+                                                        </button>
+                                                        <a href="index.php?tab=settings&section=collections&action=delete_category&id=<?php echo $cat['id']; ?>" 
+                                                           class="btn-icon delete" 
+                                                           title="Delete Category"
+                                                           onclick="return confirm('Are you sure you want to delete this category: <?php echo htmlspecialchars($cat['name']); ?>? Any associated products will need to be reclassified.');">
+                                                            <i class="fa-solid fa-trash-can"></i>
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right: Add Category form -->
+                    <div class="brands-form-panel">
+                        <div class="editor-card" style="padding: 30px;">
+                            <h4 style="font-family: var(--font-title); font-size: 1.1rem; color: var(--color-primary); margin-bottom: 20px;">Add New Category</h4>
+                            <form action="index.php?tab=settings&section=collections" method="POST">
+                                <input type="hidden" name="form_action" value="add_category">
+                                
+                                <div class="form-group" style="margin-bottom: 15px;">
+                                    <label for="cat_name">Category Name</label>
+                                    <input type="text" id="cat_name" name="cat_name" class="input-control" required placeholder="e.g. Armchairs" oninput="document.getElementById('cat_slug').value = this.value.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');">
+                                </div>
+                                
+                                <div class="form-group" style="margin-bottom: 15px;">
+                                    <label for="cat_slug">Category Slug</label>
+                                    <input type="text" id="cat_slug" name="cat_slug" class="input-control" required placeholder="e.g. armchairs">
+                                </div>
+                                
+                                <div class="form-group" style="margin-bottom: 15px;">
+                                    <label for="cat_bg_color">Section Background Color (Pastel)</label>
+                                    <div style="display: flex; gap: 10px; align-items: center;">
+                                        <input type="text" id="cat_bg_color" name="cat_bg_color" class="input-control" placeholder="e.g. #FAF9F6" value="#FAF9F6">
+                                        <input type="color" id="cat_bg_picker" class="input-control" style="width: 45px; height: 42px; padding: 2px; border-radius: 6px; cursor: pointer; border: 1px solid var(--color-panel-border);" value="#FAF9F6" oninput="document.getElementById('cat_bg_color').value = this.value;">
+                                    </div>
+                                    <span style="font-size: 0.68rem; color: var(--color-gray); margin-top: 5px; display: inline-block;">Leave blank to dynamically generate a pastel shade.</span>
+                                </div>
+                                
+                                <button type="submit" class="action-btn" style="width: 100%; justify-content: center; margin-top: 20px;">
+                                    <i class="fa-solid fa-circle-plus"></i> Register Category
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Material Types -->
+                <div class="page-header" style="margin-bottom: 20px; border-bottom: 1px solid var(--color-panel-border); padding-bottom: 10px;">
+                    <h3 style="font-family: var(--font-title); font-size: 1.3rem; color: var(--color-primary); display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-cubes" style="color: var(--color-accent);"></i> Material Types
+                    </h3>
+                </div>
+                
+                <div class="brands-grid" style="margin-bottom: 20px;">
+                    <!-- Left: List of materials -->
+                    <div class="brands-list-panel">
+                        <div class="table-card">
+                            <div class="table-responsive">
+                                <table class="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Material Name</th>
+                                            <th>Slug</th>
+                                            <th style="width: 80px; text-align: right;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (empty($materials_list)): ?>
+                                            <tr>
+                                                <td colspan="3" style="text-align: center; padding: 20px; color: var(--color-gray);">No materials registered.</td>
+                                            </tr>
+                                        <?php else: ?>
+                                            <?php foreach ($materials_list as $mat): ?>
+                                                <tr>
+                                                    <td style="font-weight: 700; color: var(--color-primary);"><?php echo htmlspecialchars($mat['name']); ?></td>
+                                                    <td><code style="color: var(--color-accent); font-family: var(--font-numeric); font-size: 0.85rem; background: var(--color-gray-dark); padding: 4px 8px; border-radius: 4px;"><?php echo htmlspecialchars($mat['slug']); ?></code></td>
+                                                    <td style="text-align: right;">
+                                                        <button type="button" 
+                                                                onclick="openEditMaterialModal(<?php echo $mat['id']; ?>, '<?php echo addslashes($mat['name']); ?>', '<?php echo addslashes($mat['slug']); ?>')" 
+                                                                class="btn-icon edit" 
+                                                                style="background: none; border: none; cursor: pointer; color: var(--color-accent); margin-right: 8px; font-size: 0.9rem;"
+                                                                title="Edit Material">
+                                                            <i class="fa-solid fa-pen-to-square"></i>
+                                                        </button>
+                                                        <a href="index.php?tab=settings&section=collections&action=delete_material&id=<?php echo $mat['id']; ?>" 
+                                                           class="btn-icon delete" 
+                                                           title="Delete Material"
+                                                           onclick="return confirm('Are you sure you want to delete this material: <?php echo htmlspecialchars($mat['name']); ?>? Any associated products will default back to wood.');">
+                                                            <i class="fa-solid fa-trash-can"></i>
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right: Add Material form -->
+                    <div class="brands-form-panel">
+                        <div class="editor-card" style="padding: 30px;">
+                            <h4 style="font-family: var(--font-title); font-size: 1.1rem; color: var(--color-primary); margin-bottom: 20px;">Add Material Type</h4>
+                            <form action="index.php?tab=settings&section=collections" method="POST">
+                                <input type="hidden" name="form_action" value="add_material">
+                                
+                                <div class="form-group" style="margin-bottom: 15px;">
+                                    <label for="mat_name">Material Name</label>
+                                    <input type="text" id="mat_name" name="mat_name" class="input-control" required placeholder="e.g. Teak Wood" oninput="document.getElementById('mat_slug').value = this.value.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');">
+                                </div>
+                                
+                                <div class="form-group" style="margin-bottom: 15px;">
+                                    <label for="mat_slug">Material Slug</label>
+                                    <input type="text" id="mat_slug" name="mat_slug" class="input-control" required placeholder="e.g. teak-wood">
+                                </div>
+                                
+                                <button type="submit" class="action-btn" style="width: 100%; justify-content: center;">
+                                    <i class="fa-solid fa-circle-plus"></i> Register Material
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Color Palette -->
+                <div class="page-header" style="margin-bottom: 20px; border-bottom: 1px solid var(--color-panel-border); padding-bottom: 10px; margin-top: 35px;">
+                    <h3 style="font-family: var(--font-title); font-size: 1.3rem; color: var(--color-primary); display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-palette" style="color: var(--color-accent);"></i> Colors & Palette
+                    </h3>
+                </div>
+                
+                <div class="brands-grid" style="margin-bottom: 50px;">
+                    <!-- Left: List of colors -->
+                    <div class="brands-list-panel">
+                        <div class="table-card">
+                            <div class="table-responsive">
+                                <table class="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 100px;">Color Swatch</th>
+                                            <th>Color Name</th>
+                                            <th>HEX Value</th>
+                                            <th style="width: 80px; text-align: right;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (empty($colors_list)): ?>
+                                            <tr>
+                                                <td colspan="4" style="text-align: center; padding: 20px; color: var(--color-gray);">No colors registered.</td>
+                                            </tr>
+                                        <?php else: ?>
+                                            <?php foreach ($colors_list as $color): ?>
+                                                <tr>
+                                                    <td>
+                                                        <span style="display: inline-block; width: 22px; height: 22px; border-radius: 50%; background-color: <?php echo htmlspecialchars($color['hex']); ?>; border: 1px solid var(--color-panel-border); vertical-align: middle; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></span>
+                                                    </td>
+                                                    <td style="font-weight: 700; color: var(--color-primary);"><?php echo htmlspecialchars($color['name']); ?></td>
+                                                    <td><code style="color: var(--color-accent); font-family: var(--font-numeric); font-size: 0.85rem; background: var(--color-gray-dark); padding: 4px 8px; border-radius: 4px;"><?php echo htmlspecialchars($color['hex']); ?></code></td>
+                                                    <td style="text-align: right;">
+                                                        <button type="button" 
+                                                                onclick="openEditColorModal(<?php echo $color['id']; ?>, '<?php echo addslashes($color['name']); ?>', '<?php echo addslashes($color['hex']); ?>')" 
+                                                                class="btn-icon edit" 
+                                                                style="background: none; border: none; cursor: pointer; color: var(--color-accent); margin-right: 8px; font-size: 0.9rem;"
+                                                                title="Edit Color">
+                                                            <i class="fa-solid fa-pen-to-square"></i>
+                                                        </button>
+                                                        <a href="index.php?tab=settings&section=collections&action=delete_color&id=<?php echo $color['id']; ?>" 
+                                                           class="btn-icon delete" 
+                                                           title="Delete Color"
+                                                           onclick="return confirm('Are you sure you want to delete this color: <?php echo htmlspecialchars($color['name']); ?>? Any associated products will default back to no color.');">
+                                                            <i class="fa-solid fa-trash-can"></i>
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right: Add Color form -->
+                    <div class="brands-form-panel">
+                        <div class="editor-card" style="padding: 30px;">
+                            <h4 style="font-family: var(--font-title); font-size: 1.1rem; color: var(--color-primary); margin-bottom: 20px;">Add New Color</h4>
+                            <form action="index.php?tab=settings&section=collections" method="POST">
+                                <input type="hidden" name="form_action" value="add_color">
+                                
+                                <div class="form-group" style="margin-bottom: 15px;">
+                                    <label for="color_name">Color Name</label>
+                                    <input type="text" id="color_name" name="color_name" class="input-control" required placeholder="e.g. Royal Gold">
+                                </div>
+                                
+                                <div class="form-group" style="margin-bottom: 15px;">
+                                    <label for="color_hex">Color HEX Code & Picker</label>
+                                    <div style="display: flex; gap: 10px; align-items: center;">
+                                        <input type="text" id="color_hex" name="color_hex" class="input-control" required placeholder="#ffffff" value="#ffffff" pattern="^#([A-Fa-f0-9]{6})$" title="Must be a valid hex color code starting with #, followed by 6 hex characters.">
+                                        <input type="color" id="color_picker" class="input-control" style="width: 45px; height: 42px; padding: 2px; border-radius: 6px; cursor: pointer; border: 1px solid var(--color-panel-border);" value="#ffffff">
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="action-btn" style="width: 100%; justify-content: center; margin-top: 20px;">
+                                    <i class="fa-solid fa-circle-plus"></i> Register Color
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            <?php elseif ($current_section === 'announcement'): ?>
+                <?php
+                $announcements_list = [];
+                if ($db) {
+                    try {
+                        $ann_stmt = $db->query("SELECT * FROM `oxo_announcements` ORDER BY `id` DESC");
+                        $announcements_list = $ann_stmt->fetchAll(PDO::FETCH_ASSOC);
+                    } catch (\PDOException $e) {
+                        $announcements_list = [];
+                    }
+                }
+                ?>
+                <div class="brands-grid" style="grid-template-columns: 1.2fr 1fr; gap: 30px; margin-bottom: 50px;">
+                    <!-- Left: Upload / Add New Announcement Form -->
+                    <div class="brands-form-panel">
+                        <div class="editor-card" style="padding: 30px;">
+                            <h3 style="font-family: var(--font-title); font-size: 1.3rem; color: var(--color-primary); margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
+                                <i class="fa-solid fa-bullhorn" style="color: var(--color-accent);"></i> Post New Announcement
+                            </h3>
+                            <p style="color: var(--color-gray); font-size: 0.88rem; margin-bottom: 25px; line-height: 1.5;">
+                                Upload a high-resolution announcement poster image. When set to <strong>Active</strong>, it will automatically popup for visitors when the index page loads. If no poster is active, the index page loads normally.
+                            </p>
+
+                            <form action="index.php?tab=settings&section=announcement" method="POST" enctype="multipart/form-data">
+                                <input type="hidden" name="form_action" value="save_announcement">
+
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label for="ann_poster_file" style="font-weight: 700;">Poster Image File (Upload)</label>
+                                    <input type="file" id="ann_poster_file" name="poster_file" accept="image/*" class="input-control" style="padding: 10px;">
+                                    <span style="font-size: 0.78rem; color: var(--color-gray); margin-top: 4px; display: block;">Supports JPG, PNG, WEBP, GIF. Image will be automatically compressed for fast loading.</span>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label for="ann_poster_url" style="font-weight: 700;">Or Image Relative URL</label>
+                                    <input type="text" id="ann_poster_url" name="poster_url" class="input-control" placeholder="assets/images/announcement.jpg">
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label for="ann_title" style="font-weight: 700;">Announcement Headline / Title (Optional)</label>
+                                    <input type="text" id="ann_title" name="title" class="input-control" placeholder="e.g. Exclusive Private Trunk Show 2026">
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label for="ann_subtitle" style="font-weight: 700;">Subtitle / Brief Description (Optional)</label>
+                                    <textarea id="ann_subtitle" name="subtitle" class="input-control" rows="2" placeholder="e.g. Discover our limited edition Calacatta Marble & Walnut Collection before public release."></textarea>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label for="ann_link_url" style="font-weight: 700;">Click Link / Action Button URL (Optional)</label>
+                                    <input type="text" id="ann_link_url" name="link_url" class="input-control" placeholder="e.g. shop.php?category=sofas or #contact">
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 25px; display: flex; align-items: center; gap: 12px; background: rgba(200, 162, 118, 0.08); padding: 16px; border-radius: 12px; border: 1px solid rgba(200, 162, 118, 0.2);">
+                                    <input type="checkbox" id="ann_is_active" name="is_active" value="1" checked style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--color-primary);">
+                                    <label for="ann_is_active" style="font-weight: 700; color: var(--color-primary); cursor: pointer; margin: 0;">
+                                        Set as Active Announcement Poster (Popup on index load)
+                                    </label>
+                                </div>
+
+                                <button type="submit" class="action-btn" style="width: 100%; justify-content: center; padding: 14px 20px; font-size: 0.95rem;">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i> Publish Announcement Poster
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Right: Current Posters List & Status Management -->
+                    <div class="brands-list-panel">
+                        <div class="editor-card" style="padding: 30px;">
+                            <h3 style="font-family: var(--font-title); font-size: 1.3rem; color: var(--color-primary); margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                                <i class="fa-solid fa-images" style="color: var(--color-accent);"></i> Posted Announcements
+                            </h3>
+
+                            <?php if (empty($announcements_list)): ?>
+                                <div style="text-align: center; padding: 40px 20px; background: var(--color-bg-body); border-radius: 16px; border: 1px dashed var(--color-panel-border);">
+                                    <i class="fa-solid fa-bullhorn" style="font-size: 2.5rem; color: var(--color-gray); margin-bottom: 12px; display: block;"></i>
+                                    <p style="color: var(--color-gray); font-size: 0.95rem; margin: 0;">No announcement posters posted yet.</p>
+                                    <span style="font-size: 0.8rem; color: var(--color-gray); display: block; margin-top: 6px;">Index page will load normally without popups.</span>
+                                </div>
+                            <?php else: ?>
+                                <div style="display: flex; flex-direction: column; gap: 20px;">
+                                    <?php foreach ($announcements_list as $ann): ?>
+                                        <div style="background: var(--color-bg-body); border-radius: 16px; padding: 20px; border: 1px solid <?php echo $ann['is_active'] ? 'var(--color-accent)' : 'var(--color-panel-border)'; ?>; position: relative;">
+                                            <div style="display: flex; gap: 18px; align-items: flex-start;">
+                                                <div style="width: 120px; height: 120px; border-radius: 12px; overflow: hidden; background: #000; flex-shrink: 0;">
+                                                    <img src="../<?php echo htmlspecialchars($ann['image_path']); ?>" alt="Poster" style="width: 100%; height: 100%; object-fit: cover;">
+                                                </div>
+                                                <div style="flex: 1;">
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                                        <span style="padding: 4px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; <?php echo $ann['is_active'] ? 'background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid #2ecc71;' : 'background: rgba(149, 165, 166, 0.15); color: #7f8c8d; border: 1px solid #7f8c8d;'; ?>">
+                                                            <i class="fa-solid <?php echo $ann['is_active'] ? 'fa-circle-check' : 'fa-circle-pause'; ?>"></i> <?php echo $ann['is_active'] ? 'Active Popup' : 'Inactive'; ?>
+                                                        </span>
+                                                        <span style="font-size: 0.75rem; color: var(--color-gray); font-family: var(--font-numeric);">
+                                                            <?php echo date('M d, Y', strtotime($ann['created_at'])); ?>
+                                                        </span>
+                                                    </div>
+                                                    <?php if (!empty($ann['title'])): ?>
+                                                        <h4 style="font-family: var(--font-title); font-size: 1rem; color: var(--color-primary); margin: 0 0 4px 0;"><?php echo htmlspecialchars($ann['title']); ?></h4>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($ann['subtitle'])): ?>
+                                                        <p style="font-size: 0.82rem; color: var(--color-gray); margin: 0 0 12px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><?php echo htmlspecialchars($ann['subtitle']); ?></p>
+                                                    <?php endif; ?>
+
+                                                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                                        <form action="index.php?tab=settings&section=announcement" method="POST" style="display: inline;">
+                                                            <input type="hidden" name="form_action" value="toggle_announcement">
+                                                            <input type="hidden" name="announcement_id" value="<?php echo $ann['id']; ?>">
+                                                            <input type="hidden" name="new_status" value="<?php echo $ann['is_active'] ? 0 : 1; ?>">
+                                                            <button type="submit" class="action-btn" style="padding: 6px 14px; font-size: 0.78rem; <?php echo $ann['is_active'] ? 'background: rgba(230, 126, 34, 0.15); color: #d35400; border: 1px solid #e67e22;' : 'background: rgba(46, 204, 113, 0.15); color: #27ae60; border: 1px solid #2ecc71;'; ?>">
+                                                                <i class="fa-solid <?php echo $ann['is_active'] ? 'fa-pause' : 'fa-play'; ?>"></i> <?php echo $ann['is_active'] ? 'Deactivate' : 'Activate'; ?>
+                                                            </button>
+                                                        </form>
+
+                                                        <form action="index.php?tab=settings&section=announcement" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this announcement poster?');">
+                                                            <input type="hidden" name="form_action" value="delete_announcement">
+                                                            <input type="hidden" name="announcement_id" value="<?php echo $ann['id']; ?>">
+                                                            <button type="submit" class="action-btn" style="padding: 6px 14px; font-size: 0.78rem; background: rgba(231, 76, 60, 0.15); color: #e74c3c; border: 1px solid #e74c3c;">
+                                                                <i class="fa-solid fa-trash-can"></i> Delete
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+
         </div>
         <!-- TAB F: ADD PRODUCT TAB -->
         <div class="tab-container <?php echo $current_tab === 'add_product' ? 'active' : ''; ?>">
@@ -2257,510 +3704,6 @@ if (!function_exists('format_inr_admin')) {
         });
         </script>
 
-        <!-- TAB D: COLLECTIONS & BRANDS TAB (Categories, Materials, and Brand Logos combined) -->
-        <div class="tab-container <?php echo $current_tab === 'collections' ? 'active' : ''; ?>">
-            
-            <!-- Section 1: Partner Brands (First) -->
-            <div class="page-header" style="margin-bottom: 20px; border-bottom: 1px solid var(--color-panel-border); padding-bottom: 10px; margin-top: 10px;">
-                <h3 style="font-family: var(--font-title); font-size: 1.3rem; color: var(--color-primary); display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-certificate" style="color: var(--color-accent);"></i> Partner Brands & Logos
-                </h3>
-            </div>
-            
-            <div class="brands-grid" style="margin-bottom: 50px;">
-                <!-- Left: List of brands -->
-                <div class="brands-list-panel">
-                    <div class="table-card">
-                        <div class="table-responsive">
-                            <table class="admin-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 150px;">Visual Logo</th>
-                                        <th>Brand Name</th>
-                                        <th style="width: 100px; text-align: right;">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (empty($brands)): ?>
-                                        <tr>
-                                            <td colspan="3" style="text-align: center; padding: 40px; color: var(--color-gray);">No brands registered.</td>
-                                        </tr>
-                                    <?php else: ?>
-                                        <?php foreach ($brands as $b): ?>
-                                            <tr>
-                                                <td>
-                                                    <?php if (!empty($b['logo_path'])): ?>
-                                                        <img src="../<?php echo htmlspecialchars($b['logo_path']); ?>" alt="<?php echo htmlspecialchars($b['name']); ?>" class="brand-logo-preview" onerror="this.style.display='none';">
-                                                    <?php else: ?>
-                                                        <span class="brand-text-fallback"><?php echo htmlspecialchars($b['name']); ?></span>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td style="font-weight: 700; color: var(--color-primary);"><?php echo htmlspecialchars($b['name']); ?></td>
-                                                <td style="text-align: right;">
-                                                    <button type="button" 
-                                                            onclick="openEditBrandModal(<?php echo $b['id']; ?>, '<?php echo addslashes($b['name']); ?>', '<?php echo addslashes($b['logo_path']); ?>')" 
-                                                            class="btn-icon edit" 
-                                                            style="background: none; border: none; cursor: pointer; color: var(--color-accent); margin-right: 8px; font-size: 0.9rem;"
-                                                            title="Edit Brand">
-                                                        <i class="fa-solid fa-pen-to-square"></i>
-                                                    </button>
-                                                    <a href="index.php?tab=collections&action=delete&id=<?php echo urlencode($b['id']); ?>" 
-                                                       class="btn-icon delete" 
-                                                       title="Delete Brand"
-                                                       onclick="return confirm('Are you sure you want to delete this brand: <?php echo htmlspecialchars($b['name']); ?>? This action cannot be undone.');">
-                                                        <i class="fa-solid fa-trash-can"></i>
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Right: Add Brand form -->
-                <div class="brands-form-panel">
-                    <div class="editor-card" style="padding: 30px;">
-                        <h4 style="font-family: var(--font-title); font-size: 1.1rem; color: var(--color-primary); margin-bottom: 20px;">Add New Brand</h4>
-                        <form action="index.php?tab=collections" method="POST" enctype="multipart/form-data">
-                            <input type="hidden" name="form_action" value="add_brand">
-                            
-                            <div class="form-group" style="margin-bottom: 15px;">
-                                <label for="brand_name">Brand Name</label>
-                                <input type="text" id="brand_name" name="brand_name" class="input-control" required placeholder="e.g. Aethera Studio">
-                            </div>
-                            
-                            <div class="form-group" style="margin-bottom: 15px;">
-                                <label>Brand Logo Image (PNG / JPG / WEBP)</label>
-                                <div class="upload-container" onclick="document.getElementById('logo_file').click();">
-                                    <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
-                                    <div class="upload-text"><strong>Click to Upload Logo File</strong></div>
-                                    <div style="font-size: 0.7rem; color: var(--color-gray); margin-top: 5px;">Supports transparent PNG, JPG</div>
-                                </div>
-                                <input type="file" id="logo_file" name="logo_file" class="upload-file-input" accept="image/*">
-                            </div>
-                            
-                            <div class="form-group" style="margin-bottom: 15px;">
-                                <label for="logo_url">Or Logo Image URL Path</label>
-                                <input type="text" id="logo_url" name="logo_url" class="input-control" placeholder="assets/images/logo_client.png">
-                                <span style="font-size: 0.7rem; color: var(--color-gray); margin-top: 5px; display: inline-block;">If no image/URL is specified, the brand name will be displayed as a fallback.</span>
-                            </div>
-                            
-                            <!-- Image Preview Box -->
-                            <div class="preview-box" id="logo-preview-wrapper" style="display: none;">
-                                <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--color-accent); display: block; margin-bottom: 5px;">Logo Preview</span>
-                                <img src="" alt="Preview" class="preview-img" id="logo-preview-img" style="max-height: 80px; object-fit: contain;">
-                            </div>
-                            
-                            <button type="submit" class="action-btn" style="width: 100%; justify-content: center; margin-top: 20px;">
-                                <i class="fa-solid fa-circle-check"></i> Register Brand
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Section 2: Furniture Categories (Second) -->
-            <div class="page-header" style="margin-bottom: 20px; border-bottom: 1px solid var(--color-panel-border); padding-bottom: 10px;">
-                <h3 style="font-family: var(--font-title); font-size: 1.3rem; color: var(--color-primary); display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-layer-group" style="color: var(--color-accent);"></i> Furniture Categories
-                </h3>
-            </div>
-            
-            <div class="brands-grid" style="margin-bottom: 50px;">
-                <!-- Left: List of categories -->
-                <div class="brands-list-panel">
-                    <div class="table-card">
-                        <div class="table-responsive">
-                            <table class="admin-table">
-                                <thead>
-                                    <tr>
-                                        <th>Category Name</th>
-                                        <th>Slug</th>
-                                        <th>Section Background</th>
-                                        <th style="width: 100px; text-align: right;">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (empty($categories_list)): ?>
-                                        <tr>
-                                            <td colspan="4" style="text-align: center; padding: 20px; color: var(--color-gray);">No categories registered.</td>
-                                        </tr>
-                                    <?php else: ?>
-                                        <?php foreach ($categories_list as $cat): ?>
-                                            <tr>
-                                                <td style="font-weight: 700; color: var(--color-primary);"><?php echo htmlspecialchars($cat['name']); ?></td>
-                                                <td><code style="color: var(--color-accent); font-family: var(--font-numeric); font-size: 0.85rem; background: var(--color-gray-dark); padding: 4px 8px; border-radius: 4px;"><?php echo htmlspecialchars($cat['slug']); ?></code></td>
-                                                <td>
-                                                    <?php if (!empty($cat['bg_color'])): ?>
-                                                        <div style="display: flex; align-items: center; gap: 8px;">
-                                                            <span style="display: inline-block; width: 14px; height: 14px; border-radius: 4px; background: <?php echo htmlspecialchars($cat['bg_color']); ?>; border: 1px solid var(--color-panel-border);"></span>
-                                                            <span style="font-size: 0.8rem; font-family: var(--font-numeric); color: var(--color-primary);"><?php echo htmlspecialchars($cat['bg_color']); ?></span>
-                                                        </div>
-                                                    <?php else: ?>
-                                                        <span style="font-size: 0.75rem; color: var(--color-gray); font-style: italic;">Auto Pastel HSL</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td style="text-align: right;">
-                                                    <button type="button" 
-                                                            onclick="openEditCategoryModal(<?php echo $cat['id']; ?>, '<?php echo addslashes($cat['name']); ?>', '<?php echo addslashes($cat['slug']); ?>', '<?php echo addslashes($cat['bg_color'] ?? ''); ?>')" 
-                                                            class="btn-icon edit" 
-                                                            style="background: none; border: none; cursor: pointer; color: var(--color-accent); margin-right: 8px; font-size: 0.9rem;"
-                                                            title="Edit Category">
-                                                        <i class="fa-solid fa-pen-to-square"></i>
-                                                    </button>
-                                                    <a href="index.php?tab=collections&action=delete_category&id=<?php echo $cat['id']; ?>" 
-                                                       class="btn-icon delete" 
-                                                       title="Delete Category"
-                                                       onclick="return confirm('Are you sure you want to delete this category: <?php echo htmlspecialchars($cat['name']); ?>? Any associated products will need to be reclassified.');">
-                                                        <i class="fa-solid fa-trash-can"></i>
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Right: Add Category form -->
-                <div class="brands-form-panel">
-                    <div class="editor-card" style="padding: 30px;">
-                        <h4 style="font-family: var(--font-title); font-size: 1.1rem; color: var(--color-primary); margin-bottom: 20px;">Add New Category</h4>
-                        <form action="index.php?tab=collections" method="POST">
-                            <input type="hidden" name="form_action" value="add_category">
-                            
-                            <div class="form-group" style="margin-bottom: 15px;">
-                                <label for="cat_name">Category Name</label>
-                                <input type="text" id="cat_name" name="cat_name" class="input-control" required placeholder="e.g. Armchairs" oninput="document.getElementById('cat_slug').value = this.value.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');">
-                            </div>
-                            
-                            <div class="form-group" style="margin-bottom: 15px;">
-                                <label for="cat_slug">Category Slug</label>
-                                <input type="text" id="cat_slug" name="cat_slug" class="input-control" required placeholder="e.g. armchairs">
-                            </div>
-                            
-                            <div class="form-group" style="margin-bottom: 15px;">
-                                <label for="cat_bg_color">Section Background Color (Pastel)</label>
-                                <div style="display: flex; gap: 10px; align-items: center;">
-                                    <input type="text" id="cat_bg_color" name="cat_bg_color" class="input-control" placeholder="e.g. #FAF9F6" value="#FAF9F6">
-                                    <input type="color" id="cat_bg_picker" class="input-control" style="width: 45px; height: 42px; padding: 2px; border-radius: 6px; cursor: pointer; border: 1px solid var(--color-panel-border);" value="#FAF9F6" oninput="document.getElementById('cat_bg_color').value = this.value;">
-                                </div>
-                                <span style="font-size: 0.68rem; color: var(--color-gray); margin-top: 5px; display: inline-block;">Leave blank to dynamically generate a pastel shade.</span>
-                            </div>
-                            
-                            <button type="submit" class="action-btn" style="width: 100%; justify-content: center; margin-top: 20px;">
-                                <i class="fa-solid fa-circle-plus"></i> Register Category
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Section 3: Material Types (Last) -->
-            <div class="page-header" style="margin-bottom: 20px; border-bottom: 1px solid var(--color-panel-border); padding-bottom: 10px;">
-                <h3 style="font-family: var(--font-title); font-size: 1.3rem; color: var(--color-primary); display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-cubes" style="color: var(--color-accent);"></i> Material Types
-                </h3>
-            </div>
-            
-            <div class="brands-grid" style="margin-bottom: 20px;">
-                <!-- Left: List of materials -->
-                <div class="brands-list-panel">
-                    <div class="table-card">
-                        <div class="table-responsive">
-                            <table class="admin-table">
-                                <thead>
-                                    <tr>
-                                        <th>Material Name</th>
-                                        <th>Slug</th>
-                                        <th style="width: 80px; text-align: right;">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (empty($materials_list)): ?>
-                                        <tr>
-                                            <td colspan="3" style="text-align: center; padding: 20px; color: var(--color-gray);">No materials registered.</td>
-                                        </tr>
-                                    <?php else: ?>
-                                        <?php foreach ($materials_list as $mat): ?>
-                                            <tr>
-                                                <td style="font-weight: 700; color: var(--color-primary);"><?php echo htmlspecialchars($mat['name']); ?></td>
-                                                <td><code style="color: var(--color-accent); font-family: var(--font-numeric); font-size: 0.85rem; background: var(--color-gray-dark); padding: 4px 8px; border-radius: 4px;"><?php echo htmlspecialchars($mat['slug']); ?></code></td>
-                                                <td style="text-align: right;">
-                                                    <button type="button" 
-                                                            onclick="openEditMaterialModal(<?php echo $mat['id']; ?>, '<?php echo addslashes($mat['name']); ?>', '<?php echo addslashes($mat['slug']); ?>')" 
-                                                            class="btn-icon edit" 
-                                                            style="background: none; border: none; cursor: pointer; color: var(--color-accent); margin-right: 8px; font-size: 0.9rem;"
-                                                            title="Edit Material">
-                                                        <i class="fa-solid fa-pen-to-square"></i>
-                                                    </button>
-                                                    <a href="index.php?tab=collections&action=delete_material&id=<?php echo $mat['id']; ?>" 
-                                                       class="btn-icon delete" 
-                                                       title="Delete Material"
-                                                       onclick="return confirm('Are you sure you want to delete this material: <?php echo htmlspecialchars($mat['name']); ?>? Any associated products will default back to wood.');">
-                                                        <i class="fa-solid fa-trash-can"></i>
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Right: Add Material form -->
-                <div class="brands-form-panel">
-                    <div class="editor-card" style="padding: 30px;">
-                        <h4 style="font-family: var(--font-title); font-size: 1.1rem; color: var(--color-primary); margin-bottom: 20px;">Add Material Type</h4>
-                        <form action="index.php?tab=collections" method="POST">
-                            <input type="hidden" name="form_action" value="add_material">
-                            
-                            <div class="form-group" style="margin-bottom: 15px;">
-                                <label for="mat_name">Material Name</label>
-                                <input type="text" id="mat_name" name="mat_name" class="input-control" required placeholder="e.g. Teak Wood" oninput="document.getElementById('mat_slug').value = this.value.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');">
-                            </div>
-                            
-                            <div class="form-group" style="margin-bottom: 15px;">
-                                <label for="mat_slug">Material Slug</label>
-                                <input type="text" id="mat_slug" name="mat_slug" class="input-control" required placeholder="e.g. teak-wood">
-                            </div>
-                            
-                            <button type="submit" class="action-btn" style="width: 100%; justify-content: center;">
-                                <i class="fa-solid fa-circle-plus"></i> Register Material
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Section 4: Color Palette (New) -->
-            <div class="page-header" style="margin-bottom: 20px; border-bottom: 1px solid var(--color-panel-border); padding-bottom: 10px; margin-top: 35px;">
-                <h3 style="font-family: var(--font-title); font-size: 1.3rem; color: var(--color-primary); display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-palette" style="color: var(--color-accent);"></i> Colors & Palette
-                </h3>
-            </div>
-            
-            <div class="brands-grid" style="margin-bottom: 50px;">
-                <!-- Left: List of colors -->
-                <div class="brands-list-panel">
-                    <div class="table-card">
-                        <div class="table-responsive">
-                            <table class="admin-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 100px;">Color Swatch</th>
-                                        <th>Color Name</th>
-                                        <th>HEX Value</th>
-                                        <th style="width: 80px; text-align: right;">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (empty($colors_list)): ?>
-                                        <tr>
-                                            <td colspan="4" style="text-align: center; padding: 20px; color: var(--color-gray);">No colors registered.</td>
-                                        </tr>
-                                    <?php else: ?>
-                                        <?php foreach ($colors_list as $color): ?>
-                                            <tr>
-                                                <td>
-                                                    <span style="display: inline-block; width: 22px; height: 22px; border-radius: 50%; background-color: <?php echo htmlspecialchars($color['hex']); ?>; border: 1px solid var(--color-panel-border); vertical-align: middle; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></span>
-                                                </td>
-                                                <td style="font-weight: 700; color: var(--color-primary);"><?php echo htmlspecialchars($color['name']); ?></td>
-                                                <td><code style="color: var(--color-accent); font-family: var(--font-numeric); font-size: 0.85rem; background: var(--color-gray-dark); padding: 4px 8px; border-radius: 4px;"><?php echo htmlspecialchars($color['hex']); ?></code></td>
-                                                <td style="text-align: right;">
-                                                    <button type="button" 
-                                                            onclick="openEditColorModal(<?php echo $color['id']; ?>, '<?php echo addslashes($color['name']); ?>', '<?php echo addslashes($color['hex']); ?>')" 
-                                                            class="btn-icon edit" 
-                                                            style="background: none; border: none; cursor: pointer; color: var(--color-accent); margin-right: 8px; font-size: 0.9rem;"
-                                                            title="Edit Color">
-                                                        <i class="fa-solid fa-pen-to-square"></i>
-                                                    </button>
-                                                    <a href="index.php?tab=collections&action=delete_color&id=<?php echo $color['id']; ?>" 
-                                                       class="btn-icon delete" 
-                                                       title="Delete Color"
-                                                       onclick="return confirm('Are you sure you want to delete this color: <?php echo htmlspecialchars($color['name']); ?>? Any associated products will default back to no color.');">
-                                                        <i class="fa-solid fa-trash-can"></i>
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Right: Add Color form -->
-                <div class="brands-form-panel">
-                    <div class="editor-card" style="padding: 30px;">
-                        <h4 style="font-family: var(--font-title); font-size: 1.1rem; color: var(--color-primary); margin-bottom: 20px;">Add New Color</h4>
-                        <form action="index.php?tab=collections" method="POST">
-                            <input type="hidden" name="form_action" value="add_color">
-                            
-                            <div class="form-group" style="margin-bottom: 15px;">
-                                <label for="color_name">Color Name</label>
-                                <input type="text" id="color_name" name="color_name" class="input-control" required placeholder="e.g. Royal Gold">
-                            </div>
-                            
-                            <div class="form-group" style="margin-bottom: 15px;">
-                                <label for="color_hex">Color HEX Code & Picker</label>
-                                <div style="display: flex; gap: 10px; align-items: center;">
-                                    <input type="text" id="color_hex" name="color_hex" class="input-control" required placeholder="#ffffff" value="#ffffff" pattern="^#([A-Fa-f0-9]{6})$" title="Must be a valid hex color code starting with #, followed by 6 hex characters.">
-                                    <input type="color" id="color_picker" class="input-control" style="width: 45px; height: 42px; padding: 2px; border-radius: 6px; cursor: pointer; border: 1px solid var(--color-panel-border);" value="#ffffff">
-                                </div>
-                            </div>
-                            
-                            <button type="submit" class="action-btn" style="width: 100%; justify-content: center; margin-top: 20px;">
-                                <i class="fa-solid fa-circle-plus"></i> Register Color
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- TAB F: ANNOUNCEMENT POSTER TAB -->
-        <?php
-        $announcements_list = [];
-        if ($db) {
-            try {
-                $ann_stmt = $db->query("SELECT * FROM `oxo_announcements` ORDER BY `id` DESC");
-                $announcements_list = $ann_stmt->fetchAll(PDO::FETCH_ASSOC);
-            } catch (\PDOException $e) {
-                $announcements_list = [];
-            }
-        }
-        ?>
-        <div class="tab-container <?php echo $current_tab === 'announcement' ? 'active' : ''; ?>">
-            <div class="brands-grid" style="grid-template-columns: 1.2fr 1fr; gap: 30px; margin-bottom: 50px;">
-                <!-- Left: Upload / Add New Announcement Form -->
-                <div class="brands-form-panel">
-                    <div class="editor-card" style="padding: 30px;">
-                        <h3 style="font-family: var(--font-title); font-size: 1.3rem; color: var(--color-primary); margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
-                            <i class="fa-solid fa-bullhorn" style="color: var(--color-accent);"></i> Post New Announcement
-                        </h3>
-                        <p style="color: var(--color-gray); font-size: 0.88rem; margin-bottom: 25px; line-height: 1.5;">
-                            Upload a high-resolution announcement poster image. When set to <strong>Active</strong>, it will automatically popup for visitors when the index page loads. If no poster is active, the index page loads normally.
-                        </p>
-
-                        <form action="index.php?tab=announcement" method="POST" enctype="multipart/form-data">
-                            <input type="hidden" name="form_action" value="save_announcement">
-
-                            <div class="form-group" style="margin-bottom: 20px;">
-                                <label for="ann_poster_file" style="font-weight: 700;">Poster Image File (Upload)</label>
-                                <input type="file" id="ann_poster_file" name="poster_file" accept="image/*" class="input-control" style="padding: 10px;">
-                                <span style="font-size: 0.78rem; color: var(--color-gray); margin-top: 4px; display: block;">Supports JPG, PNG, WEBP, GIF. Image will be automatically compressed for fast loading.</span>
-                            </div>
-
-                            <div class="form-group" style="margin-bottom: 20px;">
-                                <label for="ann_poster_url" style="font-weight: 700;">Or Image Relative URL</label>
-                                <input type="text" id="ann_poster_url" name="poster_url" class="input-control" placeholder="assets/images/announcement.jpg">
-                            </div>
-
-                            <div class="form-group" style="margin-bottom: 20px;">
-                                <label for="ann_title" style="font-weight: 700;">Announcement Headline / Title (Optional)</label>
-                                <input type="text" id="ann_title" name="title" class="input-control" placeholder="e.g. Exclusive Private Trunk Show 2026">
-                            </div>
-
-                            <div class="form-group" style="margin-bottom: 20px;">
-                                <label for="ann_subtitle" style="font-weight: 700;">Subtitle / Brief Description (Optional)</label>
-                                <textarea id="ann_subtitle" name="subtitle" class="input-control" rows="2" placeholder="e.g. Discover our limited edition Calacatta Marble & Walnut Collection before public release."></textarea>
-                            </div>
-
-                            <div class="form-group" style="margin-bottom: 20px;">
-                                <label for="ann_link_url" style="font-weight: 700;">Click Link / Action Button URL (Optional)</label>
-                                <input type="text" id="ann_link_url" name="link_url" class="input-control" placeholder="e.g. shop.php?category=sofas or #contact">
-                            </div>
-
-                            <div class="form-group" style="margin-bottom: 25px; display: flex; align-items: center; gap: 12px; background: rgba(200, 162, 118, 0.08); padding: 16px; border-radius: 12px; border: 1px solid rgba(200, 162, 118, 0.2);">
-                                <input type="checkbox" id="ann_is_active" name="is_active" value="1" checked style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--color-primary);">
-                                <label for="ann_is_active" style="font-weight: 700; color: var(--color-primary); cursor: pointer; margin: 0;">
-                                    Set as Active Announcement Poster (Popup on index load)
-                                </label>
-                            </div>
-
-                            <button type="submit" class="action-btn" style="width: 100%; justify-content: center; padding: 14px 20px; font-size: 0.95rem;">
-                                <i class="fa-solid fa-cloud-arrow-up"></i> Publish Announcement Poster
-                            </button>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Right: Current Posters List & Status Management -->
-                <div class="brands-list-panel">
-                    <div class="editor-card" style="padding: 30px;">
-                        <h3 style="font-family: var(--font-title); font-size: 1.3rem; color: var(--color-primary); margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                            <i class="fa-solid fa-images" style="color: var(--color-accent);"></i> Posted Announcements
-                        </h3>
-
-                        <?php if (empty($announcements_list)): ?>
-                            <div style="text-align: center; padding: 40px 20px; background: var(--color-bg-body); border-radius: 16px; border: 1px dashed var(--color-panel-border);">
-                                <i class="fa-solid fa-bullhorn" style="font-size: 2.5rem; color: var(--color-gray); margin-bottom: 12px; display: block;"></i>
-                                <p style="color: var(--color-gray); font-size: 0.95rem; margin: 0;">No announcement posters posted yet.</p>
-                                <span style="font-size: 0.8rem; color: var(--color-gray); display: block; margin-top: 6px;">Index page will load normally without popups.</span>
-                            </div>
-                        <?php else: ?>
-                            <div style="display: flex; flex-direction: column; gap: 20px;">
-                                <?php foreach ($announcements_list as $ann): ?>
-                                    <div style="background: var(--color-bg-body); border-radius: 16px; padding: 20px; border: 1px solid <?php echo $ann['is_active'] ? 'var(--color-accent)' : 'var(--color-panel-border)'; ?>; position: relative;">
-                                        <div style="display: flex; gap: 18px; align-items: flex-start;">
-                                            <div style="width: 120px; height: 120px; border-radius: 12px; overflow: hidden; background: #000; flex-shrink: 0;">
-                                                <img src="../<?php echo htmlspecialchars($ann['image_path']); ?>" alt="Poster" style="width: 100%; height: 100%; object-fit: cover;">
-                                            </div>
-                                            <div style="flex: 1;">
-                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                                    <span style="padding: 4px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; <?php echo $ann['is_active'] ? 'background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid #2ecc71;' : 'background: rgba(149, 165, 166, 0.15); color: #7f8c8d; border: 1px solid #7f8c8d;'; ?>">
-                                                        <i class="fa-solid <?php echo $ann['is_active'] ? 'fa-circle-check' : 'fa-circle-pause'; ?>"></i> <?php echo $ann['is_active'] ? 'Active Popup' : 'Inactive'; ?>
-                                                    </span>
-                                                    <span style="font-size: 0.75rem; color: var(--color-gray); font-family: var(--font-numeric);">
-                                                        <?php echo date('M d, Y', strtotime($ann['created_at'])); ?>
-                                                    </span>
-                                                </div>
-                                                <?php if (!empty($ann['title'])): ?>
-                                                    <h4 style="font-family: var(--font-title); font-size: 1rem; color: var(--color-primary); margin: 0 0 4px 0;"><?php echo htmlspecialchars($ann['title']); ?></h4>
-                                                <?php endif; ?>
-                                                <?php if (!empty($ann['subtitle'])): ?>
-                                                    <p style="font-size: 0.82rem; color: var(--color-gray); margin: 0 0 12px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><?php echo htmlspecialchars($ann['subtitle']); ?></p>
-                                                <?php endif; ?>
-
-                                                <div style="display: flex; gap: 10px; margin-top: 10px;">
-                                                    <form action="index.php?tab=announcement" method="POST" style="display: inline;">
-                                                        <input type="hidden" name="form_action" value="toggle_announcement">
-                                                        <input type="hidden" name="announcement_id" value="<?php echo $ann['id']; ?>">
-                                                        <input type="hidden" name="new_status" value="<?php echo $ann['is_active'] ? 0 : 1; ?>">
-                                                        <button type="submit" class="action-btn" style="padding: 6px 14px; font-size: 0.78rem; <?php echo $ann['is_active'] ? 'background: rgba(230, 126, 34, 0.15); color: #d35400; border: 1px solid #e67e22;' : 'background: rgba(46, 204, 113, 0.15); color: #27ae60; border: 1px solid #2ecc71;'; ?>">
-                                                            <i class="fa-solid <?php echo $ann['is_active'] ? 'fa-pause' : 'fa-play'; ?>"></i> <?php echo $ann['is_active'] ? 'Deactivate' : 'Activate'; ?>
-                                                        </button>
-                                                    </form>
-
-                                                    <form action="index.php?tab=announcement" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this announcement poster?');">
-                                                        <input type="hidden" name="form_action" value="delete_announcement">
-                                                        <input type="hidden" name="announcement_id" value="<?php echo $ann['id']; ?>">
-                                                        <button type="submit" class="action-btn" style="padding: 6px 14px; font-size: 0.78rem; background: rgba(231, 76, 60, 0.15); color: #e74c3c; border: 1px solid #e74c3c;">
-                                                            <i class="fa-solid fa-trash-can"></i> Delete
-                                                        </button>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <script>
         document.addEventListener('DOMContentLoaded', () => {
             const logoInput = document.getElementById('logo_file');
@@ -3207,7 +4150,7 @@ if (!function_exists('format_inr_admin')) {
                 <h4 class="edit-modal-title"><i class="fa-solid fa-layer-group" style="color: var(--color-accent); margin-right: 8px;"></i> Edit Category</h4>
                 <button type="button" class="edit-modal-close" onclick="closeEditModal('edit-category-modal')">&times;</button>
             </div>
-            <form action="index.php?tab=collections" method="POST">
+            <form action="index.php?tab=settings&section=collections" method="POST">
                 <input type="hidden" name="form_action" value="edit_category">
                 <input type="hidden" name="cat_id" id="edit_cat_id">
                 
@@ -3243,7 +4186,7 @@ if (!function_exists('format_inr_admin')) {
                 <h4 class="edit-modal-title"><i class="fa-solid fa-cubes" style="color: var(--color-accent); margin-right: 8px;"></i> Edit Material</h4>
                 <button type="button" class="edit-modal-close" onclick="closeEditModal('edit-material-modal')">&times;</button>
             </div>
-            <form action="index.php?tab=collections" method="POST">
+            <form action="index.php?tab=settings&section=collections" method="POST">
                 <input type="hidden" name="form_action" value="edit_material">
                 <input type="hidden" name="mat_id" id="edit_mat_id">
                 
@@ -3271,7 +4214,7 @@ if (!function_exists('format_inr_admin')) {
                 <h4 class="edit-modal-title"><i class="fa-solid fa-palette" style="color: var(--color-accent); margin-right: 8px;"></i> Edit Color</h4>
                 <button type="button" class="edit-modal-close" onclick="closeEditModal('edit-color-modal')">&times;</button>
             </div>
-            <form action="index.php?tab=collections" method="POST">
+            <form action="index.php?tab=settings&section=collections" method="POST">
                 <input type="hidden" name="form_action" value="edit_color">
                 <input type="hidden" name="color_id" id="edit_color_id">
                 
@@ -3302,7 +4245,7 @@ if (!function_exists('format_inr_admin')) {
                 <h4 class="edit-modal-title"><i class="fa-solid fa-certificate" style="color: var(--color-accent); margin-right: 8px;"></i> Edit Brand</h4>
                 <button type="button" class="edit-modal-close" onclick="closeEditModal('edit-brand-modal')">&times;</button>
             </div>
-            <form action="index.php?tab=collections" method="POST" enctype="multipart/form-data">
+            <form action="index.php?tab=settings&section=collections" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="form_action" value="edit_brand">
                 <input type="hidden" name="brand_id" id="edit_brand_id">
                 
@@ -3513,6 +4456,45 @@ if (!function_exists('format_inr_admin')) {
         return confirm('WARNING: Are you sure you want to delete ' + count + ' selected creation(s)?\n\nThis will permanently delete the records from the database and remove all associated image files from the server disk.');
     }
 
+    // Mobile Sidebar Off-Canvas Navigation Toggle
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleBtn = document.getElementById('mobileNavToggle');
+        const sidebar = document.querySelector('.admin-sidebar');
+        const backdrop = document.getElementById('sidebarBackdrop');
+
+        function toggleSidebar() {
+            if (!sidebar) return;
+            const isOpen = sidebar.classList.contains('mobile-open');
+            if (isOpen) {
+                closeSidebar();
+            } else {
+                openSidebar();
+            }
+        }
+
+        function openSidebar() {
+            if (sidebar) sidebar.classList.add('mobile-open');
+            if (backdrop) backdrop.classList.add('active');
+            if (toggleBtn) toggleBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSidebar() {
+            if (sidebar) sidebar.classList.remove('mobile-open');
+            if (backdrop) backdrop.classList.remove('active');
+            if (toggleBtn) toggleBtn.innerHTML = '<i class="fa-solid fa-bars"></i>';
+            document.body.style.overflow = '';
+        }
+
+        if (toggleBtn) toggleBtn.addEventListener('click', toggleSidebar);
+        if (backdrop) backdrop.addEventListener('click', closeSidebar);
+
+        // Close sidebar when clicking any navigation link on mobile
+        document.querySelectorAll('.sidebar-link').forEach(link => {
+            link.addEventListener('click', closeSidebar);
+        });
+    });
+
     // Close modals when clicking backdrop
     window.addEventListener('click', (e) => {
         const importModal = document.getElementById('importDbModal');
@@ -3522,6 +4504,76 @@ if (!function_exists('format_inr_admin')) {
         }
         if (e.target === docsModal) {
             docsModal.style.display = 'none';
+        }
+    });
+    </script>
+    <!-- Real-Time Chart.js Initialization -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. Category Distribution Doughnut Chart
+        const catCanvas = document.getElementById('categoryChart');
+        if (catCanvas && typeof Chart !== 'undefined') {
+            const catCtx = catCanvas.getContext('2d');
+            new Chart(catCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: <?php echo json_encode($analytics_cat_labels); ?>,
+                    datasets: [{
+                        data: <?php echo json_encode($analytics_cat_values); ?>,
+                        backgroundColor: ['#D97706', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#6366F1'],
+                        borderWidth: 2,
+                        borderColor: '#111A15'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#9CA3AF', font: { family: 'Inter', size: 12 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 2. Material Breakdown Bar Chart
+        const matCanvas = document.getElementById('materialChart');
+        if (matCanvas && typeof Chart !== 'undefined') {
+            const matCtx = matCanvas.getContext('2d');
+            new Chart(matCtx, {
+                type: 'bar',
+                data: {
+                    labels: <?php echo json_encode($analytics_mat_labels); ?>,
+                    datasets: [{
+                        label: 'Products Count',
+                        data: <?php echo json_encode($analytics_mat_values); ?>,
+                        backgroundColor: 'rgba(217, 119, 6, 0.75)',
+                        borderColor: '#D97706',
+                        borderWidth: 1.5,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#9CA3AF', stepSize: 1 }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#9CA3AF' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
         }
     });
     </script>

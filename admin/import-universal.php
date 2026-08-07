@@ -1640,17 +1640,17 @@ $db_colors = $db ? $db->query("SELECT * FROM `oxo_colors` ORDER BY `name` ASC")-
 </head>
 <body>
 
-<div class="container py-5">
-    <div class="d-flex align-items-center justify-content-between mb-4">
+<div class="container py-4 py-md-5">
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between mb-4 gap-3">
         <div>
-            <h2 class="fw-bold mb-1" style="color: #0a2e24;">Universal Brand Product Importer</h2>
-            <p class="text-muted mb-0">Import products from Indroyal, Applecart, Supreme, Peps India, MM Foam, Evergreen Chair, Nilkamal & any brand site.</p>
+            <h2 class="fw-bold mb-1" style="color: #0a2e24; font-size: calc(1.3rem + .6vw);">Universal Brand Product Importer</h2>
+            <p class="text-muted mb-0" style="font-size: 0.9rem;">Import products from Indroyal, Applecart, Supreme, Peps India, MM Foam, Evergreen Chair, Nilkamal & any brand site.</p>
         </div>
-        <div class="d-flex gap-2">
-            <a href="sync-prices.php?action=sync_all" class="btn btn-sm btn-outline-primary" style="border-radius: 8px;">
+        <div class="d-flex gap-2 w-100 w-md-auto">
+            <a href="sync-prices.php?action=sync_all" class="btn btn-sm btn-outline-primary flex-fill flex-md-grow-0" style="border-radius: 8px;">
                 <i class="bi bi-arrow-repeat me-1"></i> Sync Live Prices
             </a>
-            <a href="index.php" class="btn btn-outline-secondary btn-sm" style="border-radius: 8px;"><i class="bi bi-arrow-left me-1"></i> Back to Dashboard</a>
+            <a href="index.php?tab=settings" class="btn btn-outline-secondary btn-sm flex-fill flex-md-grow-0" style="border-radius: 8px;"><i class="bi bi-arrow-left me-1"></i> Back to Settings</a>
         </div>
     </div>
 
