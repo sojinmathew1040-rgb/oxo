@@ -247,6 +247,19 @@ include 'includes/header.php';
     .pro-dev-link:hover {
         text-decoration: underline;
     }
+
+    @media (max-width: 480px) {
+        .pro-auth-section {
+            padding: 30px 16px;
+        }
+        .pro-auth-card {
+            padding: 30px 20px;
+            border-radius: 20px;
+        }
+        .pro-auth-title {
+            font-size: 24px;
+        }
+    }
 </style>
 
 <section class="pro-auth-section">

@@ -196,20 +196,18 @@ function initGSAPAnimations() {
         }
     });
 
-    // Card fade/scale reveals
-    gsap.utils.toArray('.product-card').forEach((card, idx) => {
+    // Fast, high-performance card reveals
+    gsap.utils.toArray('.product-card').forEach((card) => {
         gsap.from(card, {
             scrollTrigger: {
                 trigger: card,
-                start: "top 90%",
+                start: "top 95%",
                 toggleActions: "play none none none"
             },
             opacity: 0,
-            y: 50,
-            scale: 0.95,
-            duration: 1.0,
-            delay: (idx % 4) * 0.1, // Stagger in grid row
-            ease: "power3.out"
+            y: 20,
+            duration: 0.4,
+            ease: "power2.out"
         });
     });
 
@@ -822,14 +820,16 @@ function initNavBehavior() {
     // Mobile Hamburger
     if (menuToggle && navMenu) {
         menuToggle.addEventListener('click', () => {
-            navMenu.classList.toggle('active');
+            const isActive = navMenu.classList.toggle('active');
             
             const icon = menuToggle.querySelector('i');
-            if (navMenu.classList.contains('active')) {
-                icon.className = 'fa-solid fa-xmark';
+            if (isActive) {
+                if (icon) icon.className = 'fa-solid fa-xmark';
+                document.body.style.overflow = 'hidden';
                 if (lenis) lenis.stop();
             } else {
-                icon.className = 'fa-solid fa-bars-staggered';
+                if (icon) icon.className = 'fa-solid fa-bars-staggered';
+                document.body.style.overflow = '';
                 if (lenis) lenis.start();
             }
         });
@@ -839,24 +839,35 @@ function initNavBehavior() {
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             const href = link.getAttribute('href');
-            if (href.startsWith('index.php') || href.startsWith('about.php')) {
+
+            const closeNav = () => {
                 if (navMenu && navMenu.classList.contains('active')) {
                     navMenu.classList.remove('active');
-                    if (menuToggle) menuToggle.querySelector('i').className = 'fa-solid fa-bars-staggered';
+                    document.body.style.overflow = '';
+                    if (menuToggle) {
+                        const icon = menuToggle.querySelector('i');
+                        if (icon) icon.className = 'fa-solid fa-bars-staggered';
+                    }
+                    if (lenis) lenis.start();
                 }
-                return; // Let standard link navigation happen
+            };
+
+            if (!href || href === '#' || href.startsWith('index.php') || href.startsWith('about.php') || href.startsWith('shop.php') || href.startsWith('product.php')) {
+                closeNav();
+                return; // Allow standard link navigation
             }
 
-            e.preventDefault();
-            const targetSec = document.querySelector(href);
-
-            if (navMenu && navMenu.classList.contains('active')) {
-                navMenu.classList.remove('active');
-                if (menuToggle) menuToggle.querySelector('i').className = 'fa-solid fa-bars-staggered';
-            }
-
-            if (targetSec && lenis) {
-                lenis.scrollTo(targetSec, { offset: -50 });
+            if (href.startsWith('#')) {
+                e.preventDefault();
+                closeNav();
+                const targetSec = document.querySelector(href);
+                if (targetSec) {
+                    if (lenis) {
+                        lenis.scrollTo(targetSec, { offset: -50 });
+                    } else {
+                        targetSec.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }
             }
         });
     });

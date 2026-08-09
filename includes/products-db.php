@@ -41,21 +41,20 @@ if ($db) {
                 }
             }
 
-            // Auto-heal missing brand_id for Nilkamal products
+            // Auto-heal missing brand_id in-memory
             $b_id = isset($p['brand_id']) && $p['brand_id'] !== '' && $p['brand_id'] !== null ? (int)$p['brand_id'] : null;
-            if (!$b_id && $nk_brand_id && (strpos($p['id'], 'nk-') === 0 || stripos($p['specs'], 'nilkamal') !== false || stripos($p['title'], 'nilkamal') !== false)) {
-                $b_id = (int)$nk_brand_id;
-                try {
-                    $up_stmt = $db->prepare("UPDATE `oxo_products` SET `brand_id` = ? WHERE `id` = ?");
-                    $up_stmt->execute([$b_id, $p['id']]);
-                } catch (\Exception $e) {}
+
+            // Auto-heal misclassified TV Unit category in-memory
+            $cat_val = $p['category'];
+            if (($cat_val === 'chairs' || empty($cat_val)) && (preg_match('/tv\s*unit|tv\s*stand|tv\s*cabinet|media\s*unit/i', $p['title'] . ' ' . $p['id']))) {
+                $cat_val = 'tv-units';
             }
 
             $PRODUCTS_DB[$p['id']] = [
                 "id" => $p['id'],
                 "title" => $p['title'],
                 "price" => (int)$p['price'],
-                "category" => $p['category'],
+                "category" => $cat_val,
                 "image" => $p['image'],
                 "description" => $p['description'],
                 "specs" => $p['specs'],

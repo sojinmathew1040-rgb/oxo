@@ -405,6 +405,37 @@ include 'includes/header.php';
             position: static;
         }
     }
+
+    @media(max-width: 768px) {
+        .pro-acc-wrap {
+            padding: 0 16px;
+            margin: 30px auto 60px;
+        }
+        .pro-acc-header {
+            margin-bottom: 35px;
+        }
+        .pro-acc-header h1 {
+            font-size: clamp(1.8rem, 6vw, 2.8rem);
+        }
+        .pro-bento-profile {
+            padding: 24px 18px;
+            border-radius: 20px;
+        }
+        .pro-order-card {
+            padding: 20px 16px;
+            border-radius: 16px;
+        }
+        .pro-order-top {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .pro-modal {
+            padding: 24px 18px;
+            max-width: 90vw;
+            border-radius: 16px;
+        }
+    }
 </style>
 
 <div class="pro-acc-wrap">

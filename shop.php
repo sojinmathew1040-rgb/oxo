@@ -33,6 +33,8 @@ if (empty($categories)) {
         ["slug" => "sofas", "name" => "Sofas"],
         ["slug" => "chairs", "name" => "Chairs"],
         ["slug" => "tables", "name" => "Tables"],
+        ["slug" => "tv-units", "name" => "TV Units"],
+        ["slug" => "beds", "name" => "Beds"],
         ["slug" => "lighting", "name" => "Lighting"],
         ["slug" => "storage", "name" => "Storage"]
     ];
@@ -398,13 +400,36 @@ if (empty($materials)) {
                         gap: 24px;
                     }
                 }
+                @media (max-width: 768px) {
+                    .filter-control-deck {
+                        padding: 14px 16px;
+                    }
+                    .deck-top-row {
+                        flex-direction: column;
+                        align-items: stretch;
+                        gap: 12px;
+                    }
+                    .deck-actions {
+                        width: 100%;
+                        justify-content: space-between;
+                        flex-wrap: wrap;
+                        gap: 10px;
+                    }
+                    .btn-toggle-filters {
+                        width: 100%;
+                        justify-content: center;
+                    }
+                }
                 @media (max-width: 576px) {
                     .drawer-grid {
                         grid-template-columns: 1fr;
                         gap: 20px;
                     }
+                    .brand-filter-grid {
+                        grid-template-columns: repeat(2, 1fr);
+                    }
                     .filter-control-deck {
-                        padding: 12px 16px;
+                        padding: 12px 14px;
                     }
                 }
             </style>
@@ -596,7 +621,7 @@ if (empty($materials)) {
                          data-original-image="<?php echo htmlspecialchars($p['image']); ?>"
                          data-id="<?php echo htmlspecialchars($p['id']); ?>">
                         <div class="product-image-container">
-                            <img src="<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['title']); ?>" loading="lazy">
+                            <img src="<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['title']); ?>" loading="lazy" decoding="async">
                             <div class="product-actions">
                                 <button class="product-action-btn" data-action="quick-view" data-id="<?php echo htmlspecialchars($p['id']); ?>" aria-label="Quick View">
                                     <i class="fa-regular fa-eye"></i>

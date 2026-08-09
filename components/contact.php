@@ -23,7 +23,7 @@ $c_map = get_site_content('contact_map', 'https://maps.google.com');
                         <span class="oxo-badge oxo-badge-accent" style="margin-bottom: 14px;">
                             <i class="fa-solid fa-headset" style="font-size: 0.65rem;"></i> <?php echo htmlspecialchars($c_tag); ?>
                         </span>
-                        <h2 style="font-family: var(--font-title); font-size: 2.8rem; font-weight: 700; line-height: 1.15; color: #FFFFFF; margin: 10px 0 0 0;">
+                        <h2 style="font-family: var(--font-title); font-size: clamp(1.8rem, 5vw, 2.8rem); font-weight: 700; line-height: 1.15; color: #FFFFFF; margin: 10px 0 0 0;">
                             <?php echo nl2br(htmlspecialchars($c_title)); ?>
                         </h2>
                         <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.95rem; line-height: 1.7; margin-top: 15px;">

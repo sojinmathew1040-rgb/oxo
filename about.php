@@ -1,13 +1,13 @@
 <?php
 /**
  * OXO Premium Furniture Store
- * Dedicated About Us Page
+ * Dedicated About Us Page (Apple Pro Level Redesign)
  */
 
 // 1. Load Header Layout
 require_once __DIR__ . '/includes/header.php';
 
-// Copy generated assets for About page if not already present in the workspace
+// Copy generated assets for About page if present
 $generated_craftsman = 'C:\\Users\\sojin\\.gemini\\antigravity-ide\\brain\\de2a8e5a-b9fd-4554-a7fb-416cecf0e467\\craftsman_polishing_wood_1784621148970.png';
 $dest_craftsman = __DIR__ . '/assets/images/about-craftsman.png';
 if (file_exists($generated_craftsman) && !file_exists($dest_craftsman)) {
@@ -24,208 +24,148 @@ if (file_exists($user_facade)) {
 
 <main id="scroll-container">
     
-    <!-- CSS Custom Styles for About Us Page -->
+    <!-- CSS Custom Styles for About Us Page (Apple Level Pro Suite) -->
     <style>
+        /* --- PRO ULTRA-LUXURY DESIGN TOKENS --- */
         .about-hero-section {
-            padding: 160px 0 100px;
-            background: radial-gradient(circle at 50% 30%, rgba(181, 148, 96, 0.08), transparent 70%);
+            padding: 130px 0 80px;
+            background: radial-gradient(circle at 50% 20%, rgba(200, 162, 118, 0.12), transparent 70%), linear-gradient(180deg, #FAF9F6 0%, #FFFFFF 100%);
             text-align: center;
-            border-bottom: 1px solid var(--color-panel-border);
+            position: relative;
+            border-bottom: 1px solid rgba(10, 46, 36, 0.06);
+            overflow: hidden;
         }
         .about-hero-container {
-            max-width: 900px;
+            max-width: 960px;
             margin: 0 auto;
             padding: 0 20px;
+            position: relative;
+            z-index: 2;
         }
         .about-title {
-            font-size: 3.5rem;
-            line-height: 1.1;
-            margin-bottom: 25px;
-            font-weight: 300;
+            font-family: var(--font-title);
+            font-size: clamp(2.2rem, 5.5vw, 4.2rem);
+            line-height: 1.08;
+            margin-bottom: 24px;
+            font-weight: 700;
             color: var(--color-primary);
+            letter-spacing: -0.03em;
+            word-wrap: break-word;
+        }
+        .about-title span {
+            font-family: var(--font-serif);
+            font-weight: 400;
+            color: var(--color-accent);
         }
         .about-subtitle {
-            font-size: 1.15rem;
-            line-height: 1.8;
-            color: var(--color-gray);
-            max-width: 750px;
-            margin: 0 auto 35px;
+            font-size: clamp(1rem, 2.2vw, 1.2rem);
+            line-height: 1.75;
+            color: #4A564E;
+            max-width: 780px;
+            margin: 0 auto 45px;
+            font-weight: 300;
+        }
+
+        /* Apple Pro Stat Bento Grid */
+        .about-bento-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            max-width: 1080px;
+            margin: 40px auto 0;
+            padding: 0 10px;
+        }
+        .bento-stat-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(10, 46, 36, 0.08);
+            border-radius: 20px;
+            padding: 28px 20px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(10, 46, 36, 0.03);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .bento-stat-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(200, 162, 118, 0.4);
+            box-shadow: 0 25px 50px rgba(10, 46, 36, 0.08);
+        }
+        .bento-stat-val {
+            font-family: var(--font-numeric);
+            font-size: clamp(2rem, 3.5vw, 2.8rem);
+            font-weight: 700;
+            color: var(--color-primary);
+            line-height: 1;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+        .bento-stat-lbl {
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--color-accent);
+            font-weight: 700;
         }
         
+        /* Pro Heritage Section */
         .about-grid-section {
-            padding: 100px 0;
-            border-bottom: 1px solid var(--color-panel-border);
+            padding: 110px 0;
+            background: #FFFFFF;
+            border-bottom: 1px solid rgba(10, 46, 36, 0.06);
         }
         .about-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 60px;
+            grid-template-columns: 1fr 1.1fr;
+            gap: 70px;
             align-items: center;
         }
         .about-content-card {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 22px;
         }
         .about-content-card h2 {
-            font-size: 2.2rem;
-            font-weight: 300;
-            line-height: 1.2;
+            font-family: var(--font-title);
+            font-size: clamp(1.8rem, 4vw, 3rem);
+            font-weight: 700;
+            line-height: 1.15;
             color: var(--color-primary);
+            letter-spacing: -0.02em;
         }
         .about-content-card p {
-            font-size: 0.98rem;
-            line-height: 1.75;
+            font-size: 1rem;
+            line-height: 1.8;
             color: #4A564E;
             margin: 0;
         }
         .about-image-wrapper {
             position: relative;
-            border-radius: 20px;
+            border-radius: 28px;
             overflow: hidden;
-            border: 1px solid var(--color-panel-border);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.05);
-            aspect-ratio: 16/9;
-            background: linear-gradient(135deg, #18221D, #0C1511);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            border: 1px solid rgba(10, 46, 36, 0.08);
+            box-shadow: 0 25px 60px rgba(10, 46, 36, 0.1);
+            aspect-ratio: 4/3;
+            background: #0C1511;
         }
         .about-image-wrapper img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .about-image-wrapper img:hover {
+        .about-image-wrapper:hover img {
             transform: scale(1.06);
-        }
-
-        .philosophy-section {
-            padding: 100px 0;
-            background: rgba(181, 148, 96, 0.02);
-            border-bottom: 1px solid var(--color-panel-border);
-        }
-        .philosophy-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 30px;
-            margin-top: 50px;
-        }
-        .philosophy-card {
-            background: var(--color-bg-panel);
-            border: 1px solid var(--color-panel-border);
-            border-radius: 16px;
-            padding: 40px 30px;
-            transition: all 0.35s ease;
-        }
-        .philosophy-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--color-accent);
-            box-shadow: 0 10px 30px rgba(181, 148, 96, 0.05);
-        }
-        .philosophy-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
-            background: rgba(181, 148, 96, 0.08);
-            color: var(--color-accent);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.3rem;
-            margin-bottom: 25px;
-        }
-        .philosophy-card h3 {
-            font-family: var(--font-title);
-            font-size: 1.15rem;
-            color: var(--color-primary);
-            margin-bottom: 15px;
-            font-weight: 700;
-        }
-        .philosophy-card p {
-            font-size: 0.88rem;
-            line-height: 1.6;
-            color: var(--color-gray);
-            margin: 0;
-        }
-
-        .process-section {
-            padding: 100px 0;
-            border-bottom: 1px solid var(--color-panel-border);
-        }
-        .process-flow {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 30px;
-            margin-top: 50px;
-        }
-        .process-step {
-            position: relative;
-        }
-        .step-number {
-            font-family: var(--font-numeric);
-            font-size: 3rem;
-            font-weight: 200;
-            color: var(--color-accent);
-            opacity: 0.3;
-            line-height: 1;
-            margin-bottom: 15px;
-        }
-        .process-step h4 {
-            font-family: var(--font-title);
-            font-size: 1.05rem;
-            color: var(--color-primary);
-            margin-bottom: 10px;
-            font-weight: 700;
-        }
-        .process-step p {
-            font-size: 0.85rem;
-            line-height: 1.6;
-            color: var(--color-gray);
-            margin: 0;
-        }
-
-        .about-cta-section {
-            padding: 120px 0;
-            text-align: center;
-            background: radial-gradient(circle at 50% 80%, rgba(181, 148, 96, 0.06), transparent 60%);
-        }
-
-        @keyframes pulse-icon {
-            0%, 100% { transform: scale(1); opacity: 0.25; }
-            50% { transform: scale(1.15); opacity: 0.4; }
-        }
-
-        @media (max-width: 992px) {
-            .about-grid {
-                grid-template-columns: 1fr;
-                gap: 40px;
-            }
-            .philosophy-grid {
-                grid-template-columns: 1fr;
-            }
-            .process-flow {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 40px;
-            }
-            .about-title {
-                font-size: 2.5rem;
-            }
-        }
-        @media (max-width: 576px) {
-            .process-flow {
-                grid-template-columns: 1fr;
-            }
         }
 
         /* --- FLAGSHIP EXPERIENCE STYLES --- */
         .flagship-section {
-            padding: 100px 0;
-            background: #0C1511; /* Dark aesthetic from the corrugated black facade */
+            padding: 110px 0;
+            background: linear-gradient(135deg, #0A2E24 0%, #061F18 100%);
             color: #FFFFFF;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             position: relative;
+            overflow: hidden;
         }
         .flagship-section::after {
             content: '';
@@ -234,17 +174,19 @@ if (file_exists($user_facade)) {
             left: 0;
             width: 4px;
             height: 100%;
-            background: #E25822; /* Vivid orange accent from storefront border */
+            background: #E25822;
         }
         .flagship-section .section-tag {
             color: var(--color-accent);
         }
         .flagship-section h2 {
-            font-size: 2.4rem;
-            font-weight: 300;
-            line-height: 1.2;
+            font-family: var(--font-title);
+            font-size: clamp(2rem, 4.5vw, 3.2rem);
+            font-weight: 700;
+            line-height: 1.15;
             color: #FFFFFF;
             margin-bottom: 25px;
+            letter-spacing: -0.02em;
         }
         .flagship-grid {
             display: grid;
@@ -253,12 +195,12 @@ if (file_exists($user_facade)) {
             align-items: center;
         }
         .flagship-desc {
-            font-size: 0.98rem;
-            line-height: 1.8;
+            font-size: 1rem;
+            line-height: 1.85;
             color: #A5B6AC;
         }
         .flagship-desc p {
-            margin-bottom: 25px;
+            margin-bottom: 22px;
         }
         .flagship-features {
             display: grid;
@@ -267,21 +209,23 @@ if (file_exists($user_facade)) {
             margin-top: 30px;
         }
         .feature-card {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
             padding: 24px;
-            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+            backdrop-filter: blur(10px);
         }
         .feature-card:hover {
-            border-color: #E25822; /* Store design orange */
-            background: rgba(255, 255, 255, 0.04);
+            border-color: #E25822;
+            background: rgba(255, 255, 255, 0.06);
             transform: translateY(-4px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
         }
         .feature-card-icon {
-            font-size: 1.4rem;
+            font-size: 1.5rem;
             color: #E25822;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
             display: inline-block;
         }
         .feature-card h4 {
@@ -295,109 +239,15 @@ if (file_exists($user_facade)) {
         }
         .feature-card p {
             color: #8E9C94;
-            margin: 0;
-        }
-        .flagship-image-card img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .flagship-image-card:hover img {
-            transform: scale(1.05);
-        }
-
-        /* --- DEPARTMENTS SECTION STYLES --- */
-        .departments-section {
-            padding: 100px 0;
-            border-bottom: 1px solid var(--color-panel-border);
-            background: var(--color-secondary);
-        }
-        .departments-intro {
-            max-width: 800px;
-            margin: 0 auto 55px;
-            text-align: center;
-        }
-        .departments-intro h2 {
-            margin-bottom: 15px;
-            color: var(--color-primary);
-        }
-        .departments-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 20px;
-        }
-        .dept-card {
-            background: var(--color-white);
-            border: 1px solid var(--color-panel-border);
-            border-radius: 16px;
-            padding: 35px 20px;
-            text-align: center;
-            transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .dept-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background: #E25822; /* Vivid orange border matching store outline */
-            transform: scaleX(0);
-            transition: transform 0.35s ease;
-            transform-origin: left;
-        }
-        .dept-card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 16px 35px rgba(226, 88, 34, 0.06);
-            border-color: rgba(226, 88, 34, 0.25);
-        }
-        .dept-card:hover::before {
-            transform: scaleX(1);
-        }
-        .dept-icon {
-            width: 54px;
-            height: 54px;
-            border-radius: 50%;
-            background: rgba(226, 88, 34, 0.06);
-            color: #E25822;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.3rem;
-            margin-bottom: 20px;
-            transition: all 0.3s ease;
-        }
-        .dept-card:hover .dept-icon {
-            background: #E25822;
-            color: #FFFFFF;
-        }
-        .dept-card h3 {
-            font-family: var(--font-title);
-            font-size: 1.05rem;
-            color: var(--color-primary);
-            margin-bottom: 12px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
-        .dept-card p {
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             line-height: 1.6;
-            color: var(--color-gray);
             margin: 0;
         }
 
-        /* --- FLAGSHIP RESPONSIVENESS --- */
         /* --- SHOP SHOWCASE GALLERY STYLES --- */
         .shop-gallery-section {
             padding: 110px 0;
-            background: #0B110E;
+            background: #061F18;
             color: #FFFFFF;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             position: relative;
@@ -408,31 +258,32 @@ if (file_exists($user_facade)) {
             text-align: center;
         }
         .shop-gallery-intro h2 {
-            font-size: 2.5rem;
-            font-weight: 300;
-            line-height: 1.2;
+            font-family: var(--font-title);
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 700;
+            line-height: 1.15;
             color: #FFFFFF;
             margin-top: 8px;
             margin-bottom: 15px;
         }
         .shop-gallery-intro p {
             color: #A5B6AC;
-            font-size: 0.98rem;
+            font-size: 1rem;
             line-height: 1.7;
             margin: 0;
         }
         .shop-gallery-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 25px;
+            gap: 24px;
         }
         .shop-gallery-card {
             position: relative;
-            border-radius: 18px;
+            border-radius: 20px;
             overflow: hidden;
             background: #141E18;
-            border: 1px solid rgba(255, 255, 255, 0.09);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
             cursor: pointer;
             aspect-ratio: 4 / 3;
             transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
@@ -445,8 +296,8 @@ if (file_exists($user_facade)) {
         }
         .shop-gallery-card:hover {
             transform: translateY(-6px);
-            border-color: #E25822;
-            box-shadow: 0 20px 45px rgba(0,0,0,0.5), 0 0 25px rgba(226, 88, 34, 0.25);
+            border-color: var(--color-accent);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5), 0 0 30px rgba(200, 162, 118, 0.2);
         }
         .shop-gallery-card img {
             width: 100%;
@@ -460,8 +311,8 @@ if (file_exists($user_facade)) {
         .shop-gallery-overlay {
             position: absolute;
             inset: 0;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%);
-            padding: 25px;
+            background: linear-gradient(to top, rgba(6, 31, 24, 0.95) 0%, rgba(6, 31, 24, 0.3) 50%, transparent 100%);
+            padding: 28px;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
@@ -471,42 +322,42 @@ if (file_exists($user_facade)) {
             font-family: var(--font-numeric);
             font-size: 0.72rem;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #E25822;
+            letter-spacing: 1.2px;
+            color: var(--color-accent);
             font-weight: 700;
             margin-bottom: 6px;
             display: inline-block;
         }
         .shop-gallery-caption {
             font-family: var(--font-title);
-            font-size: 1.15rem;
+            font-size: 1.25rem;
             color: #FFFFFF;
-            font-weight: 600;
+            font-weight: 700;
             margin: 0;
             line-height: 1.3;
         }
         .shop-gallery-subcaption {
-            font-size: 0.82rem;
+            font-size: 0.85rem;
             color: #A5B6AC;
             margin-top: 4px;
             line-height: 1.4;
         }
         .shop-gallery-zoom-btn {
             position: absolute;
-            top: 18px;
-            right: 18px;
-            width: 42px;
-            height: 42px;
+            top: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
-            background: rgba(12, 21, 17, 0.65);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background: rgba(6, 31, 24, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: #FFFFFF;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.95rem;
+            font-size: 1rem;
             opacity: 0;
             transform: scale(0.8);
             transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
@@ -521,9 +372,9 @@ if (file_exists($user_facade)) {
             position: fixed;
             inset: 0;
             z-index: 99999;
-            background: rgba(8, 14, 11, 0.92);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            background: rgba(6, 31, 24, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             display: none;
             align-items: center;
             justify-content: center;
@@ -547,49 +398,237 @@ if (file_exists($user_facade)) {
             max-width: 100%;
             max-height: 75vh;
             object-fit: contain;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+            border-radius: 16px;
+            border: 1px solid rgba(200, 162, 118, 0.3);
+            box-shadow: 0 30px 70px rgba(0,0,0,0.8);
         }
         .shop-lightbox-info {
-            margin-top: 15px;
+            margin-top: 18px;
             text-align: center;
             color: #FFFFFF;
         }
         .shop-lightbox-title {
             font-family: var(--font-title);
-            font-size: 1.25rem;
-            color: #E25822;
+            font-size: 1.35rem;
+            color: var(--color-accent);
             margin-bottom: 4px;
+            font-weight: 700;
         }
         .shop-lightbox-cap {
-            font-size: 0.9rem;
+            font-size: 0.92rem;
             color: #A5B6AC;
         }
         .shop-lightbox-close {
             position: absolute;
-            top: -45px;
+            top: -48px;
             right: 0;
             background: none;
             border: none;
             color: #FFFFFF;
-            font-size: 2rem;
+            font-size: 2.2rem;
             cursor: pointer;
             transition: color 0.2s;
         }
         .shop-lightbox-close:hover {
-            color: #E25822;
+            color: var(--color-accent);
         }
 
+        /* --- DEPARTMENTS SECTION STYLES --- */
+        .departments-section {
+            padding: 110px 0;
+            background: #FAF9F6;
+            border-bottom: 1px solid rgba(10, 46, 36, 0.06);
+        }
+        .departments-intro {
+            max-width: 750px;
+            margin: 0 auto 60px;
+            text-align: center;
+        }
+        .departments-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+        }
+        .dept-card {
+            background: #FFFFFF;
+            border: 1px solid rgba(10, 46, 36, 0.06);
+            border-radius: 20px;
+            padding: 32px 22px;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .dept-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(200, 162, 118, 0.4);
+            box-shadow: 0 20px 45px rgba(10, 46, 36, 0.08);
+        }
+        .dept-icon {
+            width: 58px;
+            height: 58px;
+            border-radius: 16px;
+            background: rgba(10, 46, 36, 0.04);
+            color: var(--color-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        .dept-card:hover .dept-icon {
+            background: var(--color-primary);
+            color: var(--color-white);
+        }
+        .dept-card h3 {
+            font-family: var(--font-title);
+            font-size: 1.1rem;
+            color: var(--color-primary);
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        .dept-card p {
+            font-size: 0.84rem;
+            line-height: 1.6;
+            color: var(--color-gray);
+            margin: 0;
+        }
+
+        /* --- PHILOSOPHY SECTION STYLES --- */
+        .philosophy-section {
+            padding: 110px 0;
+            background: #FFFFFF;
+            border-bottom: 1px solid rgba(10, 46, 36, 0.06);
+        }
+        .philosophy-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-top: 60px;
+        }
+        .philosophy-card {
+            background: rgba(250, 249, 246, 0.6);
+            border: 1px solid rgba(10, 46, 36, 0.06);
+            border-radius: 24px;
+            padding: 42px 34px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .philosophy-card:hover {
+            transform: translateY(-6px);
+            background: #FFFFFF;
+            border-color: rgba(200, 162, 118, 0.4);
+            box-shadow: 0 20px 50px rgba(10, 46, 36, 0.06);
+        }
+        .philosophy-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: rgba(200, 162, 118, 0.12);
+            color: var(--color-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            margin-bottom: 24px;
+        }
+        .philosophy-card h3 {
+            font-family: var(--font-title);
+            font-size: 1.25rem;
+            color: var(--color-primary);
+            margin-bottom: 14px;
+            font-weight: 700;
+        }
+        .philosophy-card p {
+            font-size: 0.92rem;
+            line-height: 1.7;
+            color: #4A564E;
+            margin: 0;
+        }
+
+        /* --- PROCESS SECTION STYLES --- */
+        .process-section {
+            padding: 110px 0;
+            background: #FAF9F6;
+            border-bottom: 1px solid rgba(10, 46, 36, 0.06);
+        }
+        .process-flow {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+            margin-top: 60px;
+        }
+        .process-step {
+            position: relative;
+            background: #FFFFFF;
+            border-radius: 20px;
+            padding: 32px 26px;
+            border: 1px solid rgba(10, 46, 36, 0.06);
+            transition: all 0.35s ease;
+        }
+        .process-step:hover {
+            transform: translateY(-4px);
+            border-color: var(--color-accent);
+            box-shadow: 0 15px 35px rgba(10, 46, 36, 0.05);
+        }
+        .step-number {
+            font-family: var(--font-numeric);
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: var(--color-accent);
+            opacity: 0.35;
+            line-height: 1;
+            margin-bottom: 16px;
+        }
+        .process-step h4 {
+            font-family: var(--font-title);
+            font-size: 1.1rem;
+            color: var(--color-primary);
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        .process-step p {
+            font-size: 0.88rem;
+            line-height: 1.65;
+            color: var(--color-gray);
+            margin: 0;
+        }
+
+        /* CTA Section */
+        .about-cta-section {
+            padding: 120px 0;
+            text-align: center;
+            background: radial-gradient(circle at 50% 80%, rgba(200, 162, 118, 0.12), transparent 60%), #FFFFFF;
+        }
+
+        /* --- APPLE PRO LEVEL MOBILE RESPONSIVENESS --- */
         @media (max-width: 1200px) {
             .departments-grid {
                 grid-template-columns: repeat(3, 1fr);
+                gap: 16px;
             }
         }
         @media (max-width: 992px) {
+            .about-hero-section {
+                padding: 100px 0 60px;
+            }
+            .about-bento-stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 14px;
+            }
+            .about-grid,
             .flagship-grid {
                 grid-template-columns: 1fr;
                 gap: 40px;
+            }
+            .philosophy-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            .process-flow {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
             }
             .shop-gallery-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -601,6 +640,14 @@ if (file_exists($user_facade)) {
             }
         }
         @media (max-width: 768px) {
+            .about-grid-section,
+            .flagship-section,
+            .shop-gallery-section,
+            .departments-section,
+            .philosophy-section,
+            .process-section {
+                padding: 60px 0;
+            }
             .departments-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
@@ -609,18 +656,29 @@ if (file_exists($user_facade)) {
             }
         }
         @media (max-width: 576px) {
-            .departments-grid {
+            .about-bento-stats {
                 grid-template-columns: 1fr;
+                gap: 12px;
             }
+            .departments-grid,
+            .process-flow,
             .shop-gallery-grid {
                 grid-template-columns: 1fr;
+                gap: 16px;
             }
             .shop-gallery-card.featured-card {
                 grid-column: span 1;
                 min-height: 260px;
             }
-            .shop-gallery-intro h2 {
-                font-size: 1.8rem;
+            .bento-stat-card {
+                padding: 20px 16px;
+            }
+            .philosophy-card {
+                padding: 28px 20px;
+                border-radius: 18px;
+            }
+            .about-image-wrapper {
+                border-radius: 20px;
             }
         }
     </style>
@@ -645,18 +703,24 @@ if (file_exists($user_facade)) {
             <span class="section-tag">Our Heritage</span>
             <h1 class="about-title"><?php echo htmlspecialchars($ap_hero_title); ?></h1>
             <p class="about-subtitle"><?php echo htmlspecialchars($ap_hero_sub); ?></p>
-            <div style="display: flex; gap: 20px; justify-content: center; align-items: center; flex-wrap: wrap;">
-                <div style="border-right: 1px solid var(--color-panel-border); padding-right: 25px; margin-right: 5px;">
-                    <span style="font-family: var(--font-numeric); font-size: 2.2rem; font-weight: 300; color: var(--color-primary); display: block;"><?php echo htmlspecialchars(get_site_content('about_home_bento1_val', '15+')); ?></span>
-                    <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-gray); font-weight: 700;"><?php echo htmlspecialchars(get_site_content('about_home_bento1_label', 'Years Legacy')); ?></span>
+            
+            <!-- Apple Pro Bento Stats Grid -->
+            <div class="about-bento-stats">
+                <div class="bento-stat-card">
+                    <div class="bento-stat-val"><?php echo htmlspecialchars(get_site_content('about_home_bento1_val', '15+')); ?></div>
+                    <div class="bento-stat-lbl"><?php echo htmlspecialchars(get_site_content('about_home_bento1_label', 'Years Legacy')); ?></div>
                 </div>
-                <div style="border-right: 1px solid var(--color-panel-border); padding-right: 25px; margin-right: 5px;">
-                    <span style="font-family: var(--font-numeric); font-size: 2.2rem; font-weight: 300; color: var(--color-primary); display: block;"><?php echo htmlspecialchars(get_site_content('about_home_bento2_val', '100%')); ?></span>
-                    <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-gray); font-weight: 700;"><?php echo htmlspecialchars(get_site_content('about_home_bento2_label', 'Bespoke Design')); ?></span>
+                <div class="bento-stat-card">
+                    <div class="bento-stat-val"><?php echo htmlspecialchars(get_site_content('about_home_bento2_val', '100%')); ?></div>
+                    <div class="bento-stat-lbl"><?php echo htmlspecialchars(get_site_content('about_home_bento2_label', 'Bespoke Design')); ?></div>
                 </div>
-                <div>
-                    <span style="font-family: var(--font-numeric); font-size: 2.2rem; font-weight: 300; color: var(--color-primary); display: block;"><?php echo htmlspecialchars(get_site_content('about_home_bento3_val', '8,000+')); ?></span>
-                    <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-gray); font-weight: 700;"><?php echo htmlspecialchars(get_site_content('about_home_bento3_label', 'Elite Homes')); ?></span>
+                <div class="bento-stat-card">
+                    <div class="bento-stat-val"><?php echo htmlspecialchars(get_site_content('about_home_bento3_val', '8,000+')); ?></div>
+                    <div class="bento-stat-lbl"><?php echo htmlspecialchars(get_site_content('about_home_bento3_label', 'Elite Homes')); ?></div>
+                </div>
+                <div class="bento-stat-card">
+                    <div class="bento-stat-val">120+</div>
+                    <div class="bento-stat-lbl">Craft Hours / Piece</div>
                 </div>
             </div>
         </div>
@@ -675,7 +739,7 @@ if (file_exists($user_facade)) {
                 </div>
 
                 <div class="about-image-wrapper">
-                    <img src="<?php echo htmlspecialchars($ap_herit_img); ?>" alt="OXO Heritage Craftsmanship">
+                    <img src="<?php echo htmlspecialchars($ap_herit_img); ?>" alt="OXO Heritage Craftsmanship" loading="lazy" decoding="async">
                 </div>
 
             </div>
@@ -718,7 +782,7 @@ if (file_exists($user_facade)) {
                     <div class="feature-card">
                         <span class="feature-card-icon"><i class="fa-solid fa-location-dot"></i></span>
                         <h4>Design Hub</h4>
-                        <p>A landmark experience center located in Kerala, inspiring regional design standards.</p>
+                        <p>A landmark experience center inspiring regional luxury design standards.</p>
                     </div>
                 </div>
             </div>
@@ -747,7 +811,7 @@ if (file_exists($user_facade)) {
                 <?php foreach ($dynamic_shop_photos as $index => $item): ?>
                     <div class="shop-gallery-card <?php echo $index === 0 ? 'featured-card' : ''; ?>" 
                          onclick="openShopLightbox('<?php echo htmlspecialchars($item['image_path']); ?>', '<?php echo addslashes(htmlspecialchars($item['title'])); ?>', '<?php echo addslashes(htmlspecialchars($item['caption'] ?? '')); ?>')">
-                        <img src="<?php echo htmlspecialchars($item['image_path']); ?>" alt="<?php echo htmlspecialchars($item['title']); ?>" loading="lazy">
+                        <img src="<?php echo htmlspecialchars($item['image_path']); ?>" alt="<?php echo htmlspecialchars($item['title']); ?>" loading="lazy" decoding="async">
                         <div class="shop-gallery-overlay">
                             <span class="shop-gallery-slot-tag"><?php echo htmlspecialchars($item['title']); ?></span>
                             <h3 class="shop-gallery-caption"><?php echo htmlspecialchars($item['caption'] ?? $item['title']); ?></h3>
@@ -803,7 +867,7 @@ if (file_exists($user_facade)) {
             <div class="departments-intro">
                 <span class="section-tag">Our Collections</span>
                 <h2 class="title-medium">Tailored for <span class="title-serif">Every Space</span></h2>
-                <p style="color: var(--color-gray); font-size: 0.95rem; line-height: 1.7; margin: 0;">
+                <p style="color: var(--color-gray); font-size: 0.95rem; line-height: 1.7; margin-top: 10px;">
                     Following the clear vision marked on our gallery's facade, OXO offers bespoke furniture meticulously crafted for five core segments of modern, elite living:
                 </p>
             </div>
@@ -850,7 +914,7 @@ if (file_exists($user_facade)) {
     <!-- 3. Core Philosophy Section -->
     <section class="philosophy-section" id="philosophy">
         <div class="container">
-            <div style="text-align: center;">
+            <div style="text-align: center; max-width: 750px; margin: 0 auto;">
                 <span class="section-tag">Guiding Values</span>
                 <h2 class="title-medium">Our Core <span class="title-serif">Philosophy</span></h2>
             </div>
@@ -889,7 +953,7 @@ if (file_exists($user_facade)) {
     <!-- 4. Crafting Process flow -->
     <section class="process-section">
         <div class="container">
-            <div style="text-align: center;">
+            <div style="text-align: center; max-width: 750px; margin: 0 auto;">
                 <span class="section-tag">Behind the Scenes</span>
                 <h2 class="title-medium">The Design <span class="title-serif">Process</span></h2>
             </div>
@@ -919,7 +983,7 @@ if (file_exists($user_facade)) {
                 <!-- Step 4 -->
                 <div class="process-step">
                     <div class="step-number">04</div>
-                    <h4>Curation & Delivery</h4>
+                    <h4>White-Glove Setup</h4>
                     <p>Rigorous quality checks followed by white-glove assembly inside your home.</p>
                 </div>
             </div>
@@ -932,7 +996,7 @@ if (file_exists($user_facade)) {
             <span class="section-tag">Take the Next Step</span>
             <h2 class="title-medium" style="margin-bottom: 30px;">Discover the <span class="title-serif">OXO Collection</span></h2>
             <a href="shop.php" class="magnetic-btn" style="display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">
-                <span class="magnetic-btn-text">Explore Catalog</span>
+                <span class="magnetic-btn-text">Explore Catalog &nbsp; <i class="fa-solid fa-arrow-right-long" style="color: var(--color-accent);"></i></span>
             </a>
         </div>
     </section>
@@ -940,13 +1004,12 @@ if (file_exists($user_facade)) {
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         if (typeof gsap !== 'undefined') {
-            // Hero animation (runs immediately on load)
             gsap.from('.about-hero-section > *', {
                 opacity: 0,
-                y: 30,
-                duration: 1.2,
-                stagger: 0.15,
-                ease: "power4.out"
+                y: 25,
+                duration: 1.0,
+                stagger: 0.12,
+                ease: "power3.out"
             });
         }
     });

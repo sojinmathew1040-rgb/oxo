@@ -529,37 +529,76 @@ function render_scale_graph($h, $w, $l) {
                     
                     <div class="product-grid" id="related-products-grid">
                         <?php 
-                            // Select up to 8 related products
-                            $related_count = 0;
-                            foreach ($PRODUCTS_DB as $pid => $p) {
-                                if ($pid === $product['id']) continue;
-                                if ($related_count >= 8) break;
-                                
-                                // Strictly select products of the exact same category
-                                if (strtolower($p['category']) === strtolower($product['category'])) {
-                                    $related_count++;
-                                    ?>
-                                    <div class="product-card" data-category="<?php echo htmlspecialchars($p['category']); ?>" data-id="<?php echo htmlspecialchars($p['id']); ?>">
-                                        <div class="product-image-container">
-                                            <img src="<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['title']); ?>" loading="lazy">
-                                            <div class="product-actions">
-                                                <button class="product-action-btn" data-action="quick-view" data-id="<?php echo htmlspecialchars($p['id']); ?>" aria-label="Quick View">
-                                                    <i class="fa-regular fa-eye"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div class="product-info">
-                                            <span class="product-category"><?php echo htmlspecialchars(ucfirst($p['category'])); ?></span>
-                                            <h3 class="product-title"><?php echo htmlspecialchars($p['title']); ?></h3>
-                                            <span class="product-price">
-                                                <?php echo format_inr($p['price']); ?>
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <?php
+                            if (!function_exists('oxo_norm_cat')) {
+                                function oxo_norm_cat($cat) {
+                                    $c = strtolower(trim($cat));
+                                    $c = preg_replace('/[^a-z0-9]/', '', $c);
+                                    if (in_array($c, ['tvunit', 'tvunits', 'tvstand', 'tvstands', 'tvcabinet', 'tvcabinets', 'mediaunit'])) return 'tvunits';
+                                    if (in_array($c, ['sofa', 'sofas', 'couch', 'couches', 'sectional'])) return 'sofas';
+                                    if (in_array($c, ['chair', 'chairs', 'recliner', 'recliners', 'stool', 'bench'])) return 'chairs';
+                                    if (in_array($c, ['table', 'tables', 'desk', 'desks'])) return 'tables';
+                                    if (in_array($c, ['bed', 'beds', 'mattress'])) return 'beds';
+                                    if (in_array($c, ['lamp', 'lamps', 'light', 'lighting'])) return 'lighting';
+                                    if (in_array($c, ['storage', 'cabinet', 'cabinets', 'wardrobe'])) return 'storage';
+                                    return $c;
                                 }
                             }
-                        ?>
+
+                            $target_cat_norm = oxo_norm_cat($product['category']);
+                            $related_products = [];
+
+                            // Phase 1: Strictly select products matching the exact same category
+                            foreach ($PRODUCTS_DB as $pid => $p) {
+                                if ($pid === $product['id']) continue;
+                                if (oxo_norm_cat($p['category']) === $target_cat_norm) {
+                                    $related_products[] = $p;
+                                }
+                            }
+
+                            // Phase 2: If fewer than 4 items in same category, fill remaining slots with same material
+                            if (count($related_products) < 4) {
+                                foreach ($PRODUCTS_DB as $pid => $p) {
+                                    if ($pid === $product['id']) continue;
+                                    if (in_array($p, $related_products, true)) continue;
+                                    if (count($related_products) >= 8) break;
+                                    
+                                    $p_mat = isset($p['material_slug']) ? strtolower($p['material_slug']) : '';
+                                    $cur_mat = isset($product['material_slug']) ? strtolower($product['material_slug']) : '';
+                                    if (!empty($p_mat) && $p_mat === $cur_mat) {
+                                        $related_products[] = $p;
+                                    }
+                                }
+                            }
+
+                            // Limit to 8 related creations
+                            $related_products = array_slice($related_products, 0, 8);
+
+                            foreach ($related_products as $p):
+                            ?>
+                                <div class="product-card" data-category="<?php echo htmlspecialchars($p['category']); ?>" data-id="<?php echo htmlspecialchars($p['id']); ?>">
+                                    <div class="product-image-container">
+                                        <a href="product.php?id=<?php echo htmlspecialchars($p['id']); ?>" style="display: block; width: 100%; height: 100%;">
+                                            <img src="<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['title']); ?>" loading="lazy" decoding="async">
+                                        </a>
+                                        <div class="product-actions">
+                                            <button class="product-action-btn" data-action="quick-view" data-id="<?php echo htmlspecialchars($p['id']); ?>" aria-label="Quick View">
+                                                <i class="fa-regular fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="product-info">
+                                        <span class="product-category"><?php echo htmlspecialchars(ucfirst($p['category'])); ?></span>
+                                        <h3 class="product-title">
+                                            <a href="product.php?id=<?php echo htmlspecialchars($p['id']); ?>" style="color: inherit; text-decoration: none;">
+                                                <?php echo htmlspecialchars($p['title']); ?>
+                                            </a>
+                                        </h3>
+                                        <span class="product-price">
+                                            <?php echo format_inr($p['price']); ?>
+                                        </span>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
                     </div>
                     
                     <script>
@@ -729,7 +768,7 @@ function render_scale_graph($h, $w, $l) {
 </div>
 
 <!-- Interactive Mobile AR Camera Sandbox Overlay -->
-<div id="ar-camera-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000000; z-index: 100000; display: none; flex-direction: column; overflow: hidden; font-family: sans-serif;">
+<div id="ar-camera-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000000; z-index: 100000; display: none; flex-direction: column; overflow: hidden; font-family: sans-serif;">
     <!-- Live Video Stream -->
     <video id="ar-video" autoplay playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;"></video>
     

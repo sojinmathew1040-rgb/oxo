@@ -57,8 +57,8 @@ if ($active_poster && !empty($active_poster['image_path'])):
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
     background: rgba(10, 46, 36, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -66,7 +66,7 @@ if ($active_poster && !empty($active_poster['image_path'])):
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 16px;
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.4s;
@@ -190,6 +190,26 @@ if ($active_poster && !empty($active_poster['image_path'])):
     border-color: #c8a276;
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(200, 162, 118, 0.3);
+}
+
+@media (max-width: 480px) {
+    .announcement-modal-card {
+        border-radius: 20px;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+    .announcement-poster-img {
+        max-height: 300px;
+    }
+    .announcement-modal-content {
+        padding: 18px 20px 22px 20px;
+    }
+    .announcement-title {
+        font-size: 1.25rem;
+    }
+    .announcement-cta-btn {
+        width: 100%;
+    }
 }
 </style>
 

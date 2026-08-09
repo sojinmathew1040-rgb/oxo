@@ -37,17 +37,23 @@ $brands_count = count($brands);
         <!-- Pass the logo-only brands count to CSS variable for scroll loop offsets -->
         <div class="marquee-track" style="--brands-count: <?php echo $brands_count; ?>;">
             
-            <!-- Loop 1: Render actual logo images -->
+            <!-- Loop 1: Render actual logo images + Brand Names -->
             <?php foreach ($brands as $b): ?>
                 <div class="marquee-item">
-                    <img src="<?php echo htmlspecialchars($b['logo_path']); ?>" alt="<?php echo htmlspecialchars($b['name']); ?>" class="marquee-logo-img" onerror="this.style.display='none';">
+                    <div class="marquee-logo-box">
+                        <img src="<?php echo htmlspecialchars($b['logo_path']); ?>" alt="<?php echo htmlspecialchars($b['name']); ?>" class="marquee-logo-img" onerror="this.style.display='none';">
+                    </div>
+                    <span class="marquee-brand-name"><?php echo htmlspecialchars($b['name']); ?></span>
                 </div>
             <?php endforeach; ?>
             
             <!-- Loop 2: Duplicate items for seamless infinite wrap -->
             <?php foreach ($brands as $b): ?>
                 <div class="marquee-item">
-                    <img src="<?php echo htmlspecialchars($b['logo_path']); ?>" alt="<?php echo htmlspecialchars($b['name']); ?>" class="marquee-logo-img" onerror="this.style.display='none';">
+                    <div class="marquee-logo-box">
+                        <img src="<?php echo htmlspecialchars($b['logo_path']); ?>" alt="<?php echo htmlspecialchars($b['name']); ?>" class="marquee-logo-img" onerror="this.style.display='none';">
+                    </div>
+                    <span class="marquee-brand-name"><?php echo htmlspecialchars($b['name']); ?></span>
                 </div>
             <?php endforeach; ?>
             

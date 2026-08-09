@@ -342,10 +342,19 @@ function parse_product_dimensions($text) {
 
 // Category Auto-Creator helper
 function ensure_category_exists($db, $slug_or_name) {
-    if (!$db || empty($slug_or_name)) return 'chairs';
-    $slug = preg_replace('/[^a-z0-9\-]/', '', strtolower(trim($slug_or_name)));
-    if (empty($slug)) $slug = 'chairs';
-    $name = ucwords(str_replace('-', ' ', $slug_or_name));
+    if (!$db || empty($slug_or_name)) return 'storage';
+    $raw_clean = trim($slug_or_name);
+    $slug = preg_replace('/[^a-z0-9\-]/', '', strtolower(str_replace(' ', '-', $raw_clean)));
+    if (empty($slug)) $slug = 'storage';
+    
+    // Normalize TV Unit slugs
+    if ($slug === 'tv-unit' || $slug === 'tv-units' || $slug === 'tvunit' || $slug === 'tvunits') {
+        $slug = 'tv-units';
+        $name = 'TV Units';
+    } else {
+        $name = ucwords(str_replace('-', ' ', $slug));
+    }
+
     try {
         $stmt = $db->prepare("SELECT `slug` FROM `oxo_categories` WHERE `slug` = ? OR LOWER(`name`) = ? LIMIT 1");
         $stmt->execute([$slug, strtolower($name)]);
@@ -382,28 +391,48 @@ function ensure_material_exists($db, $slug_or_name) {
 
 // Category Auto-Mapper
 function map_universal_category($product_type, $title, $body_text) {
+    $raw_type = trim(strtolower($product_type));
     $text = strtolower($product_type . ' ' . $title . ' ' . $body_text);
-    
-    if (strpos($text, 'bed') !== false || strpos($text, 'mattress') !== false || strpos($text, 'cot') !== false || strpos($text, 'pillow') !== false) {
+
+    // 1. Specific check for TV Units / Media Units / TV Stands / TV Cabinets
+    if (preg_match('/tv\s*unit|tv\s*stand|tv\s*cabinet|media\s*unit|media\s*console|entertainment\s*unit|wall\s*unit/i', $text)) {
+        return 'tv-units';
+    }
+
+    // 2. Specific checks for standard categories
+    if (preg_match('/bed|mattress|cot|pillow|bedroom/i', $text)) {
         return 'beds';
     }
-    if (strpos($text, 'chair') !== false || strpos($text, 'recliner') !== false || strpos($text, 'stool') !== false || strpos($text, 'bench') !== false) {
-        return 'chairs';
-    }
-    if (strpos($text, 'sofa') !== false || strpos($text, 'couch') !== false || strpos($text, 'settee') !== false || strpos($text, 'lounger') !== false) {
+    if (preg_match('/sofa|couch|settee|lounger|sectional|divan|daybed/i', $text)) {
         return 'sofas';
     }
-    if (strpos($text, 'table') !== false || strpos($text, 'desk') !== false) {
+    if (preg_match('/table|desk|workstation/i', $text)) {
         return 'tables';
     }
-    if (strpos($text, 'lamp') !== false || strpos($text, 'light') !== false) {
+    if (preg_match('/lamp|light|chandelier|pendant|sconce|lantern/i', $text)) {
         return 'lighting';
     }
-    if (strpos($text, 'cabinet') !== false || strpos($text, 'wardrobe') !== false || strpos($text, 'storage') !== false || strpos($text, 'rack') !== false || strpos($text, 'shelf') !== false || strpos($text, 'almirah') !== false) {
+    if (preg_match('/cabinet|wardrobe|storage|rack|shelf|almirah|credenza|sideboard|dresser|chest|bookcase/i', $text)) {
         return 'storage';
     }
-    
-    return 'chairs';
+    if (preg_match('/chair|recliner|stool|bench|pouf|armchair|ottoman/i', $text)) {
+        return 'chairs';
+    }
+
+    // 3. If raw product_type / raw_category was explicitly provided (and not generic)
+    if (!empty($raw_type) && !in_array($raw_type, ['product', 'item', 'furniture', 'all', 'default', 'home', 'uncategorized'])) {
+        $custom_slug = preg_replace('/[^a-z0-9\-]/', '', str_replace(' ', '-', $raw_type));
+        if (!empty($custom_slug)) {
+            return $custom_slug;
+        }
+    }
+
+    // 4. Fallback check on title keywords
+    if (preg_match('/unit/i', $title)) {
+        return 'tv-units';
+    }
+
+    return 'storage'; // Safe fallback instead of forcing 'chairs'
 }
 
 // Material Auto-Mapper

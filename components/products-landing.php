@@ -54,7 +54,7 @@ $bg_colors = [
                     <span class="oxo-badge oxo-badge-accent" style="margin-bottom: 10px;">
                         <i class="fa-solid fa-sparkles" style="font-size: 0.65rem;"></i> Latest Release
                     </span>
-                    <h2 style="margin: 0; font-family: var(--font-title); font-size: 2.6rem; color: var(--color-primary); font-weight: 700; line-height: 1.15;">
+                    <h2 style="margin: 0; font-family: var(--font-title); font-size: clamp(1.8rem, 5vw, 2.6rem); color: var(--color-primary); font-weight: 700; line-height: 1.15;">
                         Curated Creations
                     </h2>
                 </div>
@@ -66,7 +66,7 @@ $bg_colors = [
             </div>
 
             <!-- Product Cards Grid -->
-            <div class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; width: 100%;">
+            <div class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; width: 100%;">
                 <?php 
                 $all_count = 0;
                 foreach ($PRODUCTS_DB as $p):
@@ -75,7 +75,7 @@ $bg_colors = [
                 ?>
                     <div class="product-card" data-category="<?php echo htmlspecialchars($p['category']); ?>" data-id="<?php echo htmlspecialchars($p['id']); ?>">
                         <div class="product-image-container">
-                            <img src="<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['title']); ?>" loading="lazy">
+                            <img src="<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['title']); ?>" loading="lazy" decoding="async">
                             
                             <div style="position: absolute; top: 12px; left: 12px;">
                                 <span class="oxo-badge" style="background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); font-size: 0.62rem;">
@@ -133,7 +133,7 @@ $bg_colors = [
                         <span class="oxo-badge" style="margin-bottom: 10px; background: rgba(10, 46, 36, 0.06);">
                             <?php echo htmlspecialchars($cat_name); ?>
                         </span>
-                        <h2 style="margin: 0; font-family: var(--font-title); font-size: 2.4rem; color: var(--color-primary); font-weight: 700; line-height: 1.15;">
+                        <h2 style="margin: 0; font-family: var(--font-title); font-size: clamp(1.6rem, 4.5vw, 2.4rem); color: var(--color-primary); font-weight: 700; line-height: 1.15;">
                             Curated <?php echo htmlspecialchars($cat_name); ?>
                         </h2>
                     </div>
@@ -145,11 +145,11 @@ $bg_colors = [
                 </div>
 
                 <!-- 4 Product Grid for Category -->
-                <div class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; width: 100%;">
+                <div class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; width: 100%;">
                     <?php foreach ($cat_products_limit as $p): ?>
                         <div class="product-card" data-category="<?php echo htmlspecialchars($p['category']); ?>" data-id="<?php echo htmlspecialchars($p['id']); ?>">
                             <div class="product-image-container">
-                                <img src="<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['title']); ?>" loading="lazy">
+                                <img src="<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['title']); ?>" loading="lazy" decoding="async">
                                 
                                 <div style="position: absolute; top: 12px; left: 12px;">
                                     <span class="oxo-badge" style="background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); font-size: 0.62rem;">
