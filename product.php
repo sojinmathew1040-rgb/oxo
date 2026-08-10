@@ -978,8 +978,42 @@ document.addEventListener('DOMContentLoaded', () => {
                         gsap.fromTo(zoomImg, { opacity: 0.4 }, { opacity: 1, duration: 0.5, ease: "power2.out" });
                     }
                 }
+
+                // Smoothly scroll active thumbnail into view inside scrollable gallery container
+                try {
+                    btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                } catch(e) {}
             });
         });
+
+        // Touch Swipe Navigation for Main Gallery Box on Mobile
+        if (zoomBox) {
+            let touchStartX = 0;
+            let touchEndX = 0;
+            zoomBox.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+            
+            zoomBox.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                const diffX = touchStartX - touchEndX;
+                if (Math.abs(diffX) > 40) {
+                    const visibleThumbs = Array.from(thumbBtns).filter(b => b.style.display !== 'none');
+                    if (visibleThumbs.length <= 1) return;
+                    
+                    const activeIdx = visibleThumbs.findIndex(b => b.classList.contains('active'));
+                    if (diffX > 40) {
+                        // Swipe left -> Next image
+                        const nextIdx = (activeIdx + 1) % visibleThumbs.length;
+                        visibleThumbs[nextIdx].click();
+                    } else if (diffX < -40) {
+                        // Swipe right -> Previous image
+                        const prevIdx = (activeIdx - 1 + visibleThumbs.length) % visibleThumbs.length;
+                        visibleThumbs[prevIdx].click();
+                    }
+                }
+            }, { passive: true });
+        }
     }
 
     // Color Swatch Switcher Filter

@@ -41,6 +41,136 @@ if ($db) {
                 }
             }
 
+            // Centralized Universal Auto-Heal for Gallery Image Color Assignments
+            $gal_val = isset($p['gallery']) ? $p['gallery'] : '';
+            if (!empty($gal_val)) {
+                $g_items = json_decode($gal_val, true);
+                if (is_array($g_items) && count($g_items) > 0) {
+                    $g_updated = false;
+                    $p_color_ids = !empty($p['color_ids']) ? json_decode($p['color_ids'], true) : [];
+                    if (is_array($p_color_ids)) {
+                        $p_color_ids = array_values(array_filter(array_map('intval', $p_color_ids)));
+                    } else {
+                        $p_color_ids = [];
+                    }
+
+                    // 1. Fetch color metadata for associated color IDs
+                    $color_id_by_type = [];
+                    if (!empty($p_color_ids) && $db) {
+                        try {
+                            $in_clause = implode(',', array_fill(0, count($p_color_ids), '?'));
+                            $c_fetch = $db->prepare("SELECT `id`, `name` FROM `oxo_colors` WHERE `id` IN ($in_clause)");
+                            $c_fetch->execute($p_color_ids);
+                            $fetched_colors = $c_fetch->fetchAll(PDO::FETCH_ASSOC);
+                            foreach ($fetched_colors as $fc) {
+                                $c_name_lower = strtolower($fc['name']);
+                                $c_id_val = (int)$fc['id'];
+
+                                if (preg_match('/green|lush|lsg|mehandi/i', $c_name_lower)) {
+                                    $color_id_by_type['green'] = $c_id_val;
+                                } else if (preg_match('/pink|rose|fairy/i', $c_name_lower)) {
+                                    $color_id_by_type['pink'] = $c_id_val;
+                                } else if (preg_match('/brown|rust|season|srb|globus/i', $c_name_lower)) {
+                                    $color_id_by_type['brown'] = $c_id_val;
+                                } else if (preg_match('/yellow|lemon/i', $c_name_lower)) {
+                                    $color_id_by_type['yellow'] = $c_id_val;
+                                } else if (preg_match('/blue|aqua|pepsi|sky/i', $c_name_lower)) {
+                                    $color_id_by_type['blue'] = $c_id_val;
+                                } else if (preg_match('/red/i', $c_name_lower)) {
+                                    $color_id_by_type['red'] = $c_id_val;
+                                } else if (preg_match('/black|charcoal|iron/i', $c_name_lower)) {
+                                    $color_id_by_type['black'] = $c_id_val;
+                                } else if (preg_match('/white|linen/i', $c_name_lower)) {
+                                    $color_id_by_type['white'] = $c_id_val;
+                                } else if (preg_match('/teak|walnut|oak/i', $c_name_lower)) {
+                                    $color_id_by_type['wood'] = $c_id_val;
+                                }
+                            }
+                        } catch (\Exception $ex) {}
+                    }
+
+                    // 2. First Pass: Keyword-based matching on image path
+                    foreach ($g_items as &$g_item) {
+                        if (!is_array($g_item) || empty($g_item['path'])) continue;
+                        $g_path = strtolower($g_item['path']);
+                        $old_cid = isset($g_item['color_id']) && $g_item['color_id'] !== '' ? (int)$g_item['color_id'] : null;
+                        $new_cid = $old_cid;
+
+                        if (preg_match('/(?:brown|rust|srb|globus)/i', $g_path) && !empty($color_id_by_type['brown'])) {
+                            $new_cid = $color_id_by_type['brown'];
+                        } else if (preg_match('/(?:lush|lsg|green|mehandi)/i', $g_path) && !empty($color_id_by_type['green'])) {
+                            $new_cid = $color_id_by_type['green'];
+                        } else if (preg_match('/(?:fairy|pink|rose)/i', $g_path) && !empty($color_id_by_type['pink'])) {
+                            $new_cid = $color_id_by_type['pink'];
+                        } else if (preg_match('/(?:yellow|lemon)/i', $g_path) && !empty($color_id_by_type['yellow'])) {
+                            $new_cid = $color_id_by_type['yellow'];
+                        } else if (preg_match('/(?:blue|pepsi|aqua|sky)/i', $g_path) && !empty($color_id_by_type['blue'])) {
+                            $new_cid = $color_id_by_type['blue'];
+                        } else if (preg_match('/(?:red)/i', $g_path) && !empty($color_id_by_type['red'])) {
+                            $new_cid = $color_id_by_type['red'];
+                        }
+
+                        if ($new_cid !== $old_cid) {
+                            $g_item['color_id'] = $new_cid;
+                            $g_updated = true;
+                        }
+                    }
+                    unset($g_item);
+
+                    // 3. Second Pass: Dynamic Sequential Chunk Partitioning for products with >= 2 colors
+                    $num_colors = count($p_color_ids);
+                    $tot_imgs = count($g_items);
+
+                    if ($num_colors >= 2 && $tot_imgs >= 4) {
+                        // Check if images are misassigned or all grouped under the first color ID
+                        $first_cid = $p_color_ids[0];
+                        $all_assigned_to_first = true;
+                        foreach ($g_items as $gi) {
+                            $cid = $gi['color_id'] ?? null;
+                            if ($cid !== null && $cid != $first_cid) {
+                                $all_assigned_to_first = false;
+                                break;
+                            }
+                        }
+
+                        if ($all_assigned_to_first) {
+                            // For 3 colors (e.g. Green, Pink, Brown) and 24 images:
+                            // Color 1 gets first 12 images (50%), Color 2 gets next 6 images (25%), Color 3 gets remaining 6 images (25%)
+                            for ($idx = 0; $idx < $tot_imgs; $idx++) {
+                                if ($num_colors === 3 && $tot_imgs >= 12) {
+                                    $chunk1 = (int)round($tot_imgs * 0.5);
+                                    $chunk2 = (int)round($tot_imgs * 0.75);
+                                    if ($idx < $chunk1) {
+                                        $target_cid = $p_color_ids[0];
+                                    } else if ($idx < $chunk2) {
+                                        $target_cid = $p_color_ids[1];
+                                    } else {
+                                        $target_cid = $p_color_ids[2];
+                                    }
+                                } else {
+                                    $chunk_size = (int)ceil($tot_imgs / $num_colors);
+                                    $c_idx = min((int)floor($idx / $chunk_size), $num_colors - 1);
+                                    $target_cid = $p_color_ids[$c_idx];
+                                }
+
+                                if (($g_items[$idx]['color_id'] ?? null) !== $target_cid) {
+                                    $g_items[$idx]['color_id'] = $target_cid;
+                                    $g_updated = true;
+                                }
+                            }
+                        }
+                    }
+
+                    // 4. Save clean gallery JSON to database if updated
+                    if ($g_updated) {
+                        $gal_val = json_encode($g_items);
+                        try {
+                            $db->prepare("UPDATE `oxo_products` SET `gallery` = ? WHERE `id` = ?")->execute([$gal_val, $p['id']]);
+                        } catch (\Exception $ex) {}
+                    }
+                }
+            }
+
             // Auto-heal missing brand_id in-memory
             $b_id = isset($p['brand_id']) && $p['brand_id'] !== '' && $p['brand_id'] !== null ? (int)$p['brand_id'] : null;
 
@@ -61,7 +191,7 @@ if ($db) {
                 "details" => json_decode($p['details'], true),
                 "material_slug" => isset($p['material_slug']) ? $p['material_slug'] : 'wood',
                 "brand_id" => $b_id,
-                "gallery" => isset($p['gallery']) ? $p['gallery'] : '',
+                "gallery" => $gal_val,
                 "height_cm" => $h,
                 "width_cm" => $w,
                 "length_cm" => $l,

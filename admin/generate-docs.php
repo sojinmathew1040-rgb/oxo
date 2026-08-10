@@ -309,6 +309,7 @@ MD;
             margin-bottom: 10px;
             background: linear-gradient(to right, #FFFFFF, var(--accent-glow));
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 

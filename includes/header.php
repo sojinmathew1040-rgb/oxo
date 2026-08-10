@@ -63,10 +63,45 @@ if ($is_product_page && $current_product) {
             </div>
             
             <nav class="nav-menu" id="nav-menu">
-                <a href="<?php echo ($current_script !== 'index.php') ? 'index.php#hero' : '#hero'; ?>" class="nav-link">Home</a>
-                <a href="<?php echo ($current_script !== 'index.php') ? 'index.php#collections-container' : '#collections-container'; ?>" class="nav-link <?php echo ($current_script === 'shop.php') ? 'active' : ''; ?>">Products</a>
-                <a href="<?php echo ($current_script === 'index.php') ? '#about' : (($current_script === 'about.php') ? '#philosophy' : 'about.php#philosophy'); ?>" class="nav-link <?php echo ($current_script === 'about.php') ? 'active' : ''; ?>">About</a>
-                <a href="<?php echo ($current_script !== 'index.php') ? 'index.php#contact' : '#contact'; ?>" class="nav-link">Contact</a>
+                <div class="nav-menu-inner">
+                    <div class="nav-links-stack">
+                        <a href="<?php echo ($current_script !== 'index.php') ? 'index.php#hero' : '#hero'; ?>" class="nav-link">
+                            <span class="nav-num">01</span>
+                            <span class="nav-text">Home</span>
+                            <i class="fa-solid fa-arrow-right-long nav-arrow"></i>
+                        </a>
+                        <a href="<?php echo ($current_script !== 'index.php') ? 'index.php#collections-container' : '#collections-container'; ?>" class="nav-link <?php echo ($current_script === 'shop.php') ? 'active' : ''; ?>">
+                            <span class="nav-num">02</span>
+                            <span class="nav-text">Products</span>
+                            <i class="fa-solid fa-arrow-right-long nav-arrow"></i>
+                        </a>
+                        <a href="<?php echo ($current_script === 'index.php') ? '#about' : (($current_script === 'about.php') ? '#philosophy' : 'about.php#philosophy'); ?>" class="nav-link <?php echo ($current_script === 'about.php') ? 'active' : ''; ?>">
+                            <span class="nav-num">03</span>
+                            <span class="nav-text">About</span>
+                            <i class="fa-solid fa-arrow-right-long nav-arrow"></i>
+                        </a>
+                        <a href="<?php echo ($current_script !== 'index.php') ? 'index.php#contact' : '#contact'; ?>" class="nav-link">
+                            <span class="nav-num">04</span>
+                            <span class="nav-text">Contact</span>
+                            <i class="fa-solid fa-arrow-right-long nav-arrow"></i>
+                        </a>
+                    </div>
+
+                    <div class="mobile-nav-footer">
+                        <div class="mobile-nav-tagline">OXO Furniture Studio</div>
+                        <p class="mobile-nav-sub">Curated luxury & visual excellence</p>
+                        <?php 
+                        $admin_wa = get_admin_whatsapp();
+                        if (!empty($admin_wa)):
+                            $clean_wa = preg_replace('/[^0-9]/', '', $admin_wa);
+                            if (strlen($clean_wa) === 10) $clean_wa = '91' . $clean_wa;
+                        ?>
+                            <a href="https://wa.me/<?php echo $clean_wa; ?>" target="_blank" rel="noopener" class="mobile-nav-wa-btn">
+                                <i class="fa-brands fa-whatsapp"></i> Chat on WhatsApp
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
             </nav>
             
             <div class="header-actions">

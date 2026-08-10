@@ -847,17 +847,23 @@ function build_extracted_images_meta($images, $detected_color_ids, $html = '', $
     }
 
     $images_meta = [];
-    $current_group_color_id = !empty($colors) ? (int)$colors[0]['id'] : null;
+    $current_group_color_id = null;
 
-    // Build variant_id to color_id map if shopify_json exists
+    // Build variant_id to color_id map AND image_id to color_id map if shopify_json exists
     $variant_color_map = [];
+    $shopify_img_id_color_map = [];
     if ($shopify_json && isset($shopify_json['product']['variants'])) {
         foreach ($shopify_json['product']['variants'] as $var) {
             $v_id = $var['id'];
+            $v_image_id = $var['image_id'] ?? null;
             $v_title = trim($var['title'] ?? '');
+            $v_color = trim($var['option1'] ?? $v_title);
             foreach ($colors as $c) {
-                if (strcasecmp($v_title, $c['name']) === 0 || stripos($v_title, $c['name']) !== false || stripos($c['name'], $v_title) !== false) {
+                if (strcasecmp($v_color, $c['name']) === 0 || strcasecmp($v_title, $c['name']) === 0 || stripos($v_color, $c['name']) !== false || stripos($c['name'], $v_color) !== false) {
                     $variant_color_map[$v_id] = (int)$c['id'];
+                    if ($v_image_id) {
+                        $shopify_img_id_color_map[$v_image_id] = (int)$c['id'];
+                    }
                     break;
                 }
             }
@@ -870,11 +876,16 @@ function build_extracted_images_meta($images, $detected_color_ids, $html = '', $
         foreach ($shopify_json['product']['images'] as $simg) {
             $s_src = strtok($simg['src'] ?? '', '?');
             $s_alt = trim($simg['alt'] ?? '');
+            $s_id = $simg['id'] ?? null;
             $s_color_id = null;
 
-            if (!empty($s_alt)) {
+            if ($s_id && isset($shopify_img_id_color_map[$s_id])) {
+                $s_color_id = $shopify_img_id_color_map[$s_id];
+            }
+
+            if (!$s_color_id && !empty($s_alt)) {
                 foreach ($colors as $c) {
-                    if (strcasecmp($s_alt, $c['name']) === 0 || stripos($s_alt, $c['name']) !== false || stripos($c['name'], $s_alt) !== false) {
+                    if (strcasecmp($s_alt, $c['name']) === 0 || (strlen($s_alt) >= 3 && stripos($s_alt, $c['name']) !== false)) {
                         $s_color_id = (int)$c['id'];
                         break;
                     }
@@ -931,7 +942,7 @@ function build_extracted_images_meta($images, $detected_color_ids, $html = '', $
                 $cwords = preg_split('/[\s\-_]+/', $cname);
                 foreach ($cwords as $cw) {
                     $cw_clean = preg_replace('/[^a-z0-9]/', '', $cw);
-                    if (strlen($cw_clean) >= 3 && in_array($cw_clean, ['red', 'pink', 'green', 'yellow', 'blue', 'navy', 'black', 'white', 'grey', 'gray', 'orange', 'purple', 'violet', 'brown', 'walnut', 'oak', 'teak', 'beige', 'cream', 'gold', 'silver', 'aqua', 'multi', 'globus', 'mehandi'])) {
+                    if (strlen($cw_clean) >= 4 && in_array($cw_clean, ['pink', 'green', 'yellow', 'blue', 'navy', 'black', 'white', 'grey', 'gray', 'orange', 'purple', 'violet', 'brown', 'walnut', 'teak', 'beige', 'cream', 'gold', 'silver', 'aqua', 'multi', 'globus', 'mehandi', 'rust'])) {
                         if (strpos($url_norm, $cw_clean) !== false) {
                             $assigned_color_id = (int)$c['id'];
                             break 2;
@@ -941,11 +952,9 @@ function build_extracted_images_meta($images, $detected_color_ids, $html = '', $
             }
         }
 
-        // 3. Sequential Group Continuity Fallback
+        // Only propagate color ID if we have consecutive images of the same color variant
         if ($assigned_color_id) {
             $current_group_color_id = $assigned_color_id;
-        } else {
-            $assigned_color_id = $current_group_color_id;
         }
 
         $images_meta[] = [
