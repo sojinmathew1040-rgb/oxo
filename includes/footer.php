@@ -11,14 +11,14 @@
     ?>
     <footer class="site-footer-luxury">
         <div class="container">
-            <div style="display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.2fr; gap: 50px; margin-bottom: 60px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 60px; margin-bottom: 60px; align-items: start;">
                 
                 <!-- Col 1: Brand & Manifesto -->
                 <div style="display: flex; flex-direction: column; gap: 20px;">
                     <a href="index.php" style="display: inline-block;">
                         <img src="assets/images/logo.png" alt="OXO Luxury Furniture" style="height: 50px; width: auto; filter: brightness(0) invert(1);">
                     </a>
-                    <p style="font-size: 0.9rem; line-height: 1.7; color: rgba(255, 255, 255, 0.65); margin: 0; max-width: 320px;">
+                    <p style="font-size: 0.9rem; line-height: 1.7; color: rgba(255, 255, 255, 0.65); margin: 0; max-width: 380px;">
                         <?php echo htmlspecialchars($f_desc); ?>
                     </p>
                     <div style="display: flex; gap: 12px; margin-top: 6px;">
@@ -28,36 +28,13 @@
                     </div>
                 </div>
                 
-                <!-- Col 2: Collections -->
-                <div>
-                    <h4 style="font-family: var(--font-title); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--color-accent); font-weight: 700; margin-bottom: 20px;">Collections</h4>
-                    <ul style="display: flex; flex-direction: column; gap: 12px; font-size: 0.88rem;">
-                        <li><a href="shop.php?category=sofas" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Modular Sofas & Lounges</a></li>
-                        <li><a href="shop.php?category=chairs" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Accent Armchairs</a></li>
-                        <li><a href="shop.php?category=tables" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Calacatta Dining Tables</a></li>
-                        <li><a href="shop.php?category=lighting" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Architectural Lighting</a></li>
-                        <li><a href="shop.php?category=storage" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Walnut Sideboards</a></li>
-                    </ul>
-                </div>
-
-                <!-- Col 3: Brand & House -->
-                <div>
-                    <h4 style="font-family: var(--font-title); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--color-accent); font-weight: 700; margin-bottom: 20px;">The House</h4>
-                    <ul style="display: flex; flex-direction: column; gap: 12px; font-size: 0.88rem;">
-                        <li><a href="about.php" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Our Philosophy</a></li>
-                        <li><a href="about.php#craftsmanship" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Sourcing & Craftsmanship</a></li>
-                        <li><a href="account.php" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Bespoke Consultations</a></li>
-                        <li><a href="login.php" style="color: rgba(255,255,255,0.7); text-decoration: none; transition: color 0.3s ease;">Private Account</a></li>
-                    </ul>
-                </div>
-                
-                <!-- Col 4: Newsletter -->
+                <!-- Col 2: Newsletter -->
                 <div>
                     <h4 style="font-family: var(--font-title); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--color-accent); font-weight: 700; margin-bottom: 20px;">Private Journal</h4>
-                    <p style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.65); line-height: 1.6; margin-bottom: 16px;">
+                    <p style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.65); line-height: 1.6; margin-bottom: 16px; max-width: 360px;">
                         Subscribe to receive early access to private trunk shows and editorial lookbooks.
                     </p>
-                    <div style="display: flex; gap: 8px;">
+                    <div style="display: flex; gap: 8px; max-width: 400px;">
                         <input type="email" placeholder="Enter your email" style="flex: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 30px; padding: 12px 18px; color: #FFFFFF; font-size: 0.82rem;">
                         <button aria-label="Subscribe" style="width: 44px; height: 44px; border-radius: 50%; background: var(--color-accent); color: var(--color-primary); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                             <i class="fa-solid fa-arrow-right"></i>

@@ -66,7 +66,7 @@ $bg_colors = [
             </div>
 
             <!-- Product Cards Grid -->
-            <div class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; width: 100%;">
+            <div class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(285px, 1fr)); gap: 30px; width: 100%;">
                 <?php 
                 $all_count = 0;
                 foreach ($PRODUCTS_DB as $p):
@@ -77,34 +77,34 @@ $bg_colors = [
                         <div class="product-image-container">
                             <img src="<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['title']); ?>" loading="lazy" decoding="async">
                             
-                            <div style="position: absolute; top: 12px; left: 12px;">
-                                <span class="oxo-badge" style="background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); font-size: 0.62rem;">
+                            <div style="position: absolute; top: 14px; left: 14px;">
+                                <span class="oxo-badge" style="background: rgba(255,255,255,0.92); backdrop-filter: blur(8px); font-size: 0.72rem; padding: 6px 12px; border-radius: 20px; font-weight: 700;">
                                     <?php echo htmlspecialchars(ucfirst($p['category'])); ?>
                                 </span>
                             </div>
 
-                            <div class="product-actions" style="position: absolute; bottom: 12px; right: 12px;">
-                                <button class="product-action-btn" data-action="quick-view" data-id="<?php echo htmlspecialchars($p['id']); ?>" aria-label="Quick View" style="width: 42px; height: 42px; border-radius: 50%; background: #ffffff; color: var(--color-primary); border: none; box-shadow: 0 6px 16px rgba(0,0,0,0.12); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
-                                    <i class="fa-regular fa-eye" style="font-size: 0.95rem;"></i>
+                            <div class="product-actions" style="position: absolute; bottom: 14px; right: 14px;">
+                                <button class="product-action-btn" data-action="quick-view" data-id="<?php echo htmlspecialchars($p['id']); ?>" aria-label="Quick View" style="width: 46px; height: 46px; border-radius: 50%; background: #ffffff; color: var(--color-primary); border: none; box-shadow: 0 6px 20px rgba(0,0,0,0.15); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
+                                    <i class="fa-regular fa-eye" style="font-size: 1.05rem;"></i>
                                 </button>
                             </div>
                         </div>
                         
                         <div class="product-info">
-                            <h3 class="product-title" style="margin: 4px 0;">
+                            <h3 class="product-title" style="margin: 6px 0 4px; font-size: 1.2rem; font-weight: 700; line-height: 1.3;">
                                 <a href="product.php?id=<?php echo htmlspecialchars($p['id']); ?>" style="color: inherit; text-decoration: none;">
                                     <?php echo htmlspecialchars($p['title']); ?>
                                 </a>
                             </h3>
-                            <p style="font-size: 0.8rem; color: var(--color-gray); margin: 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                            <p style="font-size: 0.88rem; color: var(--color-gray); margin: 4px 0 0; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
                                 <?php echo htmlspecialchars($p['description']); ?>
                             </p>
                         </div>
 
                         <div class="product-card-footer">
-                            <span class="oxo-price-tag"><?php echo format_inr($p['price']); ?></span>
-                            <a href="product.php?id=<?php echo htmlspecialchars($p['id']); ?>" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.76rem; font-weight: 700; color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.8px;">
-                                View Details <i class="fa-solid fa-arrow-right-long" style="font-size: 0.7rem; color: var(--color-accent);"></i>
+                            <span class="oxo-price-tag" style="font-size: 1.25rem; font-weight: 800;"><?php echo format_inr($p['price']); ?></span>
+                            <a href="product.php?id=<?php echo htmlspecialchars($p['id']); ?>" style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.84rem; font-weight: 700; color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.8px;">
+                                View Details <i class="fa-solid fa-arrow-right-long" style="font-size: 0.78rem; color: var(--color-accent);"></i>
                             </a>
                         </div>
                     </div>
@@ -145,40 +145,40 @@ $bg_colors = [
                 </div>
 
                 <!-- 4 Product Grid for Category -->
-                <div class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; width: 100%;">
+                <div class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(285px, 1fr)); gap: 30px; width: 100%;">
                     <?php foreach ($cat_products_limit as $p): ?>
                         <div class="product-card" data-category="<?php echo htmlspecialchars($p['category']); ?>" data-id="<?php echo htmlspecialchars($p['id']); ?>">
                             <div class="product-image-container">
                                 <img src="<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['title']); ?>" loading="lazy" decoding="async">
                                 
-                                <div style="position: absolute; top: 12px; left: 12px;">
-                                    <span class="oxo-badge" style="background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); font-size: 0.62rem;">
+                                <div style="position: absolute; top: 14px; left: 14px;">
+                                    <span class="oxo-badge" style="background: rgba(255,255,255,0.92); backdrop-filter: blur(8px); font-size: 0.72rem; padding: 6px 12px; border-radius: 20px; font-weight: 700;">
                                         <?php echo htmlspecialchars(ucfirst($p['category'])); ?>
                                     </span>
                                 </div>
 
-                                <div class="product-actions" style="position: absolute; bottom: 12px; right: 12px;">
-                                    <button class="product-action-btn" data-action="quick-view" data-id="<?php echo htmlspecialchars($p['id']); ?>" aria-label="Quick View" style="width: 42px; height: 42px; border-radius: 50%; background: #ffffff; color: var(--color-primary); border: none; box-shadow: 0 6px 16px rgba(0,0,0,0.12); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
-                                        <i class="fa-regular fa-eye" style="font-size: 0.95rem;"></i>
+                                <div class="product-actions" style="position: absolute; bottom: 14px; right: 14px;">
+                                    <button class="product-action-btn" data-action="quick-view" data-id="<?php echo htmlspecialchars($p['id']); ?>" aria-label="Quick View" style="width: 46px; height: 46px; border-radius: 50%; background: #ffffff; color: var(--color-primary); border: none; box-shadow: 0 6px 20px rgba(0,0,0,0.15); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
+                                        <i class="fa-regular fa-eye" style="font-size: 1.05rem;"></i>
                                     </button>
                                 </div>
                             </div>
                             
                             <div class="product-info">
-                                <h3 class="product-title" style="margin: 4px 0;">
+                                <h3 class="product-title" style="margin: 6px 0 4px; font-size: 1.2rem; font-weight: 700; line-height: 1.3;">
                                     <a href="product.php?id=<?php echo htmlspecialchars($p['id']); ?>" style="color: inherit; text-decoration: none;">
                                         <?php echo htmlspecialchars($p['title']); ?>
                                     </a>
                                 </h3>
-                                <p style="font-size: 0.8rem; color: var(--color-gray); margin: 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                <p style="font-size: 0.88rem; color: var(--color-gray); margin: 4px 0 0; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
                                     <?php echo htmlspecialchars($p['description']); ?>
                                 </p>
                             </div>
 
                             <div class="product-card-footer">
-                                <span class="oxo-price-tag"><?php echo format_inr($p['price']); ?></span>
-                                <a href="product.php?id=<?php echo htmlspecialchars($p['id']); ?>" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.76rem; font-weight: 700; color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.8px;">
-                                    View Details <i class="fa-solid fa-arrow-right-long" style="font-size: 0.7rem; color: var(--color-accent);"></i>
+                                <span class="oxo-price-tag" style="font-size: 1.25rem; font-weight: 800;"><?php echo format_inr($p['price']); ?></span>
+                                <a href="product.php?id=<?php echo htmlspecialchars($p['id']); ?>" style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.84rem; font-weight: 700; color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.8px;">
+                                    View Details <i class="fa-solid fa-arrow-right-long" style="font-size: 0.78rem; color: var(--color-accent);"></i>
                                 </a>
                             </div>
                         </div>
